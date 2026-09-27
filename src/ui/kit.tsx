@@ -89,6 +89,20 @@ export const Overlay = (p: ParentProps) => (
   </div>
 );
 
+/** Manuscript art from `public/art` (credits in `docs/credits.md`), fading out at the bottom, or all round when `round`.
+ * Decorative, so no alt. */
+export const Art = (p: { name: string; round?: boolean; class?: string }) => (
+  <img
+    src={`art/${p.name}.webp`}
+    alt=""
+    class={`w-full object-cover ${p.round ? '[mask-image:radial-gradient(closest-side,black_75%,transparent)]' : '[mask-image:linear-gradient(black_55%,transparent)]'} ${p.class ?? ''}`}
+  />
+);
+
+export const Portrait = (p: { name: string }) => (
+  <img src={`art/${p.name}.webp`} alt="" class="size-12 shrink-0 rounded-full border border-gold object-cover" />
+);
+
 /** A full-height top-level screen (title, options, end). */
 export const Screen = (p: ParentProps) => (
   <main class="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_50%_35%,#1f3029,var(--color-bg)_70%)] px-4 py-6 text-center">

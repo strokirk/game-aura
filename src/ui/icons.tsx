@@ -13,7 +13,6 @@ import GiEyeball from '~icons/game-icons/eyeball';
 import GiMagicGate from '~icons/game-icons/magic-gate';
 import GiMagicSwirl from '~icons/game-icons/magic-swirl';
 import GiMining from '~icons/game-icons/mining';
-import GiMoon from '~icons/game-icons/moon';
 import GiOpenBook from '~icons/game-icons/open-book';
 import GiPerson from '~icons/game-icons/person';
 import GiQuillInk from '~icons/game-icons/quill-ink';
@@ -24,9 +23,7 @@ import GiScrollUnfurled from '~icons/game-icons/scroll-unfurled';
 import GiSpiralBloom from '~icons/game-icons/spiral-bloom';
 import GiStoneBlock from '~icons/game-icons/stone-block';
 import GiStoneTower from '~icons/game-icons/stone-tower';
-import GiSun from '~icons/game-icons/sun';
 import GiTombstone from '~icons/game-icons/tombstone';
-import GiTowerFlag from '~icons/game-icons/tower-flag';
 import GiTwoCoins from '~icons/game-icons/two-coins';
 import GiVillage from '~icons/game-icons/village';
 import GiWheat from '~icons/game-icons/wheat';
@@ -78,9 +75,6 @@ export const I = {
   bribe: GiCoinsPile,
   device: GiAnvil,
   labText: GiQuillInk,
-  title: GiTowerFlag,
-  win: GiSun,
-  loss: GiMoon,
   pause: LuPause,
   menu: LuMenu,
   plus: LuPlus,

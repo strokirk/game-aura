@@ -3,8 +3,7 @@ import { magusName, year } from '../core/index.ts';
 import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
-import { I } from './icons.tsx';
-import { Button, Dim, Ico, Label, Overlay, Screen, Stack } from './kit.tsx';
+import { Art, Button, Dim, Label, Overlay, Screen, Stack } from './kit.tsx';
 import { Rich } from './Rich.tsx';
 import {
   act,
@@ -93,7 +92,7 @@ function Title() {
   const scenarios = Object.keys(SCENARIOS) as ScenarioId[];
   return (
     <Screen>
-      <Ico icon={I.title} class="size-20 text-gold" />
+      <Art name="hero" round class="aspect-square max-w-xs" />
       <Big>Aura</Big>
       <Tagline>The Covenant Must Grow</Tagline>
       <Stack>
@@ -176,7 +175,9 @@ function Options() {
         Done
       </Button>
       <Dim class="max-w-sm text-xs">
-        Icons from game-icons.net by Lorc, Delapouite and contributors (CC BY 3.0), and Lucide (ISC).
+        Icons from game-icons.net by Lorc, Delapouite and contributors (CC BY 3.0), and Lucide (ISC). Art from
+        public-domain manuscripts: the Très Riches Heures, the Luttrell Psalter, the Eadwine Psalter, William de Brailes
+        and others.
       </Dim>
     </Screen>
   );
@@ -200,9 +201,28 @@ function Pause() {
   );
 }
 
+// ponytail: keyed by card title, so a renamed card just loses its art; move to EventDef if that bites.
+const EVENT_ART: Record<string, string> = {
+  'Spring 1220': 'hero',
+  'The eel rent': 'mill',
+  'The weir': 'mill',
+  'The hands are hungry': 'fields',
+  'Granite and barrows': 'fields',
+  'The porters strike': 'fields',
+  'Two more magi': 'study',
+  'The Gate rises': 'win',
+};
+
 function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   return (
     <Overlay>
+      <Show when={EVENT_ART[p.ev.title]}>
+        {(name) => (
+          <div class="-mx-4 -mt-4 mb-2 overflow-hidden rounded-t-xl">
+            <Art name={name()} class="h-32" />
+          </div>
+        )}
+      </Show>
       <h2 class="mb-2 text-2xl">{p.ev.title}</h2>
       <p class="mb-4 whitespace-pre-line text-[1.1rem] leading-relaxed">
         <Rich text={p.ev.text} />
@@ -239,7 +259,7 @@ function End() {
   ];
   return (
     <Screen>
-      <Ico icon={won() ? I.win : I.loss} class="size-20 text-gold" />
+      <Art name={won() ? 'win' : 'wheel'} round class="aspect-square max-w-xs" />
       <Big>{won() ? 'Victory' : 'The covenant fails'}</Big>
       <Tagline>{s().outcome?.cause}</Tagline>
       <Label>The Chronicle</Label>

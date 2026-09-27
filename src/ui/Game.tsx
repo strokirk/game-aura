@@ -44,7 +44,7 @@ import {
 } from '../data/index.ts';
 import { cost, eta, mmss, num, rate } from './format.ts';
 import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
-import { Bar, Button, Card, Dim, Ico, Label, Odds, Stepper } from './kit.tsx';
+import { Bar, Button, Card, Dim, Ico, Label, Odds, Portrait, Stepper } from './kit.tsx';
 import { Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
 import { act, game, options, type Pop, pops, setConfirming, setPaused, setSpeed, speed } from './store.ts';
@@ -367,9 +367,10 @@ function Magus(p: { s: State; m: MagusState }) {
   return (
     <Card>
       <div class="flex items-center justify-between">
-        <Label>
-          <Ico icon={I.magus} /> {magusName(p.m.id)}
-        </Label>
+        <div class="flex items-center gap-2">
+          <Portrait name={p.m.id} />
+          <Label>{magusName(p.m.id)}</Label>
+        </div>
         <span>
           <Rich text="Lab Total" /> <b>{p.m.lt}</b>
         </span>
