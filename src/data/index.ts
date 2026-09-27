@@ -1,13 +1,15 @@
 // All game data. Typed, checked by tsc; no runtime parsing.
 
-export const GOODS = ['silver', 'stone', 'bread', 'vellum', 'vis', 'insight'] as const;
+export const GOODS = ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'vis', 'insight'] as const;
 export type GoodId = (typeof GOODS)[number];
 export type Cost = Partial<Record<GoodId, number>>;
 
 export const GOOD_INFO: Record<GoodId, { name: string; cap: number }> = {
   silver: { name: 'Silver', cap: 500 },
+  salt: { name: 'Salt', cap: 500 },
   stone: { name: 'Stone', cap: 200 },
   bread: { name: 'Bread', cap: 200 },
+  eels: { name: 'Eels', cap: 200 },
   vellum: { name: 'Vellum', cap: 50 },
   vis: { name: 'Vis', cap: 30 },
   insight: { name: 'Insight', cap: 1000 },
@@ -37,6 +39,8 @@ export interface BuildingDef {
   /** At most this many. Named sites (the Vis sources) are max 1 and don't use zone slots. */
   max?: number;
   site?: boolean;
+  /** Goods each worker consumes per second. The building stands idle while any of them is out of stock. */
+  uses?: Cost;
   /** Raises storage caps, per building. */
   caps?: Cost;
   blurb: string;
@@ -57,8 +61,8 @@ export const BUILDINGS = {
     zone: 'marsh',
     cost: { silver: 20 },
     slots: 2,
-    perWorker: { silver: 0.25 },
-    blurb: 'Salt-sand boiled to salt, sold at the Hall.',
+    perWorker: { salt: 0.25 },
+    blurb: 'Salt-sand boiled to salt. The Hall sells it for Silver, or keeps it to preserve food.',
   },
   tide_pool: visSite('The Tide Pool', 'A pool on the flats that never quite drains. Its water holds vis.'),
   knights_barrow: visSite(
@@ -103,7 +107,7 @@ export const BUILDINGS = {
     zone: 'marsh',
     cost: { silver: 15 },
     slots: 1,
-    perWorker: { bread: 0.3 },
+    perWorker: { eels: 0.3 },
     blurb: 'Stakes and wattle across the channel below the Tide Pool. The eels grow bigger every year.',
   },
   storehouse: {
@@ -122,6 +126,15 @@ export const BUILDINGS = {
     caps: { insight: 500 },
     blurb: 'Shelves, a lectern and a chain for every book. Room for more Insight.',
   },
+  hostel: {
+    name: "Pilgrims' Hostel",
+    zone: 'bocage',
+    cost: { silver: 40, stone: 20 },
+    slots: 1,
+    uses: { bread: 0.2 },
+    perWorker: { silver: 0.3 },
+    blurb: 'Bread and a roof for the miquelots on their way across the bay to Mont-Saint-Michel. They pay in Silver.',
+  },
   cottage: {
     name: 'Cottage',
     zone: 'bocage',
@@ -137,6 +150,12 @@ export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
 export const HAND_FOOD = 0.05; // Bread per hand per second
+/** Fish days: Eels can stand in for this share of what the hands eat, 1 Eel for 1 Bread. */
+export const FISH_SHARE = 1 / 3;
+/** Every this many Salt in stock raises the Bread and Eels caps by 1. */
+export const PRESERVE = 5;
+/** Silver per Salt sold at the Hall. */
+export const SALT_PRICE = 1;
 export const COST_GROWTH = 1.15;
 export const NOTICE_K = 0.35;
 export const SANCTUM_ASSIST = 0.25;
@@ -313,6 +332,8 @@ export const NOTICE = {
   strike: { at: 75, secs: 60, payShare: 0.05 },
   audit: { at: 90 },
   endow: { base: 500, growth: 2, gen: 1 },
+  /** Alms to the poor of Dol: Endow's Bread twin. */
+  alms: { base: 200, growth: 2, gen: 1 },
   bribe: { base: 100, growth: 2, notice: 20 },
 };
 
@@ -349,6 +370,8 @@ export type Effect =
   /** Blocks an action key such as `experiment:aldric`, `experiment:all` or `build_salt_pan`. */
   | { kind: 'block'; what: string; secs: number }
   | { kind: 'unlock'; id: string }
+  /** Removes n buildings; their workers go idle. A Vis site removed this way can't be worked again. */
+  | { kind: 'destroy'; building: BuildingId; n: number }
   /** The halfway check-in's answer for a running experiment. */
   | { kind: 'checkIn'; magus: MagusId; choice: 'push' | 'steady' | 'abort' }
   /** Ends a strike at once. */
@@ -379,7 +402,15 @@ export type Condition =
   | { kind: 'noHands' }
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
-  | { kind: 'rites'; atLeast: number };
+  | { kind: 'rites'; atLeast: number }
+  /** An ink variable the engine reads back (`stories.md`). */
+  | { kind: 'story'; v: StoryVar; atLeast?: number; atMost?: number }
+  /** The year is at least `years` after the year held in an ink variable. */
+  | { kind: 'yearsAfter'; v: StoryVar; years: number }
+  | { kind: 'all'; of: readonly Condition[] };
+
+/** The whitelist of ink variables the engine reads back. */
+export type StoryVar = 'eel_level' | 'eels_state' | 'eels_end_year';
 
 /** Something the scenario reveals when its condition is first met: buildings, recipes, tabs, magi. */
 export interface UnlockDef {
@@ -422,6 +453,35 @@ export interface ScenarioDef {
 export const YEAR = 120;
 export const START_YEAR = 1220;
 
+const inYear = (y: number): Condition => ({ kind: 'time', atLeast: (y - START_YEAR) * YEAR });
+/** A beat that plays in year `y` or later while the eels thread is open. */
+const open = (knot: string, title: string, y: number): StoryBeat => ({
+  knot,
+  title,
+  when: { kind: 'all', of: [inYear(y), { kind: 'story', v: 'eels_state', atMost: 0 }] },
+});
+/** The eels thread (`docs/ink/eels-notes.md`). The wyrm (`eels_9_the_wyrm`) waits on Sanctum traits. */
+const EELS: readonly StoryBeat[] = [
+  { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
+  { knot: 'eels_2_the_weir', title: 'The weir', when: inYear(1221) },
+  open('eels_3_the_font', 'The font', 1224),
+  open('eels_4_the_pits', 'Eels in the brine', 1229),
+  open('eels_5_the_road', 'The Dol road', 1235),
+  open('eels_6_spring_tide', 'The spring tide', 1241),
+  open('eels_7_flood', 'The flood', 1245),
+  {
+    knot: 'eels_8_rent',
+    title: 'The eel rent',
+    when: {
+      kind: 'all',
+      of: [
+        { kind: 'story', v: 'eels_state', atLeast: 1 },
+        { kind: 'yearsAfter', v: 'eels_end_year', years: 3 },
+      ],
+    },
+  },
+];
+
 export const SCENARIOS = {
   trial: {
     name: 'Trial of the Tide Pool',
@@ -455,10 +515,7 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. Five hundred pages of Insight by 1222 and the Order will take the covenant seriously.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: [
-      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
-      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
-    ],
+    story: EELS,
   },
   grow: {
     name: 'The Covenant Must Grow',
@@ -488,7 +545,7 @@ export const SCENARIOS = {
       },
       {
         when: { kind: 'researched', atLeast: 1 },
-        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device'],
+        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device', 'hostel'],
         card: {
           title: 'Granite and barrows',
           text: 'Mont-Dol is granite to the root. Quarry it for Stone: Sanctums, Storehouses and one day greater things are built of it. Out on the flats the hands have found a second place where vis gathers: the Drowned Knight’s Barrow.',
@@ -528,10 +585,7 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, six hands, a salt-works and the Tide Pool. Under the marsh lies a drowned regio, and a Gate into it. Open it before 1260. Every building will be noticed in Dol, and the Order watches what Dol notices.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: [
-      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
-      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
-    ],
+    story: EELS,
   },
   middle: {
     name: 'Stage: the Middle Years',
@@ -580,6 +634,7 @@ export const SCENARIOS = {
       'regio_spring',
       'recipe:device',
       'recipe:lab_text',
+      'hostel',
       'magus:sabine',
       'magus:herve',
     ],
@@ -656,6 +711,7 @@ export const SCENARIOS = {
       'regio_spring',
       'recipe:device',
       'recipe:lab_text',
+      'hostel',
       'magus:sabine',
       'magus:herve',
       'gate',

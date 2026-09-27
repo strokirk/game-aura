@@ -6,28 +6,138 @@ Following `process.md`, the design grows from the endgame: entries that sharpen 
 
 ## The endgame
 
-### Three different Rites
+### No More Sea: the story first
 
-The 3 Rites of the Drowned Gate ask for different things instead of the same conditions at rising cost.
+*"And I saw a new heaven and a new earth: for the first heaven and the first earth were passed away; and there was no more sea."* (Revelation 21:1)
 
-- **The Bells Beneath the Tide:** Stone and hands, as the Rites work now.
-- **The Knight Unburied:** needs the Drowned Knight's Barrow worked, and costs one magus a Twilight roll (see Warping and Twilight).
-- **The Tide Stands Still:** performing it adds about +30 Notice at once, because the whole bay sees it. The player must arrive with Notice low, so the finale pulls every system in. It also bends a Hermetic limit (see below).
+Following `process.md`, here's the ending as a story before any mechanics.
+
+The Breton legend puts Ys, the drowned city, under the bay of Douarnenez, and says that at low tide you can hear its bells. The covenant finds out the Bretons had the wrong bay. The monks of Mont-Saint-Michel say the bay was the forest of Scissy until the sea took it in 709. The covenant finds out that both are true. Ys lies in the Drowned Regio, and the regio holds back the sea. Its seven bells, once rung, let the sea go.
+
+From about 1235 the covenant rings the bells one by one. Each bell is an apocalypse in small, echoing Revelation. The bay runs red, a star falls in the marsh, the sun dims. Each one gives the covenant something new to work: drowned oak, a star-stone, a hidden hour. Each one also wakes something new that it has to deal with. When the seventh bell rings, the tide goes out and doesn't come back. The forest of Scissy stands in the sand, Ys's towers stand in the mud, and the monks across the bay watch the Merveille's windows face dry land. That's the win.
+
+The mundane covenant has been doing the same thing all along. The Marais de Dol really was won from the sea with dikes, from the 11th century onward. Every dike the covenant builds pushes the sea back an acre. No More Sea is where the dikes and the bells meet.
+
+### Rules for the endgame
+
+1. **A bell adds to the plate. It never takes something off.** Each bell opens a new zone, good, action or synergy, and wakes a new pressure. Nothing the covenant already runs becomes pointless, and several old things become more valuable.
+2. **Nothing is ever enough.** Every good has at least 3 uses and at least 1 sink that never fills. +1,000 of anything is always welcome.
+3. **Producers make more than one thing.** Most buildings feed two chains, so no building is only the answer to one shortage.
+4. **Number go up.** Bell prices grow about ×3.5 per bell, from 10,000 to 20,000,000 Insight. Production keeps up through the magical research trees below, whose multipliers compound. 75,000 Insight isn't a wall; it's about what bell 2 costs.
+5. **Always grow.** Pulling buildings down goes. Growth comes from new land (dikes, terraces, the bells' zones) and from the trees, so the player never has to shrink to change shape.
+
+### The Seven Bells of Ys
+
+The Drowned Gate is the door to Ys; founding and raising it work as `gate.md` says. After that, instead of 3 Rites, the covenant rings 7 bells in order, from about 1235, so the bells take the run's last 50 minutes, about 7 minutes each. Each bell's price mixes Insight with the goods its bell is about. **Bells are paid by delivery:** goods are routed to the Gate, which has no cap, as Stone is today, so no price is limited by a storage cap. `[PLAYTEST: all prices; the curve matters more than the values]`
+
+Target Insight rate while each bell is being paid (its price over about 420 s): 24/s, 83/s, 290/s, 950/s, 3,600/s, 12,000/s, 48,000/s. Today's full run averages 8 Insight/s, so the trees carry about ×6,000 by the end.
+
+| # | Bell | Revelation | Price (starting point) | Opens | Wakes |
+| --- | --- | --- | --- | --- | --- |
+| 1 | **The Bell of Scissy** | A third of the trees burnt up (8:7) | 10,000 Insight, 500 Stone | **Scissy**, the drowned forest: a zone of 6 slots, workable only while the tide is out (see spring tides). Its **Bog-oak** Camp makes Bog-oak, the new good for dikes, Sanctum upgrades and great Devices | The drowned dead. The bishop sends men to bless the stumps: Notice generation +1/min while Scissy is worked |
+| 2 | **The Bell of Blood** | A third of the sea became blood (8:8) | 35,000 Insight, 2,000 Salt | The bay runs red with the regio's vis. **Salt Pans also make Vis** (0.02/s per worker), and eels grow a level | The fish die. Fishers lose their living: feed them (Bread alms) or their anger adds Notice each year |
+| 3 | **The Bell of Wormwood** | A star falls, and the waters turn bitter (8:10) | 120,000 Insight, 400 Vis | **Wormwood**, a fallen star-stone: a 4th Vis site, 3× the Tide Pool | The wells go bitter. Hands drink ale, so each eats 1.5× Bread. Farms and polders matter again |
+| 4 | **The Bell of Darkness** | A third of the sun and moon darkened (8:12) | 400,000 Insight, 3,000 Vellum | **The hidden hour:** every 5 minutes, 60 s of darkness when Notice generation stops and experiments run 2× fast. The best plate-spinning in the game | Crops fail in the dark: Farms ×0.5, but salt meadows don't mind |
+| 5 | **The Bell of the Pit** | The bottomless pit opens (9:2) | 1.5 M Insight, 1,000 Bog-oak | **The Knight Unburied:** the Drowned Knight rises as the covenant's warden, a 4th named person who runs experiments at Lab Total 15 without a Sanctum, and whose Lab Total rises with the Vim tree | Things climb out after him. A yearly raid on the most crowded zone unless it's warded (Vis) or garrisoned (hands) |
+| 6 | **The Bell of the Four Winds** | Four angels holding the four winds (7:1) | 5 M Insight, 20,000 Stone | **The Couesnon moves:** the border river can be turned. Point it at one zone to double that zone's output, and move it once a year (the proverb says the Couesnon, in its madness, put the Mount in Normandy) | Storms. Every dike rolls each year to breach; breached polders flood until mended with Stone and Bread |
+| 7 | **No More Sea** | And there was no more sea (21:1) | 20 M Insight, every good at 10,000, and Notice under 50 for 60 s | — | The run is won. The Chronicle ends: "In [year] the tide went out and did not come back." |
+
+- Bells are rung in order. A covenant that stops at bell 4 by 1260 loses, but the Chronicle records how far it got, so a deep loss is still a story (*Losing is fun*).
+- **Why bells:** each one is a set-piece, like Revelation's trumpets, and each one re-values what came before. Blood makes Salt Pans a Vis source; Wormwood makes Bread matter again; Darkness turns Notice into a window to exploit; the Winds make dikes a thing to defend. That's rule 1 made concrete.
+
+### Every good, many uses
+
+| Good | Made by | Uses |
+| --- | --- | --- |
+| **Bread** | Farms, polder fields, salt-meadow flocks | Feeds hands (and ale, after Wormwood). **Alms:** a standing gift of Bread to the poor of Dol, 200 × 2^n Bread for Notice generation −1/min for good: Endow's Bread twin. The parish loves a covenant that feeds it. **Pilgrims:** feed the *miquelots* crossing to Mont-Saint-Michel at a hostel: Bread in, Silver out. **Diggers:** every dike and terrace is paid in Bread, because the labour was fed, not waged. **The Herbam tree** |
+| **Eels** (new good; the Eel Weir makes Eels, not Bread) | Eel Weirs, the eels thread | **Fish days:** medieval Christians ate no meat on about a third of days, so hands eat Eels instead of Bread on fish days. **Rent:** sold in sticks of 25 at Dol for Silver. **Render:** after the Bell of Blood, fat eels render Vis. **The Aquam tree** |
+| **Salt** (kept as a good, not sold on arrival) | Salt Pans | **Sell** at Dol. **Preserve:** salted Eels and Bread raise their caps. **Brine** for the bells. **The Aquam tree** |
+| **Stone** | Quarries | Buildings, the Gate, **dikes**, **terraces** (below), a **chapel** for the parish (a permanent Notice cut that also raises the Divine aura). **The Terram tree** |
+| **Vellum** | Parchmenters, salt-meadow flocks | Lab Texts; **letters** to the Order (Notice −5 each, 50 Vellum × 1.5^n); **copies** sold to other covenants (Vellum + Insight → Silver). **The Mentem tree** |
+| **Vis** | Vis sites, Salt Pans (after Blood), Eels (after Blood) | Experiments, Devices, the Aegis, the bells, wards against the Pit. **The Vim tree** |
+| **Bog-oak** (new) | Scissy | Dikes that don't breach, Sanctum upgrades (+1 assistant), great Devices (+100% instead of +25%, repeatable, cost ×1.15 each) |
+| **Silver** | Salt, pilgrims, rent, copies | Buildings, Endow, Bribe, hiring diggers |
+| **Insight** | Magi | Research trees, Study, bells |
+
+### Producers that feed two chains
+
+| Producer | Makes | Why it matters |
+| --- | --- | --- |
+| Salt meadow (a new polder) | Bread (mutton) + Vellum (sheepskin) | The bay's salt-meadow flocks are real. Reclaiming land feeds the labs |
+| Quarry | Stone + **Hearth slots** | Quarrying Mont-Dol cuts terraces: the first terrace opens after 2,000 Stone quarried, each next one after ×1.6 more, up to 10. The Hearth grows as the hill shrinks, but the hill runs out |
+| Salt Pan | Salt + Vis (after Blood) | The main income becomes a lab supply |
+| Eel Weir | Eels + Vis (after Blood) | The eels' temptation grows teeth |
+| Library | Insight cap + Insight (copying Vellum) | The Library is never outgrown |
+| Pilgrims' hostel | Silver + Notice with the Church | Bread becomes money, at a price |
+
+### Land from the sea
+
+- **Dike:** a Marsh action costing Stone + Bread + hands for 60 s. Each dike adds 2 slots to a new **Polder** zone (carry distance 1, Notice factor 1.0). A new polder is salt meadow for 5 years, then it can be fields. Cost ×1.5 per dike.
+- **Terraces:** the Quarry's second product (above).
+- **The bells' zones:** Scissy (bell 1), Wormwood (bell 3).
+- **Why:** the zones' slot caps stay, but a full zone is a prompt to build a dike, not to pull something down. So *Pull down* goes (`economy.md`), and the covenant only ever grows. Reclaiming the bay is also the mundane half of No More Sea.
+
+### Magical research trees
+
+Research becomes 5 trees, one per Form, as a light version of the Arts (`icebox.md` parks the full Arts). Each node is repeatable with costs ×2.5 and effects of ×1.25–1.5 that compound, the Antimatter Dimensions way. Each tree charges Insight **plus its own good**, so every good has a sink that never fills. Insight is the binding cost, and each node's effect stays below its cost growth, so no tree pays for itself.
+
+| Tree | Charges | Multiplies |
+| --- | --- | --- |
+| Terram | Insight + Stone | Quarries, dikes, terraces, Gate porters |
+| Aquam | Insight + Salt or Eels | Salt Pans, Eel Weirs, the tide windows, polders |
+| Herbam | Insight + Bread | Farms, salt meadows, Scissy, Parchmenters |
+| Vim | Insight + Vis | Experiments, Devices, Vis sites, the Knight |
+| Mentem | Insight + Vellum | Notice decay, alms, letters, the hidden hour |
+
+The flat research list stays as the early game's first steps into the trees. `[PLAYTEST: tune so Insight/s grows about ×3.5 per bell, which keeps each bell 5–10 minutes apart at a good pace.]`
+
+### Short loops in the endgame
+
+| Loop | Period | The decision |
+| --- | --- | --- |
+| Experiments | 40–180 s | Recipe, extra Vis, push or steady |
+| Spring tides and Scissy | About 90 s | Put hands in the drowned forest while the tide is out |
+| The hidden hour | 60 s every 5 min | Everything loud and every experiment goes into the dark |
+| Alms, pilgrims and letters | Whenever a stock fills | Which good becomes Notice, Silver or goodwill |
+| Dikes and their storms | Minutes | Build, mend, or bank Bog-oak |
+| Tree nodes | Every 1–2 min | What to multiply next |
+
+### Routes: move X from Y to Z
+
+The earliest prototype let the player send goods from one building to another, and the choice ("send Vis from the Regio Spring to Sabine's Sanctum") was fun. The drawn lines weren't (`icebox.md`). Routes keep the choice and drop the drawing.
+
+- **Input:** each source's card has a **Send to** picker: the Hall, the Gate, a named Sanctum, the hostel, the poor of Dol, or the market.
+- **System:** a route is `{good, from, to, share}`. The Gate's two toggles become routes. With many uses per good, routes are how the player spends a flow without clicking every second.
+- **Data:** routes are a list (`data-model.md`). A good with no route goes to the Hall.
+
+### The covenant graph
+
+At the endgame the covenant is a machine, and the player should be able to see it.
+
+- **Input:** a **Graph** view on the Covenant tab, and a snapshot of it on the end screen.
+- **System:** read-only. Columns left to right: sources, carriers, the Hall, sinks. Edges are the flows `rates()` computes, and later the routes, each labelled with its rate. Width follows the rate, and a bottleneck edge is red.
+- **Why:** Factorio players screenshot their factories. On the end screen the graph is the Chronicle's picture of what the covenant became.
+
+### Suggested order to build
+
+1. ~~Bread with uses~~: built. Salt sold or kept, Eels and fish days, alms and the Pilgrims' Hostel are in `design/economy.md` and `design/notice.md`.
+2. **Dikes and terraces**, then remove *Pull down*.
+3. **The trees**, replacing the late flat research, so numbers can climb.
+4. **Bells 1–3** replacing the 3 Rites, with the win at bell 3 while the rest is built. Then bells 4–7.
+5. **Routes**, and the covenant graph.
 
 ### Great works that bend the Hermetic limits
+
+
 
 Hermetic magic has limits no magus can break: nothing against the Divine, nothing permanent without vis (the Limit of Energy), nothing that changes a thing's essential nature, and ritual effects that follow the moon's cycle. The game pays lip service to them in flavour text and research names, and explains existing rules through them (Devices and the Aegis cost vis because of the Limit of Energy).
 
 The endgame and the great works then **bend** them, which is what makes them great:
 - The eels' wyrm is an eel that has changed its essential nature. The magi don't know how, and that should frighten them.
-- *The Tide Stands Still* holds back a tide the moon commands.
+- *No More Sea* ends a tide the moon commands.
 - Later great works (the Salt-Wife Breakthrough, Bonisagus's missing Folio) can each challenge one limit, and an ending can hint that a limit is not as fixed as the Order teaches.
 
 The magic guidelines (what each Technique and Form pair can do, and at what level) appear the same way: as the vocabulary of flavour text ("a Rego Aquam ward", "a Perdo Aquam ritual") long before they're ever mechanics.
-
-### A late tier of research and Gate works
-
-Research ends at 2,500 Insight while the Rites need 75,000, so the late game has too little to buy. Add a tier between 5,000 and 50,000 Insight, and purchases on the Gate itself. The late game never waits (`vision.md`).
 
 ## The magi and their labs
 
