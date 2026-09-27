@@ -50,7 +50,15 @@ export const Ico = (p: { icon: Icon; class?: string; label?: string }) => (
   />
 );
 
-export function Stepper(p: { label: string; value: number; max?: number; onMinus: () => void; onPlus: () => void }) {
+/** `canAdd` false disables + (for hands: nobody idle). */
+export function Stepper(p: {
+  label: string;
+  value: number;
+  max?: number;
+  canAdd?: boolean;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
   return (
     <div class="my-1.5 flex items-center gap-2">
       <span class="flex-1">{p.label}</span>
@@ -63,7 +71,7 @@ export function Stepper(p: { label: string; value: number; max?: number; onMinus
       </b>
       <Button
         aria-label={`More ${p.label}`}
-        disabled={p.max !== undefined && p.value >= p.max}
+        disabled={p.canAdd === false || (p.max !== undefined && p.value >= p.max)}
         onClick={p.onPlus}
         class="w-11"
       >
@@ -89,3 +97,12 @@ export const Screen = (p: ParentProps) => (
 );
 
 export const Stack = (p: ParentProps) => <div class="flex w-full max-w-sm flex-col gap-2">{p.children}</div>;
+
+/** Odds as one bar: success, botch and discovery side by side. */
+export const Odds = (p: { botch: number; discovery: number }) => (
+  <div class="my-1 flex h-1.5 overflow-hidden rounded-sm" aria-hidden="true">
+    <div class="bg-bad" style={{ width: `${p.botch * 100}%` }} />
+    <div class="flex-1 bg-line" />
+    <div class="bg-gold" style={{ width: `${p.discovery * 100}%` }} />
+  </div>
+);

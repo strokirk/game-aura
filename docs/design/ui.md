@@ -20,6 +20,8 @@ Mobile first: one column, a bottom tab bar, and thumb-sized targets. Desktop use
 - **Game terms are highlighted in all prose**, Old World style: event cards, choices, blurbs, goals and the Chronicle. Each term shows its icon and a dotted underline; tapping it explains it. Hermetic Arts ("Rego Aquam") are explained as a Technique and a Form. The terms and their explanations are data (`src/data/glossary.ts`).
 - **Sudden changes float**: an experiment's Insight, an event's cost or a botch's Notice rises from the resource as "+150" or "−20", green when it helps and red when it hurts. Steady income doesn't float.
 - **Numbers use tabular figures**, so ticking values don't shift the layout.
+- **Idle hands lead the header**: "3 idle · Hands 26/26", orange while any hand is idle, because hands are the scarcest resource. Hand steppers disable + when nobody is idle, and − at zero.
+- **Every number says what it does where the player decides**: a magus card shows what their Lab Total gives right now (Insight a second while reading, Insight per Study the Vis), and the Study button shows the gain. An experiment shows its odds as one bar (red botch, gold discovery) with the consequences in words.
 
 The screen stack lives in the UI: a top-level state (Title, Options, Game, End) plus an overlay stack. The core knows nothing about screens; it exposes `outcome: null | {kind: 'win' | 'loss', cause}` and the queue of pending events.
 

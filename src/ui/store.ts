@@ -83,7 +83,7 @@ export function say(text: string) {
 
 export interface Pop {
   id: number;
-  key: GoodId | 'notice';
+  key: GoodId | 'notice' | 'hands';
   n: number;
 }
 export const [pops, setPops] = createSignal<Pop[]>([]);
@@ -104,6 +104,7 @@ function popChanges(prev: State, next: State) {
   const drift = ((r.noticeGen - 0.1 * prev.notice) / 60) * dt;
   const jump = next.notice - prev.notice - drift;
   if (Math.abs(jump) >= 1) pop('notice', jump);
+  if (next.hands !== prev.hands) pop('hands', next.hands - prev.hands);
 }
 
 export const hasSave = () => readJson<Save>(SAVE_KEY) !== null;

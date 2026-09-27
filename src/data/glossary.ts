@@ -1,5 +1,6 @@
 // Game terms the interface highlights wherever they appear in text, Old World style.
 // `forms` are the exact spellings matched as whole words; the first is the display name.
+import { BASELINE_INSIGHT, EXPERIMENT, RECIPES } from './index.ts';
 
 export interface Term {
   forms: readonly string[];
@@ -38,7 +39,18 @@ export const GLOSSARY = {
     forms: ['Sanctum', 'Sanctums'],
     text: 'A magus’s laboratory, and the one room of the tower nobody else enters.',
   },
-  labTotal: { forms: ['Lab Total'], text: 'A magus’s skill in the laboratory. It raises everything they learn.' },
+  labTotal: {
+    forms: ['Lab Total'],
+    text: `A magus’s skill in the laboratory. Each point gives ${BASELINE_INSIGHT} Insight a second while the magus reads in their Sanctum, and ${RECIPES.study_vis.insightPerLT} more Insight from every Study the Vis. Raise it with Study, at a price that climbs by a third each time.`,
+  },
+  botch: {
+    forms: ['botch', 'botches', 'botched', 'Botch'],
+    text: `An experiment gone wrong. Its costs are lost, nothing comes of it, and Dol sees the smoke: +${EXPERIMENT.botchNotice} Notice. Each extra Vis adds ${EXPERIMENT.extraBotch * 100} points to the chance and pushing adds ${EXPERIMENT.pushBotch * 100}; Lab Notebooks halve it.`,
+  },
+  discovery: {
+    forms: ['discovery', 'discoveries', 'Discovery'],
+    text: 'An experiment that goes better than anyone hoped: double the result. Twice the Insight, two Lab Texts, or a Device twice as strong.',
+  },
   magi: {
     forms: ['magi', 'magus', 'Magi'],
     text: 'Wizards of the Order of Hermes. They have the Gift, which unsettles ordinary people.',

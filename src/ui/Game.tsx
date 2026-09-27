@@ -14,6 +14,7 @@ import {
   magusName,
   type Rates,
   rates,
+  readingRate,
   recipeOpen,
   type State,
   scenarioOf,
@@ -40,7 +41,7 @@ import {
 } from '../data/index.ts';
 import { cost, eta, mmss, num, rate } from './format.ts';
 import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
-import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
+import { Bar, Button, Card, Dim, Ico, Label, Odds, Stepper } from './kit.tsx';
 import { Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
 import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
@@ -164,6 +165,15 @@ function Header(p: { s: State; r: Rates }) {
         </Show>
       </div>
       <div class="flex flex-wrap gap-x-4 gap-y-1">
+        <div class="relative">
+          <Pops k="hands" />
+          <Ico icon={I.hands} class="mr-1 text-gold" />
+          <b class={idleHands(p.s) > 0 ? 'text-warn' : ''}>{idleHands(p.s)}</b>
+          <Dim> idle</Dim>
+          <div class="text-sm">
+            Hands {p.s.hands}/{housing(p.s)}
+          </div>
+        </div>
         <For each={GOODS.filter(shown)}>
           {(g) => (
             <div class="relative">
@@ -234,6 +244,7 @@ function Covenant(p: { s: State; r: Rates }) {
                 <Stepper
                   label="Porters"
                   value={p.s.porters[z] ?? 0}
+                  canAdd={idleHands(p.s) > 0}
                   onMinus={() => act({ type: 'porters', zone: z, delta: -1 })}
                   onPlus={() => act({ type: 'porters', zone: z, delta: 1 })}
                 />
@@ -290,6 +301,7 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           label={p.id === 'sanctum' ? 'Assistants' : 'Workers'}
           value={p.s.buildings[p.id]?.workers ?? 0}
           max={workerSlots(p.s, p.id)}
+          canAdd={idleHands(p.s) > 0}
           onMinus={() => act({ type: 'workers', building: p.id, delta: -1 })}
           onPlus={() => act({ type: 'workers', building: p.id, delta: 1 })}
         />
@@ -333,8 +345,14 @@ function Magus(p: { s: State; m: MagusState }) {
         <Label>
           <Ico icon={I.magus} /> {magusName(p.m.id)}
         </Label>
-        <span>Lab Total {p.m.lt}</span>
+        <span>
+          <Rich text="Lab Total" /> <b>{p.m.lt}</b>
+        </span>
       </div>
+      <Dim class="mb-1 block text-sm">
+        Reading: +{readingRate(p.s, p.m).toFixed(2)} Insight/s · Study the Vis: {RECIPES.study_vis.insightPerLT} Insight
+        per point
+      </Dim>
       <Show
         when={p.m.exp}
         fallback={
@@ -354,7 +372,7 @@ function Magus(p: { s: State; m: MagusState }) {
             <Bar pct={((p.s.t - e().start) / (e().end - e().start)) * 100} />
             <Dim class="text-sm">
               <Show when={RECIPES[e().recipe].result === 'insight'}>{num(e().insight)} Insight · </Show>
-              {Math.round(e().botch * 100)}% botch
+              <Rich text={`${Math.round(e().botch * 100)}% botch`} />
             </Dim>
           </div>
         )}
@@ -395,8 +413,14 @@ function Magus(p: { s: State; m: MagusState }) {
             onPlus={() => setExtra(extra() + 1)}
           />
           <div class="text-sm">
-            {result()} · {mmss(plan().time)} · {Math.round(plan().botch * 100)}% botch ·{' '}
-            {Math.round(plan().discovery * 100)}% discovery
+            {result()} · {mmss(plan().time)}
+          </div>
+          <Odds botch={plan().botch} discovery={plan().discovery} />
+          <div class="text-sm">
+            <span class="text-bad">{Math.round(plan().botch * 100)}%</span>{' '}
+            <Rich text={`botch: the costs are lost, +${EXPERIMENT.botchNotice} Notice`} /> ·{' '}
+            <span class="text-gold">{Math.round(plan().discovery * 100)}%</span>{' '}
+            <Rich text="discovery: double the result" />
           </div>
           <Button
             primary
@@ -415,7 +439,15 @@ function Magus(p: { s: State; m: MagusState }) {
         disabled={!canAfford(p.s, sc())}
         onClick={() => act({ type: 'study', magus: p.m.id })}
       >
-        Study: Lab Total {p.m.lt} → {p.m.lt + 1} · {cost(sc())}
+        <span class="flex flex-col">
+          <span>
+            Study: Lab Total {p.m.lt} → {p.m.lt + 1} · {cost(sc())}
+          </span>
+          <Dim class="text-sm">
+            +{(readingRate(p.s, p.m) / p.m.lt).toFixed(2)} Insight/s reading, +{RECIPES.study_vis.insightPerLT} per
+            Study the Vis
+          </Dim>
+        </span>
       </Button>
     </Card>
   );

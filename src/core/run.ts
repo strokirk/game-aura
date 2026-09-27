@@ -301,6 +301,12 @@ const assistMult = (s: State) => {
   const n = count(s, 'sanctum');
   return 1 + (n ? (SANCTUM_ASSIST * (s.buildings.sanctum?.workers ?? 0)) / n : 0);
 };
+/** Insight per second a magus makes reading in their Sanctum (none while experimenting). */
+export function readingRate(s: State, m: MagusState, mods = modifiers(s)) {
+  if (!m.sanctum) return 0;
+  const hunger = s.res.bread <= 0 ? 0.5 : 1;
+  return BASELINE_INSIGHT * m.lt * assistMult(s) * hunger * baselineMult(mods);
+}
 export const studyCost = (m: MagusState): Cost => ({ insight: Math.ceil(20 * 1.35 ** (m.lt - 10)) });
 
 export function experimentPlan(s: State, magus: MagusId, recipe: RecipeId, extra: number) {
@@ -370,9 +376,7 @@ export function rates(s: State): Rates {
       if (!toGate) net[g] += out[g];
     }
   }
-  const baseline = baselineMult(mods);
-  for (const m of s.magi)
-    if (m.sanctum && !m.exp) net.insight += BASELINE_INSIGHT * m.lt * assistMult(s) * hunger * baseline;
+  for (const m of s.magi) if (m.sanctum && !m.exp) net.insight += readingRate(s, m, mods);
   if (s.gate?.pour) {
     gate.insight = net.insight;
     net.insight = 0;

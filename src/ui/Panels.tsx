@@ -5,6 +5,7 @@ import {
   canAfford,
   endowCost,
   has,
+  idleHands,
   type Rates,
   researchCost,
   riteStatus,
@@ -150,6 +151,7 @@ export function Gate(p: { s: State; r: Rates }) {
               <Stepper
                 label="Porters carrying Stone out"
                 value={gate().porters}
+                canAdd={idleHands(p.s) > 0}
                 onMinus={() => act({ type: 'gatePorters', delta: -1 })}
                 onPlus={() => act({ type: 'gatePorters', delta: 1 })}
               />
