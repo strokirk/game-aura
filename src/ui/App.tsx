@@ -62,8 +62,10 @@ export function App() {
               <Button
                 primary
                 onClick={() => {
+                  // Read the action before closing: after setConfirming(null), c() is stale.
+                  const yes = c().yes;
                   setConfirming(null);
-                  c().yes();
+                  yes();
                 }}
               >
                 Yes
