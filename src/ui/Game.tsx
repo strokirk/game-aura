@@ -3,8 +3,10 @@ import {
   buildable,
   buildCost,
   canAfford,
+  canDemolish,
   cap,
   count,
+  demolishRefund,
   experimentPlan,
   has,
   housing,
@@ -22,6 +24,7 @@ import {
   timeToAfford,
   workerSlots,
   year,
+  zoneFull,
   zoneUsed,
 } from '../core/index.ts';
 import {
@@ -44,7 +47,7 @@ import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Odds, Stepper } from './kit.tsx';
 import { Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
-import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
+import { act, game, options, type Pop, pops, setConfirming, setPaused, setSpeed, speed } from './store.ts';
 
 type Tab = 'covenant' | 'magi' | 'research' | 'gate' | 'chronicle';
 const TABS: [Tab, string][] = [
@@ -306,15 +309,37 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           onPlus={() => act({ type: 'workers', building: p.id, delta: 1 })}
         />
       </Show>
-      <Show when={!maxed() && buildable(p.s, p.id)}>
-        <Button
-          class="mt-1.5 w-full"
-          disabled={!canAfford(p.s, c())}
-          onClick={() => act({ type: 'build', building: p.id })}
+      <div class="mt-1.5 flex gap-2">
+        <Show
+          when={!maxed() && buildable(p.s, p.id) && (def().site || !zoneFull(p.s, def().zone))}
+          fallback={
+            <Show when={!maxed() && buildable(p.s, p.id)}>
+              <Dim class="flex-1 self-center text-sm">
+                The {ZONES[def().zone].name} is full. Pull something down to make room.
+              </Dim>
+            </Show>
+          }
         >
-          {n() ? 'Build another' : 'Build'} · {cost(c())} <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>
-        </Button>
-      </Show>
+          <Button class="flex-1" disabled={!canAfford(p.s, c())} onClick={() => act({ type: 'build', building: p.id })}>
+            {n() ? 'Build another' : 'Build'} · {cost(c())}{' '}
+            <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>
+          </Button>
+        </Show>
+        <Show when={canDemolish(p.s, p.id)}>
+          <Button
+            class="ml-auto px-3 text-sm"
+            aria-label={`Pull down a ${def().name}`}
+            onClick={() =>
+              setConfirming({
+                text: `Pull down a ${def().name}? You get ${cost(demolishRefund(p.s, p.id))} back, its workers go idle, and the slot is free.`,
+                yes: () => act({ type: 'demolish', building: p.id }),
+              })
+            }
+          >
+            Pull down
+          </Button>
+        </Show>
+      </div>
     </Card>
   );
 }

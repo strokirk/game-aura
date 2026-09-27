@@ -78,4 +78,17 @@ describe('the full run', () => {
     expect(r.zones.bocage.factor).toBe(1);
     expect(s.magi.every((m) => m.sanctum)).toBe(true);
   });
+
+  it('pulling down a building refunds half, frees its slot and idles its workers', () => {
+    const s0 = ok(apply(createRun('gate', 1), { type: 'choose', option: 0 }));
+    expect(zoneUsed(s0, 'hearth')).toBe(ZONES.hearth.slots);
+    expect(apply(s0, { type: 'build', building: 'quarry' })).toEqual({ error: 'The Hearth is full' });
+    const idle = idleHands(s0);
+    const s = ok(apply(s0, { type: 'demolish', building: 'quarry' }));
+    expect(zoneUsed(s, 'hearth')).toBe(ZONES.hearth.slots - 1);
+    expect(s.res.silver).toBeCloseTo(s0.res.silver + Math.floor((40 * 1.15) / 2));
+    expect(idleHands(s)).toBe(idle + 2);
+    expect(apply(s, { type: 'demolish', building: 'sanctum' })).toEqual({ error: 'That cannot be pulled down' });
+    expect(apply(s, { type: 'demolish', building: 'tide_pool' })).toEqual({ error: 'That cannot be pulled down' });
+  });
 });

@@ -12,7 +12,8 @@ The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
 
 - Each building uses 1 slot in its zone. Cottages live in the loud Bocage, so housing more hands costs Notice.
 - Vis Sources use the 3 named Vis sites, not the Marsh's 10 slots.
-- **Why:** slots cap breadth. Once a zone is full, growth comes from research multipliers and from putting more hands to work.
+- **Pull down:** any building except a Sanctum or a Vis site can be pulled down. It refunds half of what the last one cost, its workers go idle, and its slot is free. When a zone is full, its Build buttons give way to "full"; pulling down is how the covenant reshapes itself, and pulling down a Bocage building lowers Notice.
+- **Why:** slots cap breadth. Once a zone is full, growth comes from research multipliers, Devices, putting more hands to work, and trading one building for another. A full Hearth forces the late-game trade: a Library holds Insight, a Quarry makes the Stone the Rites need.
 
 ## Hands
 

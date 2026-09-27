@@ -86,6 +86,7 @@ export interface GateState {
 }
 export type Action =
   | { type: 'build'; building: BuildingId }
+  | { type: 'demolish'; building: BuildingId }
   | { type: 'workers'; building: BuildingId; delta: number }
   | { type: 'porters'; zone: ZoneId; delta: number }
   | { type: 'experiment'; magus: MagusId; recipe: RecipeId; extra: number; target?: BuildingId }
@@ -253,6 +254,18 @@ export const buildable = (s: State, id: BuildingId) =>
   (scenarioOf(s).allowed as readonly string[]).includes(id) || has(s, id);
 export const isBlocked = (s: State, key: string) => (s.blocks[key] ?? 0) > s.t;
 export const recipeOpen = (s: State, r: RecipeId) => r === 'study_vis' || has(s, `recipe:${r}`);
+
+/** Sanctums belong to their magus and the Vis sites are places, not buildings: neither can be pulled down. */
+export const canDemolish = (s: State, id: BuildingId) => count(s, id) > 0 && id !== 'sanctum' && !isSite(id);
+/** Pulling one down refunds half of what the last one cost. */
+export function demolishRefund(s: State, id: BuildingId): Cost {
+  const c: Cost = {};
+  const base = B[id].cost;
+  for (const g of keys(base)) c[g] = Math.floor(((base[g] ?? 0) * COST_GROWTH ** (count(s, id) - 1)) / 2);
+  return c;
+}
+/** A zone with no free slot. */
+export const zoneFull = (s: State, z: ZoneId) => zoneUsed(s, z) >= ZONES[z].slots;
 
 export function buildCost(s: State, id: BuildingId): Cost {
   const c: Cost = {};
@@ -769,6 +782,17 @@ function act(s: State, a: Action): string | undefined {
           log(s, `${magusName(m.id)} moves into a Sanctum.`);
         }
       }
+      return;
+    }
+    case 'demolish': {
+      if (!canDemolish(s, a.building)) return 'That cannot be pulled down';
+      const b = s.buildings[a.building];
+      if (!b) return 'Nothing to pull down';
+      for (const [g, n] of Object.entries(demolishRefund(s, a.building)) as [GoodId, number][]) addRes(s, g, n);
+      b.count--;
+      b.workers = Math.min(b.workers, workerSlots(s, a.building));
+      if (b.count === 0) delete s.buildings[a.building];
+      log(s, `The covenant pulls down a ${B[a.building].name}.`);
       return;
     }
     case 'workers': {
