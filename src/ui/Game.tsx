@@ -3,10 +3,9 @@ import {
   buildable,
   buildCost,
   canAfford,
-  canDemolish,
   cap,
   count,
-  demolishRefund,
+  dikeCost,
   experimentPlan,
   has,
   housing,
@@ -21,16 +20,19 @@ import {
   type State,
   scenarioOf,
   studyCost,
+  terraces,
   timeToAfford,
   workerSlots,
   year,
   zoneFull,
+  zoneSlots,
   zoneUsed,
 } from '../core/index.ts';
 import {
   BUILDINGS,
   type BuildingId,
   DEFS,
+  DIKE,
   EXPERIMENT,
   GOOD_INFO,
   GOODS,
@@ -48,7 +50,7 @@ import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Odds, Stepper } from './kit.tsx';
 import { Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
-import { act, game, options, type Pop, pops, setConfirming, setPaused, setSpeed, speed } from './store.ts';
+import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
 
 type Tab = 'covenant' | 'magi' | 'research' | 'gate' | 'chronicle';
 const TABS: [Tab, string][] = [
@@ -237,9 +239,32 @@ function Covenant(p: { s: State; r: Rates }) {
             <Label>
               {ZONES[z].name}{' '}
               <Dim class="text-xs">
-                · {zoneUsed(p.s, z)}/{ZONES[z].slots} plots · Notice ×{ZONES[z].noticeFactor}
+                · {zoneUsed(p.s, z)}/{zoneSlots(p.s, z)} plots · Notice ×{ZONES[z].noticeFactor}
               </Dim>
             </Label>
+            <Show when={z === 'hearth' && count(p.s, 'quarry') > 0 && Number.isFinite(terraces(p.s).next)}>
+              <Dim class="mb-1.5 block text-sm">
+                <Ico icon={I.terrace} /> The quarry cuts a new terrace, one more Hearth plot, after{' '}
+                {num(terraces(p.s).next)} more Stone quarried
+              </Dim>
+            </Show>
+            <Show when={z === 'polder' && has(p.s, 'dike')}>
+              <Card>
+                <Button
+                  class="w-full flex-col"
+                  disabled={!canAfford(p.s, dikeCost(p.s))}
+                  onClick={() => act({ type: 'dike' })}
+                >
+                  <span>
+                    <Ico icon={I.dike} /> Build a dike · {cost(dikeCost(p.s))}{' '}
+                    <Dim class="text-sm">{eta(timeToAfford(p.s, dikeCost(p.s), p.r))}</Dim>
+                  </span>
+                  <Dim class="text-sm">
+                    +{DIKE.slots} plots of salt grass won from the sea. {p.s.dikes} dikes so far
+                  </Dim>
+                </Button>
+              </Card>
+            </Show>
             <Show when={ZONES[z].carry > 0}>
               <Card warn={p.r.zones[z].factor < 1}>
                 <Stepper
@@ -323,7 +348,12 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           fallback={
             <Show when={!maxed() && buildable(p.s, p.id)}>
               <Dim class="flex-1 self-center text-sm">
-                The {ZONES[def().zone].name} is full. Pull something down to make room.
+                The {ZONES[def().zone].name} is full.{' '}
+                {def().zone === 'hearth'
+                  ? 'Quarrying cuts new terraces.'
+                  : has(p.s, 'dike')
+                    ? 'Dikes win new land from the sea.'
+                    : 'Grow elsewhere for now.'}
               </Dim>
             </Show>
           }
@@ -331,20 +361,6 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           <Button class="flex-1" disabled={!canAfford(p.s, c())} onClick={() => act({ type: 'build', building: p.id })}>
             {n() ? 'Build another' : 'Build'} · {cost(c())}{' '}
             <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>
-          </Button>
-        </Show>
-        <Show when={canDemolish(p.s, p.id)}>
-          <Button
-            class="ml-auto px-3 text-sm"
-            aria-label={`Pull down a ${def().name}`}
-            onClick={() =>
-              setConfirming({
-                text: `Pull down a ${def().name}? You get ${cost(demolishRefund(p.s, p.id))} back, its workers go idle, and the slot is free.`,
-                yes: () => act({ type: 'demolish', building: p.id }),
-              })
-            }
-          >
-            Pull down
           </Button>
         </Show>
       </div>

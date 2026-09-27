@@ -22,9 +22,12 @@ import GiRingingBell from '~icons/game-icons/ringing-bell';
 import GiSaltShaker from '~icons/game-icons/salt-shaker';
 import GiScrollQuill from '~icons/game-icons/scroll-quill';
 import GiScrollUnfurled from '~icons/game-icons/scroll-unfurled';
+import GiSheep from '~icons/game-icons/sheep';
 import GiSpiralBloom from '~icons/game-icons/spiral-bloom';
+import GiStairs from '~icons/game-icons/stairs';
 import GiStoneBlock from '~icons/game-icons/stone-block';
 import GiStoneTower from '~icons/game-icons/stone-tower';
+import GiStoneWall from '~icons/game-icons/stone-wall';
 import GiSun from '~icons/game-icons/sun';
 import GiTombstone from '~icons/game-icons/tombstone';
 import GiTowerFlag from '~icons/game-icons/tower-flag';
@@ -59,6 +62,7 @@ export const BUILDING_ICON: Record<BuildingId, Icon> = {
   farm: GiWheat,
   eel_weir: GiEel,
   hostel: GiPilgrimHat,
+  salt_meadow: GiSheep,
   parchmenter: GiScrollQuill,
   quarry: GiMining,
   sanctum: GiStoneTower,
@@ -81,6 +85,8 @@ export const I = {
   endow: GiChurch,
   bribe: GiCoinsPile,
   alms: GiBread,
+  dike: GiStoneWall,
+  terrace: GiStairs,
   device: GiAnvil,
   labText: GiQuillInk,
   title: GiTowerFlag,

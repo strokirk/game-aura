@@ -16,7 +16,7 @@ For every concept, decide up front whether it can ever be **0**, **1** or **N**.
 | Magus skill | 1 (Lab Total) | Map skill → value with 1 entry | Could become several Arts |
 | Magi per Sanctum | 1 | List with a capacity of 1 | Shared labs are plausible |
 | Hands | A count per job | Counts, with named people as a separate list | Named hands may arrive through events |
-| Zones | 3 | List, with carry distance as data, not a formula tied to 3 | New zones or a map later |
+| Zones | 4 | List, with carry distance as data, not a formula tied to 3 | New zones or a map later |
 | Vis sites | 3 | List of named, addressable sites | Events already target them individually |
 | Zones a building can go in | 1 each | 1 zone per building definition | A building in 2 zones needs per-zone counts; add a list when one needs it |
 | Research, and its effects | About 15, 1–3 effects each | Registry; each item has a list of effects | New research is pure data |

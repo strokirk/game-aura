@@ -27,6 +27,7 @@ Nothing appears before it matters. Each unlock is an entry in data: a condition 
 | 10 hands | Parchmenters, Vellum, Libraries, the Regio Spring, *Write a Lab Text*; Sabine and Hervé arrive |
 | Notice above 1 | The Notice gauge (around minute 4–6) |
 | Year 1226 | Endow and Bribe |
+| The Bocage full | The Polder zone, dikes and Salt Meadows; a "Land from the sea" card |
 | *Aegis of the Hearth* | The Drowned Gate |
 
 **Why:** staged unlocks keep the first minutes small and give the middle a steady drip of new things, the way Kittens Game and A Dark Room reveal themselves.

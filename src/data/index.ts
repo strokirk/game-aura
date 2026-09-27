@@ -26,6 +26,8 @@ export const ZONES = {
   hearth: { name: 'Hearth', noticeFactor: 0.5, carry: 0, slots: 8 },
   bocage: { name: 'Bocage', noticeFactor: 1.5, carry: 1, slots: 12 },
   marsh: { name: 'Marsh', noticeFactor: 0.5, carry: 0.5, slots: 10 },
+  /** Land won from the sea: every dike adds slots (DIKE). */
+  polder: { name: 'Polder', noticeFactor: 1, carry: 1, slots: 0 },
 } as const satisfies Record<string, ZoneDef>;
 export type ZoneId = keyof typeof ZONES;
 
@@ -126,13 +128,21 @@ export const BUILDINGS = {
     caps: { insight: 500 },
     blurb: 'Shelves, a lectern and a chain for every book. Room for more Insight.',
   },
+  salt_meadow: {
+    name: 'Salt Meadow',
+    zone: 'polder',
+    cost: { silver: 30 },
+    slots: 2,
+    perWorker: { bread: 0.1, vellum: 0.05 },
+    blurb: 'Sheep on the salt grass inside the dike. Mutton for the table, and skins for Vellum.',
+  },
   hostel: {
     name: "Pilgrims' Hostel",
     zone: 'bocage',
     cost: { silver: 40, stone: 20 },
     slots: 1,
-    uses: { bread: 0.2 },
-    perWorker: { silver: 0.3 },
+    uses: { bread: 0.5 },
+    perWorker: { silver: 0.8 },
     blurb: 'Bread and a roof for the miquelots on their way across the bay to Mont-Saint-Michel. They pay in Silver.',
   },
   cottage: {
@@ -150,6 +160,10 @@ export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
 export const HAND_FOOD = 0.05; // Bread per hand per second
+/** A dike wins land from the sea: Polder slots, paid in Stone and in Bread for the diggers. */
+export const DIKE = { cost: { stone: 100, bread: 100 } as Cost, growth: 1.5, slots: 2 };
+/** Quarrying Mont-Dol cuts terraces: each opens a Hearth slot, after ever more Stone quarried. */
+export const TERRACE = { first: 2000, growth: 1.6, max: 10 };
 /** Fish days: Eels can stand in for this share of what the hands eat, 1 Eel for 1 Bread. */
 export const FISH_SHARE = 1 / 3;
 /** Every this many Salt in stock raises the Bread and Eels caps by 1. */
@@ -403,6 +417,7 @@ export type Condition =
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
   | { kind: 'rites'; atLeast: number }
+  | { kind: 'zoneFull'; zone: ZoneId }
   /** An ink variable the engine reads back (`stories.md`). */
   | { kind: 'story'; v: StoryVar; atLeast?: number; atMost?: number }
   /** The year is at least `years` after the year held in an ink variable. */
@@ -561,6 +576,14 @@ export const SCENARIOS = {
       },
       { when: { kind: 'notice', atLeast: 1 }, reveal: ['notice'] },
       {
+        when: { kind: 'zoneFull', zone: 'bocage' },
+        reveal: ['dike', 'salt_meadow'],
+        card: {
+          title: 'Land from the sea',
+          text: 'The Bocage is hedged to the last furrow. But the monks of Dol have been diking the marsh for a hundred years, and every dike wins a field from the sea. Stone for the bank, Bread for the diggers. The new land is salt grass at first: good for sheep.',
+        },
+      },
+      {
         when: { kind: 'time', atLeast: 6 * YEAR },
         reveal: ['endow'],
         card: {
@@ -635,6 +658,8 @@ export const SCENARIOS = {
       'recipe:device',
       'recipe:lab_text',
       'hostel',
+      'dike',
+      'salt_meadow',
       'magus:sabine',
       'magus:herve',
     ],
@@ -712,6 +737,8 @@ export const SCENARIOS = {
       'recipe:device',
       'recipe:lab_text',
       'hostel',
+      'dike',
+      'salt_meadow',
       'magus:sabine',
       'magus:herve',
       'gate',
