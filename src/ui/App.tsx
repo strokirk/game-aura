@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from 'solid-js';
 import { magusName, year } from '../core/index.ts';
-import { SCENARIOS, type ScenarioId } from '../data/index.ts';
+import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
 import { I } from './icons.tsx';
@@ -100,11 +100,20 @@ function Title() {
             Continue
           </Button>
         </Show>
-        <For each={scenarios}>
+        <For each={scenarios.filter((id) => !(SCENARIOS[id] as ScenarioDef).stage)}>
           {(id) => (
             <Button class="flex-col" onClick={() => newRun(id)}>
               New run: {SCENARIOS[id].name}
               <Dim class="text-sm">{SCENARIOS[id].goal}</Dim>
+            </Button>
+          )}
+        </For>
+        <Label>Jump to a stage</Label>
+        <For each={scenarios.filter((id) => (SCENARIOS[id] as ScenarioDef).stage)}>
+          {(id) => (
+            <Button class="flex-col" onClick={() => newRun(id)}>
+              {SCENARIOS[id].name}
+              <Dim class="text-sm">A test bed: the covenant already built up</Dim>
             </Button>
           )}
         </For>

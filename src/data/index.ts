@@ -316,6 +316,16 @@ export const NOTICE = {
   bribe: { base: 100, growth: 2, notice: 20 },
 };
 
+export interface GateStart {
+  stone: number;
+  raised: boolean;
+  insight: number;
+  pour: boolean;
+  visToGate: boolean;
+  porters: number;
+  rites: number;
+}
+
 /** The Drowned Gate (`gate.md`). */
 export const GATE = {
   found: { silver: 200, stone: 100 } as Cost,
@@ -387,8 +397,18 @@ export interface ScenarioDef {
     hands: number;
     buildings: Partial<Record<BuildingId, { count: number; workers: number }>>;
     porters: Partial<Record<ZoneId, number>>;
-    magi: readonly { id: MagusId; sanctum: boolean }[];
+    magi: readonly { id: MagusId; sanctum: boolean; lt?: number }[];
+    /** Stage scenarios start partway through a run, with the covenant already built up. */
+    t?: number;
+    notice?: number;
+    endowments?: number;
+    research?: Partial<Record<ResearchId, number>>;
+    labTexts?: number;
+    devices?: Partial<Record<BuildingId, number>>;
+    gate?: GateStart;
   };
+  /** A stage scenario: a test bed for one stage of the full run, listed apart on the title screen. */
+  stage?: boolean;
   allowed: readonly BuildingId[];
   /** Revealed from the start: recipes and features (see UnlockDef). */
   unlocked: readonly string[];
@@ -512,6 +532,145 @@ export const SCENARIOS = {
       { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
       { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
     ],
+  },
+  middle: {
+    name: 'Stage: the Middle Years',
+    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    stage: true,
+    start: {
+      t: 16 * YEAR,
+      res: { silver: 600, stone: 150, bread: 150, vellum: 30, vis: 20, insight: 800 },
+      hands: 26,
+      buildings: {
+        sanctum: { count: 3, workers: 2 },
+        library: { count: 1, workers: 0 },
+        storehouse: { count: 1, workers: 0 },
+        quarry: { count: 2, workers: 3 },
+        salt_pan: { count: 6, workers: 5 },
+        tide_pool: { count: 1, workers: 2 },
+        knights_barrow: { count: 1, workers: 2 },
+        regio_spring: { count: 1, workers: 1 },
+        farm: { count: 3, workers: 4 },
+        parchmenter: { count: 2, workers: 2 },
+        cottage: { count: 6, workers: 0 },
+      },
+      porters: { marsh: 3, bocage: 2 },
+      magi: [
+        { id: 'aldric', sanctum: true, lt: 14 },
+        { id: 'sabine', sanctum: true, lt: 12 },
+        { id: 'herve', sanctum: true, lt: 12 },
+      ],
+      notice: 45,
+      endowments: 2,
+      research: { salt_rakes: 1, plough: 1, mule_trains: 1, accounts: 1, strongbox: 1, reed_pen: 1, notebooks: 1 },
+      labTexts: 2,
+    },
+    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
+    unlocked: [
+      'research',
+      'notice',
+      'endow',
+      'farm',
+      'cottage',
+      'quarry',
+      'storehouse',
+      'knights_barrow',
+      'parchmenter',
+      'library',
+      'regio_spring',
+      'recipe:device',
+      'recipe:lab_text',
+      'magus:sabine',
+      'magus:herve',
+    ],
+    win: [{ when: { kind: 'rites', atLeast: 3 }, cause: 'The tide stands still, and the Drowned Gate opens.' }],
+    loss: [
+      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
+      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
+      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+    ],
+    intro: {
+      title: 'Spring 1236',
+      text: 'Sixteen years on. Three magi, twenty-six hands, six salt-works and three sources of vis. Dol has noticed: Notice is climbing toward the lord’s tax and settling well above it. The Aegis of the Hearth is still to be learned, and the Drowned Gate still to be found.',
+      options: [{ label: 'Begin', effects: [] }],
+    },
+  },
+  gate: {
+    name: 'Stage: the Gate',
+    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    stage: true,
+    start: {
+      t: 30 * YEAR,
+      res: { silver: 1200, stone: 150, bread: 150, vellum: 40, vis: 30, insight: 1500 },
+      hands: 30,
+      buildings: {
+        sanctum: { count: 3, workers: 2 },
+        library: { count: 3, workers: 0 },
+        quarry: { count: 2, workers: 4 },
+        salt_pan: { count: 8, workers: 5 },
+        tide_pool: { count: 1, workers: 2 },
+        knights_barrow: { count: 1, workers: 2 },
+        regio_spring: { count: 1, workers: 2 },
+        farm: { count: 3, workers: 5 },
+        parchmenter: { count: 1, workers: 1 },
+        cottage: { count: 8, workers: 0 },
+      },
+      porters: { marsh: 1, bocage: 2 },
+      magi: [
+        { id: 'aldric', sanctum: true, lt: 18 },
+        { id: 'sabine', sanctum: true, lt: 17 },
+        { id: 'herve', sanctum: true, lt: 16 },
+      ],
+      notice: 60,
+      endowments: 1,
+      research: {
+        salt_rakes: 1,
+        plough: 1,
+        mule_trains: 1,
+        accounts: 1,
+        strongbox: 1,
+        reed_pen: 1,
+        notebooks: 1,
+        apprentice_rooms: 1,
+        lead_chests: 1,
+        stones_carry: 1,
+        aegis: 1,
+        marsh_mist: 1,
+      },
+      labTexts: 6,
+      devices: { quarry: 8 },
+      gate: { stone: 1500, raised: true, insight: 12000, pour: true, visToGate: false, porters: 3, rites: 0 },
+    },
+    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
+    unlocked: [
+      'research',
+      'notice',
+      'endow',
+      'farm',
+      'cottage',
+      'quarry',
+      'storehouse',
+      'knights_barrow',
+      'parchmenter',
+      'library',
+      'regio_spring',
+      'recipe:device',
+      'recipe:lab_text',
+      'magus:sabine',
+      'magus:herve',
+      'gate',
+    ],
+    win: [{ when: { kind: 'rites', atLeast: 3 }, cause: 'The tide stands still, and the Drowned Gate opens.' }],
+    loss: [
+      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
+      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
+      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+    ],
+    intro: {
+      title: 'Spring 1250',
+      text: 'Ten years left. The Gate stands in the marsh with twelve thousand pages of Insight poured into it, and the Order watches every cartload of Stone that goes out to it. The first Rite needs Stone and Vis flowing at once, every magus ready, and more Insight than the Gate holds yet.',
+      options: [{ label: 'Begin', effects: [] }],
+    },
   },
 } as const satisfies Record<string, ScenarioDef>;
 export type ScenarioId = keyof typeof SCENARIOS;

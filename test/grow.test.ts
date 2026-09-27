@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { simulate } from '../sim/run.ts';
 import { STRATEGIES } from '../sim/strategies.ts';
-import { apply, createRun, rates, replay, type State, stepTo, toSave } from '../src/core/index.ts';
+import {
+  apply,
+  createRun,
+  housing,
+  idleHands,
+  rates,
+  replay,
+  type State,
+  stepTo,
+  toSave,
+  zoneUsed,
+} from '../src/core/index.ts';
+import { ZONES } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -54,4 +66,16 @@ describe('the full run', () => {
     const { acc: _b, ...b } = replay(toSave(live));
     expect(b).toEqual(a);
   }, 60_000);
+
+  it.each(['middle', 'gate'] as const)('the %s stage starts with every line running', (id) => {
+    const s = createRun(id, 1);
+    const r = rates(s);
+    expect(idleHands(s)).toBeGreaterThanOrEqual(0);
+    expect(s.hands).toBeLessThanOrEqual(housing(s));
+    for (const z of ['hearth', 'bocage', 'marsh'] as const) expect(zoneUsed(s, z)).toBeLessThanOrEqual(ZONES[z].slots);
+    expect(r.net.bread).toBeGreaterThan(0);
+    expect(r.zones.marsh.factor).toBe(1);
+    expect(r.zones.bocage.factor).toBe(1);
+    expect(s.magi.every((m) => m.sanctum)).toBe(true);
+  });
 });
