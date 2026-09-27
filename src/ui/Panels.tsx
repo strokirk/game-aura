@@ -1,6 +1,7 @@
 // The full run's panels: research, the Notice levers and the Drowned Gate.
 import { For, Show } from 'solid-js';
 import {
+  almsCost,
   bribeCost,
   canAfford,
   endowCost,
@@ -80,13 +81,21 @@ export function NoticeCard(p: { s: State; r: Rates }) {
         </Dim>
       </div>
       <Show when={has(p.s, 'endow')}>
-        <div class="mt-1.5 grid grid-cols-2 gap-2">
+        <div class="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Button disabled={!canAfford(p.s, endowCost(p.s))} onClick={() => act({ type: 'endow' })} class="flex-col">
             <span>
               <Ico icon={I.endow} /> Endow the Parish
             </span>
             <Dim class="text-sm">
               {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good
+            </Dim>
+          </Button>
+          <Button disabled={!canAfford(p.s, almsCost(p.s))} onClick={() => act({ type: 'alms' })} class="flex-col">
+            <span>
+              <Ico icon={I.alms} /> Give Alms
+            </span>
+            <Dim class="text-sm">
+              {cost(almsCost(p.s))} · settles {NOTICE.alms.gen * 10} lower, for good
             </Dim>
           </Button>
           <Button disabled={!canAfford(p.s, bribeCost(p.s))} onClick={() => act({ type: 'bribe' })} class="flex-col">

@@ -8,7 +8,7 @@ Mobile first: one column, a bottom tab bar, and thumb-sized targets. Desktop use
 | --- | --- | --- |
 | Title | Top level | Title, tagline, hero image (manuscript art), Continue (if a run is saved), New run (scenario choice; the trial is labelled "Short trial"), Options |
 | Options | Top level, and an overlay from Pause | Sound, number format, text size, reduced motion, dev menu toggle |
-| Game | Top level | Header: year and years left, year bar, speed (pause / 1× / 2×), menu. Resource strip: amount, cap and rate for each good. Compact Notice gauge (`notice.md`). **Tabs:** Covenant (Notice, zones, buildings, hands, porters), Magi (cards with a manuscript portrait, experiments, Study), Research and Gate (each appears when revealed), Chronicle (log of events and ink beats) |
+| Game | Top level | Header: year and years left, year bar, speed (pause / 1× / 2×), menu. Resource strip: a grid of compact chips, one per good in play (stock or flow), each an icon, the amount and its rate; the name and cap are in the tooltip, and the amount turns red when full. Compact Notice gauge (`notice.md`). **Tabs:** Covenant (Notice, zones, buildings, hands, porters), Magi (cards with a manuscript portrait, experiments, Study), Research and Gate (each appears when revealed), Chronicle (log of events and ink beats) |
 | Event card | Overlay, pauses | A manuscript picture when the card has one, then ink text and choices, or a system card (Breakthrough, check-in, audit) |
 | Confirm | Overlay | "Are you sure?" for destructive actions |
 | Pause | Overlay, pauses | Resume, Options, Restart, Quit to title |

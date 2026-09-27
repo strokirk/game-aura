@@ -11,6 +11,7 @@ import {
   type Effect,
   type EventDef,
   EXPERIMENT,
+  FISH_SHARE,
   GATE,
   GOOD_INFO,
   GOODS,
@@ -22,12 +23,14 @@ import {
   type Modifier,
   NOTICE,
   NOTICE_K,
+  PRESERVE,
   RECIPES,
   RESEARCH,
   RESEARCH_DEFS,
   RESEARCH_SHOWN,
   type RecipeId,
   type ResearchId,
+  SALT_PRICE,
   SANCTUM_ASSIST,
   SCENARIOS,
   type ScenarioDef,
@@ -94,6 +97,9 @@ export type Action =
   | { type: 'research'; id: ResearchId }
   | { type: 'endow' }
   | { type: 'bribe' }
+  | { type: 'alms' }
+  /** Keep Salt in stock to preserve food, selling only what overflows, or sell it all. */
+  | { type: 'keepSalt' }
   | { type: 'gate'; op: 'found' | 'pour' | 'vis' | 'rite' }
   | { type: 'gatePorters'; delta: number }
   | { type: 'choose'; option: number };
@@ -122,6 +128,8 @@ export interface State {
   noticeFired: string[];
   endowments: number;
   bribes: number;
+  alms: number;
+  keepSalt: boolean;
   research: Partial<Record<ResearchId, number>>;
   labTexts: number;
   devices: Partial<Record<BuildingId, number>>;
@@ -176,6 +184,8 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     noticeFired: [],
     endowments: sc.start.endowments ?? 0,
     bribes: 0,
+    alms: 0,
+    keepSalt: false,
     research: { ...sc.start.research },
     labTexts: sc.start.labTexts ?? 0,
     devices: { ...sc.start.devices },
@@ -183,7 +193,7 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     events: sc.intro ? [structuredClone(sc.intro) as EventDef] : [],
     ink: null,
     fired: [],
-    story: { eel_level: 0, eels_state: 0 },
+    story: { eel_level: 0, eels_state: 0, eels_end_year: 0 },
     mods: [],
     blocks: {},
     unlocked: [...sc.unlocked],
@@ -229,6 +239,7 @@ export function cap(s: State, g: GoodId, mods = modifiers(s)) {
   for (const id of keys(s.buildings)) c += count(s, id) * (B[id].caps?.[g] ?? 0);
   for (const x of mods) if (x.kind === 'cap' && x.good === g && x.mult) c *= x.mult;
   for (const x of mods) if (x.kind === 'cap' && x.good === g && x.add) c += x.add;
+  if (g === 'bread' || g === 'eels') c += Math.floor(s.res.salt / PRESERVE);
   return c;
 }
 export const count = (s: State, id: BuildingId) => s.buildings[id]?.count ?? 0;
@@ -309,6 +320,7 @@ export function visibleResearch(s: State): ResearchId[] {
 }
 export const endowCost = (s: State): Cost => ({ silver: NOTICE.endow.base * NOTICE.endow.growth ** s.endowments });
 export const bribeCost = (s: State): Cost => ({ silver: NOTICE.bribe.base * NOTICE.bribe.growth ** s.bribes });
+export const almsCost = (s: State): Cost => ({ bread: NOTICE.alms.base * NOTICE.alms.growth ** s.alms });
 
 const assistMult = (s: State) => {
   const n = count(s, 'sanctum');
@@ -365,7 +377,10 @@ export function rates(s: State): Rates {
     const def = B[id];
     noticeSum += count(s, id) * zoneNotice(s, def.zone, mods);
     const pw: Cost = def.perWorker ?? {};
-    const w = Math.min(s.buildings[id]?.workers ?? 0, workerSlots(s, id));
+    const uses: Cost = def.uses ?? {};
+    const fed = keys(uses).every((g) => s.res[g] > 0);
+    const w = fed ? Math.min(s.buildings[id]?.workers ?? 0, workerSlots(s, id)) : 0;
+    for (const g of keys(uses)) net[g] -= w * (uses[g] ?? 0);
     const out: Cost = {};
     for (const g of keys(pw)) {
       out[g] = w * (pw[g] ?? 0) * hunger * outputMult(s, mods, id, g);
@@ -394,9 +409,18 @@ export function rates(s: State): Rates {
     gate.insight = net.insight;
     net.insight = 0;
   }
-  net.bread -= s.hands * HAND_FOOD;
+  const food = s.hands * HAND_FOOD;
+  const fish = Math.min(food * FISH_SHARE, s.res.eels > 0 ? food : Math.max(0, net.eels));
+  net.eels -= fish;
+  net.bread -= food - fish;
+  const reserve = s.keepSalt ? cap(s, 'salt', mods) : 0;
+  if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
+    net.silver += net.salt * SALT_PRICE;
+    net.salt = 0;
+  }
   if (s.gate) gate.stone = s.gate.porters * ZONES.marsh.carry * carryMult(mods, 'marsh');
-  const gen = Math.max(0, (NOTICE_K * noticeSum - NOTICE.endow.gen * s.endowments) * noticeMult(mods));
+  const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
+  const gen = Math.max(0, (NOTICE_K * noticeSum - levers) * noticeMult(mods));
   return { net, byBuilding, zones, hungry, noticeGen: gen, gate };
 }
 
@@ -477,7 +501,7 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
   }
 }
 
-function met(s: State, c: Condition) {
+function met(s: State, c: Condition): boolean {
   switch (c.kind) {
     case 'res':
       return s.res[c.good] >= c.atLeast;
@@ -497,6 +521,12 @@ function met(s: State, c: Condition) {
       return keys(s.research).length >= c.atLeast;
     case 'rites':
       return (s.gate?.rites ?? 0) >= c.atLeast;
+    case 'story':
+      return s.story[c.v] >= (c.atLeast ?? -Infinity) && s.story[c.v] <= (c.atMost ?? Infinity);
+    case 'yearsAfter':
+      return year(s) >= s.story[c.v] + c.years;
+    case 'all':
+      return c.of.every((x) => met(s, x));
   }
 }
 function checkOutcome(s: State) {
@@ -741,7 +771,15 @@ function applyEffects(s: State, effects: readonly Effect[]) {
       s.mods.push({ id: e.id, good: e.good, mult: e.mult, until: e.secs ? s.t + e.secs : null });
     else if (e.kind === 'block') s.blocks[e.what] = Math.max(s.blocks[e.what] ?? 0, s.t + e.secs);
     else if (e.kind === 'unlock') reveal(s, e.id);
-    else if (e.kind === 'endStrike') {
+    else if (e.kind === 'destroy') {
+      const b = s.buildings[e.building];
+      // A drained Vis site stays gone.
+      if (isSite(e.building)) s.blocks[`build_${e.building}`] = Number.MAX_SAFE_INTEGER;
+      if (!b) continue;
+      b.count = Math.max(0, b.count - e.n);
+      b.workers = Math.min(b.workers, workerSlots(s, e.building));
+      if (b.count === 0) delete s.buildings[e.building];
+    } else if (e.kind === 'endStrike') {
       for (const k of Object.keys(s.blocks)) if (k.startsWith('strike:')) delete s.blocks[k];
     } else {
       const m = s.magi.find((x) => x.id === e.magus);
@@ -876,6 +914,23 @@ function act(s: State, a: Action): string | undefined {
       pay(s, c);
       s.endowments++;
       log(s, 'The covenant endows the parish of Dol. The priest says a Mass for the magi, a little stiffly.');
+      return;
+    }
+    case 'alms': {
+      if (!has(s, 'endow')) return 'Not yet';
+      const c = almsCost(s);
+      if (!canAfford(s, c)) return 'Not enough Bread';
+      pay(s, c);
+      s.alms++;
+      log(s, 'The covenant gives Bread to the poor of Dol every Friday. They pray for the magi, and mean it.');
+      return;
+    }
+    case 'keepSalt': {
+      s.keepSalt = !s.keepSalt;
+      if (!s.keepSalt) {
+        addRes(s, 'silver', s.res.salt * SALT_PRICE);
+        s.res.salt = 0;
+      }
       return;
     }
     case 'bribe': {

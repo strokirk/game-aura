@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { simulate } from '../sim/run.ts';
 import { STRATEGIES } from '../sim/strategies.ts';
 import {
+  almsCost,
   apply,
+  cap,
   createRun,
   housing,
   idleHands,
@@ -13,7 +15,7 @@ import {
   toSave,
   zoneUsed,
 } from '../src/core/index.ts';
-import { ZONES } from '../src/data/index.ts';
+import { FISH_SHARE, HAND_FOOD, ZONES } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -39,10 +41,10 @@ describe('the full run', () => {
 
   it('research costs Insight, applies its multiplier and reveals the next tier', () => {
     const s0 = { ...begin(), unlocked: ['research'], res: { ...begin().res, insight: 60 } } as State;
-    const before = rates(s0).byBuilding.salt_pan?.silver ?? 0;
+    const before = rates(s0).byBuilding.salt_pan?.salt ?? 0;
     const s = ok(apply(s0, { type: 'research', id: 'salt_rakes' }));
     expect(s.res.insight).toBe(10);
-    expect(rates(s).byBuilding.salt_pan?.silver).toBeCloseTo(before * 1.5);
+    expect(rates(s).byBuilding.salt_pan?.salt).toBeCloseTo(before * 1.5);
   });
 
   it('a strike stops the busiest porters, and paying ends it', () => {
@@ -90,5 +92,56 @@ describe('the full run', () => {
     expect(idleHands(s)).toBe(idle + 2);
     expect(apply(s, { type: 'demolish', building: 'sanctum' })).toEqual({ error: 'That cannot be pulled down' });
     expect(apply(s, { type: 'demolish', building: 'tide_pool' })).toEqual({ error: 'That cannot be pulled down' });
+  });
+});
+
+describe('goods with more than one use', () => {
+  const stage = () => ok(apply(createRun('middle', 1), { type: 'choose', option: 0 }));
+
+  it('sells Salt at the Hall by default, and keeps it to preserve food when asked', () => {
+    let s = stage();
+    const sold = rates(s);
+    expect(sold.net.salt).toBe(0);
+    s = ok(apply(s, { type: 'keepSalt' }));
+    const kept = rates(s);
+    expect(kept.net.salt).toBeGreaterThan(0);
+    expect(kept.net.silver).toBeCloseTo(sold.net.silver - kept.net.salt);
+    const cap0 = cap(s, 'bread');
+    s.res.salt = 100;
+    expect(cap(s, 'bread')).toBe(cap0 + 20);
+    s = ok(apply(s, { type: 'keepSalt' }));
+    expect(s.res.salt).toBe(0);
+  });
+
+  it('eats Eels on fish days, up to a third of the food', () => {
+    const s = stage();
+    const food = s.hands * HAND_FOOD;
+    const without = rates(s).net.bread;
+    s.res.eels = 50;
+    const r = rates(s);
+    expect(r.net.eels).toBeCloseTo(-food * FISH_SHARE);
+    expect(r.net.bread).toBeCloseTo(without + food * FISH_SHARE);
+  });
+
+  it('alms trade Bread for less Notice, doubling in price', () => {
+    let s = stage();
+    s.res.bread = 200;
+    const gen = rates(s).noticeGen;
+    s = ok(apply(s, { type: 'alms' }));
+    expect(s.res.bread).toBe(0);
+    expect(rates(s).noticeGen).toBeLessThan(gen);
+    expect(almsCost(s)).toEqual({ bread: 400 });
+  });
+
+  it('the hostel turns Bread into Silver, and stands idle without Bread', () => {
+    let s = stage();
+    s.res.stone = 150;
+    s = ok(apply(s, { type: 'build', building: 'hostel' }));
+    s.hands += 1;
+    s = ok(apply(s, { type: 'workers', building: 'hostel', delta: 1 }));
+    const r = rates(s);
+    expect(r.byBuilding.hostel?.silver).toBeGreaterThan(0);
+    s.res.bread = 0;
+    expect(rates(s).byBuilding.hostel?.silver ?? 0).toBe(0);
   });
 });

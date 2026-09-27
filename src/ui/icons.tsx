@@ -15,6 +15,7 @@ import GiMagicSwirl from '~icons/game-icons/magic-swirl';
 import GiMining from '~icons/game-icons/mining';
 import GiOpenBook from '~icons/game-icons/open-book';
 import GiPerson from '~icons/game-icons/person';
+import GiPilgrimHat from '~icons/game-icons/pilgrim-hat';
 import GiQuillInk from '~icons/game-icons/quill-ink';
 import GiRingingBell from '~icons/game-icons/ringing-bell';
 import GiSaltShaker from '~icons/game-icons/salt-shaker';
@@ -38,8 +39,10 @@ export type Icon = Component<JSX.SvgSVGAttributes<SVGSVGElement>>;
 
 export const GOOD_ICON: Record<GoodId, Icon> = {
   silver: GiTwoCoins,
+  salt: GiSaltShaker,
   stone: GiStoneBlock,
   bread: GiBread,
+  eels: GiEel,
   vellum: GiScrollUnfurled,
   vis: GiCrystal,
   insight: GiOpenBook,
@@ -52,6 +55,7 @@ export const BUILDING_ICON: Record<BuildingId, Icon> = {
   regio_spring: GiSpiralBloom,
   farm: GiWheat,
   eel_weir: GiEel,
+  hostel: GiPilgrimHat,
   parchmenter: GiScrollQuill,
   quarry: GiMining,
   sanctum: GiStoneTower,
@@ -73,6 +77,7 @@ export const I = {
   rite: GiRingingBell,
   endow: GiChurch,
   bribe: GiCoinsPile,
+  alms: GiBread,
   device: GiAnvil,
   labText: GiQuillInk,
   pause: LuPause,

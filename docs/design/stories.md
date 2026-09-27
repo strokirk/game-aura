@@ -8,6 +8,8 @@ Stories are written in [ink](https://github.com/inkle/ink) and add flavour and s
 | --- | --- | --- |
 | The eels | `src/content/eels.ink`, `docs/ink/eels-notes.md` | The marsh eel fisheries grow rich, then too rich. Unchecked, the eels flood the salt-works. They can be stopped at several points, each later stop costing more, and they tempt the player with cheap food all along |
 
+The full run plays beats 1–8 on the triggers in `docs/ink/eels-notes.md`. The wyrm (beat 9) needs Sanctum traits, `strike:all` and choice `cost:` tags, which the engine doesn't have yet, so it doesn't play. Stage scenarios start after the thread's early beats and play no story.
+
 The eels thread's first 2 beats play inside the trial scenario and can cost it: taking the weir, paid or not, cuts the Tide Pool's Vis to 80% for 10 minutes, while sending a magus to look first avoids the cut, which slows the experiments the trial's win depends on.
 
 ## The ink contract
