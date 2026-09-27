@@ -1,5 +1,6 @@
 import { createMemo, createSignal, For, Match, Show, Switch } from 'solid-js';
 import {
+  buildable,
   buildCost,
   canAfford,
   count,
@@ -148,9 +149,7 @@ function Header(p: { s: State; r: Rates }) {
 function Covenant(p: { s: State; r: Rates }) {
   const inZone = (z: ZoneId) =>
     (Object.keys(BUILDINGS) as BuildingId[]).filter(
-      (id) =>
-        BUILDINGS[id].zone === z &&
-        ((scenarioOf(p.s).allowed as readonly BuildingId[]).includes(id) || count(p.s, id) > 0),
+      (id) => BUILDINGS[id].zone === z && (buildable(p.s, id) || count(p.s, id) > 0),
     );
   const zones = () => (Object.keys(ZONES) as ZoneId[]).filter((z) => inZone(z).length);
   const breadLeft = () => (p.r.net.bread < 0 ? p.s.res.bread / -p.r.net.bread : Number.POSITIVE_INFINITY);
@@ -241,7 +240,7 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           onPlus={() => act({ type: 'workers', building: p.id, delta: 1 })}
         />
       </Show>
-      <Show when={!maxed() && (scenarioOf(p.s).allowed as readonly BuildingId[]).includes(p.id)}>
+      <Show when={!maxed() && buildable(p.s, p.id)}>
         <Button
           class="mt-1.5 w-full"
           disabled={!canAfford(p.s, c())}

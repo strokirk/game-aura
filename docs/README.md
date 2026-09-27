@@ -32,7 +32,7 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 | --- | --- |
 | [tech.md](tech.md) | Technical choices, architecture and rules for the code |
 | [credits.md](credits.md) | Asset credits and licences |
-| [ink/](ink/) | Story content and its design notes |
+| [ink/](ink/) | Design notes for the story threads, whose ink lives in `src/content/` |
 
 ## Elsewhere
 

@@ -8,9 +8,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "sim": "node sim/cli.ts",
+    "ink": "node scripts/ink.ts",
     "check": "biome check . && tsc --noEmit"
   },
   "dependencies": {
+    "inkjs": "^2.4.0",
     "solid-js": "^1.9.15"
   },
   "devDependencies": {

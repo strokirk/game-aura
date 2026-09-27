@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      inkjs:
+        specifier: ^2.4.0
+        version: 2.4.0
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -693,6 +696,10 @@ packages:
 
   import-meta-resolve@4.2.0:
     resolution: {integrity: sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg==}
+
+  inkjs@2.4.0:
+    resolution: {integrity: sha512-EoPCYESIbMtfI8SqEDZCJwn+A5is0QozMLw250iic1ReJCgZpRKIezWj0VqgRUzAx0f3MmEbsUjY/ILe2815JQ==}
+    hasBin: true
 
   is-what@4.1.16:
     resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
@@ -1665,6 +1672,8 @@ snapshots:
   html-entities@2.3.3: {}
 
   import-meta-resolve@4.2.0: {}
+
+  inkjs@2.4.0: {}
 
   is-what@4.1.16: {}
 

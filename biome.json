@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "files": { "includes": ["**", "!prototype", "!docs", "!dist"] },
+  "files": { "includes": ["**", "!prototype", "!docs", "!dist", "!src/content/*.json"] },
   "formatter": { "indentStyle": "space", "lineWidth": 120 },
   "css": { "parser": { "tailwindDirectives": true } },
   "javascript": { "formatter": { "quoteStyle": "single" } },

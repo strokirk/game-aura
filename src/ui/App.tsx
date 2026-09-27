@@ -192,7 +192,7 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   return (
     <Overlay>
       <h2 class="mb-2 text-2xl">{p.ev.title}</h2>
-      <p class="mb-4 text-[1.05rem]">{p.ev.text}</p>
+      <p class="mb-4 whitespace-pre-line text-[1.05rem]">{p.ev.text}</p>
       <div class="flex flex-col gap-2">
         <For each={p.ev.options}>
           {(o, i) => (

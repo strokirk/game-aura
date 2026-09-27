@@ -11,7 +11,7 @@
 | **Solid** | Fine-grained updates suit numbers ticking every frame. Core state → store via `reconcile` |
 | **Tailwind v4 + `ui/kit.tsx`** | Tokens in one `@theme`; styling lives on the component. New looks go in the kit, screens compose it. Stops the global-CSS sprawl LLM-written code drifts into |
 | **Iconify via `unplugin-icons`** | Icons compile to inline SVG components; only used ones ship. [game-icons.net](https://game-icons.net) (4,000+ fantasy icons) for the game, Lucide for UI chrome. All mappings in `ui/icons.tsx` |
-| **ink / inkjs** (from build step 3) | Branching story with memory. Effects are tags the core parses; ink never calls game code. Story state is saved in `State` |
+| **ink / inkjs** | Branching story with memory. Effects are tags the core parses; ink never calls game code. Story state is saved in `State` |
 | **Node's own TS stripping** | `node sim/cli.ts` runs with no build step or tsx |
 | **Vite, pnpm, Vitest, Biome** | Standard, fast |
 
@@ -30,9 +30,10 @@
 ```
 src/core/     state, step, actions, rng, effects, conditions, ink bridge. No DOM, no Date, no Math.random
 src/data/     goods, buildings, research, recipes, traits, scenarios, unlocks
-src/content/  *.ink
+src/content/  *.ink and their compiled *.json
 src/ui/       Solid: screens, tabs, overlays
 sim/          CLI + strategies
+scripts/      ink compiler
 test/         unit + balance tests
 ```
 
@@ -50,7 +51,7 @@ test/         unit + balance tests
 - The ink story state (`story.state.ToJson()`) is part of `State`, and ink's random seed comes from the run's generator.
 - Ink effects are tags parsed by the core into the same effect type that research and traits use. Ink never calls game code.
 
-**Stories:** `.ink` files compile to JSON at build time through a small Vite plugin; tests use the same compiler.
+**Stories:** `src/content/*.ink` compile to JSON next to them with `pnpm ink`, and the JSON is committed so the sim, tests and Vite all import it the same way. A test fails if the JSON is stale. The bridge is `src/core/story.ts`; which knots play, and when, is TypeScript data (`story` on each scenario).
 
 **Saves:** `{version, scenario, seed, log}` plus a snapshot for fast loading. Loading replays the log; a mismatch with the snapshot is a bug report.
 

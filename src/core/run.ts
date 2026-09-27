@@ -31,6 +31,7 @@ import {
   type ZoneId,
 } from '../data/index.ts';
 import { nextRandom, type RngState, seedRng } from './rng.ts';
+import { chooseInKnot, type InkOutputs, playKnot } from './story.ts';
 
 export const DT = 0.25;
 const B: Record<BuildingId, BuildingDef> = DEFS;
@@ -83,6 +84,15 @@ export interface State {
   magi: MagusState[];
   notice: number;
   events: EventDef[];
+  /** Ink's saved story state (JSON), null before the first knot. */
+  ink: string | null;
+  /** Story beats already played. */
+  fired: string[];
+  story: InkOutputs;
+  mods: { id: string; good: GoodId; mult: number; until: number | null }[];
+  /** Action key → game time it's blocked until. */
+  blocks: Record<string, number>;
+  unlocked: string[];
   chronicle: { t: number; text: string }[];
   outcome: Outcome | null;
   log: LogEntry[];
@@ -118,6 +128,12 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     magi: sc.start.magi.map((m) => ({ id: m.id, lt: 10, sanctum: m.sanctum, exp: null })),
     notice: 0,
     events: sc.intro ? [structuredClone(sc.intro) as EventDef] : [],
+    ink: null,
+    fired: [],
+    story: { eel_level: 0, eels_state: 0 },
+    mods: [],
+    blocks: {},
+    unlocked: [],
     chronicle: [{ t: 0, text: `Founded in spring ${START_YEAR}.` }],
     outcome: null,
     log: [],
@@ -207,7 +223,7 @@ export function rates(s: State): Rates {
     const w = Math.min(s.buildings[id]?.workers ?? 0, workerSlots(s, id));
     const out: Cost = {};
     for (const g of keys(pw)) {
-      out[g] = w * (pw[g] ?? 0) * hunger;
+      out[g] = w * (pw[g] ?? 0) * hunger * modMult(s, id, g);
       zones[def.zone].made += out[g];
     }
     byBuilding[id] = out;
@@ -234,6 +250,17 @@ export function rates(s: State): Rates {
 // ─── Simulation ─────────────────────────────────────────────────────
 
 const log = (s: State, text: string) => s.chronicle.push({ t: s.t, text });
+/** Allowed by the scenario, or unlocked in play. */
+export const buildable = (s: State, id: BuildingId) =>
+  (scenarioOf(s).allowed as readonly string[]).includes(id) || s.unlocked.includes(id);
+export const isBlocked = (s: State, key: string) => (s.blocks[key] ?? 0) > s.t;
+/** Product of the live multipliers on `good` from building `id`. */
+function modMult(s: State, id: BuildingId, good: GoodId) {
+  let m = id === 'eel_weir' && s.story.eels_state === 0 ? 1 + 0.5 * s.story.eel_level : 1;
+  for (const x of s.mods)
+    if (x.good === good && (x.id === id || !(x.id in B)) && (x.until === null || x.until > s.t)) m *= x.mult;
+  return m;
+}
 
 function addRes(s: State, g: GoodId, n: number) {
   s.res[g] = Math.min(cap(s, g), Math.max(0, s.res[g] + n));
@@ -332,6 +359,28 @@ function tick(s: State) {
   for (const m of s.magi) if (m.exp && s.t >= m.exp.end - 1e-9) resolveExperiment(s, m, m.exp);
   s.stats.peakNotice = Math.max(s.stats.peakNotice, s.notice);
   checkOutcome(s);
+  if (!s.outcome) startStory(s);
+}
+
+/** Queues the first story beat whose condition is met. Beats fire once, one at a time. */
+function startStory(s: State) {
+  const beat = scenarioOf(s).story?.find((b) => !s.fired.includes(b.knot) && met(s, b.when));
+  if (!beat) return;
+  const r = rates(s);
+  const { event, saved } = playKnot(s.ink, s.seed, beat, {
+    year: year(s),
+    notice: Math.floor(s.notice),
+    silver: Math.floor(s.res.silver),
+    silver_rate: Math.max(1, r.net.silver),
+    vis: Math.floor(s.res.vis),
+    salt_pans: count(s, 'salt_pan'),
+    has_sabine: s.magi.some((m) => m.id === 'sabine'),
+    has_herve: s.magi.some((m) => m.id === 'herve'),
+    sinking_magus: s.magi.find((m) => m.sanctum)?.id ?? 'aldric',
+  });
+  s.fired.push(beat.knot);
+  s.ink = saved;
+  s.events.push(event);
 }
 
 const blocked = (s: State) => !!s.outcome || s.events.length > 0;
@@ -358,18 +407,23 @@ export function stepTo(s0: State, t: number): State {
 // ─── Actions ────────────────────────────────────────────────────────
 
 function applyEffects(s: State, effects: readonly Effect[]) {
+  const net = rates(s).net;
   for (const e of effects) {
-    if (e.kind === 'res') addRes(s, e.good, e.n);
-    else s.notice = Math.max(0, s.notice + e.n);
+    if (e.kind === 'res') addRes(s, e.good, e.perSecond ? e.n * Math.max(1, net[e.good]) : e.n);
+    else if (e.kind === 'notice') s.notice = Math.max(0, s.notice + e.n);
+    else if (e.kind === 'mod')
+      s.mods.push({ id: e.id, good: e.good, mult: e.mult, until: e.secs ? s.t + e.secs : null });
+    else if (e.kind === 'block') s.blocks[e.what] = Math.max(s.blocks[e.what] ?? 0, s.t + e.secs);
+    else if (!s.unlocked.includes(e.id)) s.unlocked.push(e.id);
   }
 }
 
 function act(s: State, a: Action): string | undefined {
-  const sc = scenarioOf(s);
   switch (a.type) {
     case 'build': {
       const def = B[a.building];
-      if (!sc.allowed.includes(a.building)) return `${def.name} isn't available here`;
+      if (!buildable(s, a.building)) return `${def.name} isn't available here`;
+      if (isBlocked(s, `build_${a.building}`)) return `No one will build a ${def.name} yet`;
       if (count(s, a.building) >= maxOf(a.building)) return `There is only one ${def.name}`;
       if (!isSite(a.building) && zoneUsed(s, def.zone) >= ZONES[def.zone].slots)
         return `The ${ZONES[def.zone].name} is full`;
@@ -402,6 +456,8 @@ function act(s: State, a: Action): string | undefined {
       const m = s.magi.find((x) => x.id === a.magus);
       if (!m?.sanctum) return 'That magus has no Sanctum';
       if (m.exp) return 'Already experimenting';
+      if (isBlocked(s, `experiment:${m.id}`) || isBlocked(s, 'experiment:all'))
+        return `${magusName(m.id)} is away from the lab`;
       if (!Number.isInteger(a.extra) || a.extra < 0 || a.extra > EXPERIMENT.maxExtraVis) return 'Bad amount of Vis';
       const p = experimentPlan(s, a.magus, a.recipe, a.extra);
       if (!canAfford(s, p.cost)) return 'Not enough Vis';
@@ -420,9 +476,17 @@ function act(s: State, a: Action): string | undefined {
       return;
     }
     case 'choose': {
-      const opt = s.events[0]?.options[a.option];
+      const ev = s.events[0];
+      const opt = ev?.options[a.option];
       if (!opt) return 'No such choice';
-      applyEffects(s, opt.effects);
+      if (ev.knot && s.ink) {
+        const r = chooseInKnot(s.ink, a.option);
+        if (!r) return 'No such choice';
+        s.ink = r.saved;
+        s.story = r.vars;
+        applyEffects(s, r.effects);
+        log(s, [ev.title, ...r.lines].join('. ').replace(/\.\. /g, '. '));
+      } else applyEffects(s, opt.effects);
       s.events.shift();
       return;
     }

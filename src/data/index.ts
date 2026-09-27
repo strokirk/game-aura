@@ -96,6 +96,14 @@ export const BUILDINGS = {
     max: 3,
     blurb: "A magus's laboratory. Each assistant speeds its research by 25%.",
   },
+  eel_weir: {
+    name: 'Eel Weir',
+    zone: 'marsh',
+    cost: { silver: 15 },
+    slots: 1,
+    perWorker: { bread: 0.3 },
+    blurb: 'Stakes and wattle across the channel below the Tide Pool. The eels grow bigger every year.',
+  },
   cottage: {
     name: 'Cottage',
     zone: 'hearth',
@@ -152,12 +160,29 @@ export const EXPERIMENT = {
   botchNotice: 5,
 };
 
-export type Effect = { kind: 'res'; good: GoodId; n: number } | { kind: 'notice'; n: number };
+/** What choices, research and traits do. Ink tags parse into these (`docs/design/stories.md`). */
+export type Effect =
+  | { kind: 'res'; good: GoodId; n: number; perSecond?: boolean }
+  | { kind: 'notice'; n: number }
+  /** Multiplies `good` output of building `id`, or of every building if `id` isn't a building. secs 0 = forever. */
+  | { kind: 'mod'; id: string; good: GoodId; mult: number; secs: number }
+  /** Blocks an action key such as `experiment:aldric`, `experiment:all` or `build_salt_pan`. */
+  | { kind: 'block'; what: string; secs: number }
+  | { kind: 'unlock'; id: string };
 
 export interface EventDef {
   title: string;
   text: string;
   options: readonly { label: string; effects: readonly Effect[] }[];
+  /** An ink knot waiting for its choice; its effects come from the tags after the choice. */
+  knot?: string;
+}
+
+/** An ink knot the engine plays once, as an event card, when its condition is first met. */
+export interface StoryBeat {
+  knot: string;
+  title: string;
+  when: Condition;
 }
 
 export type Condition =
@@ -179,6 +204,7 @@ export interface ScenarioDef {
   win: readonly { when: Condition; cause: string }[];
   loss: readonly { when: Condition; cause: string }[];
   intro?: EventDef;
+  story?: readonly StoryBeat[];
 }
 
 export const YEAR = 120;
@@ -215,6 +241,10 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. Five hundred pages of Insight by 1222 and the Order will take the covenant seriously.',
       options: [{ label: 'Begin', effects: [] }],
     },
+    story: [
+      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
+      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
+    ],
   },
 } as const satisfies Record<string, ScenarioDef>;
 export type ScenarioId = keyof typeof SCENARIOS;

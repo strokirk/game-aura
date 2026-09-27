@@ -3,6 +3,7 @@
 import type { Component, JSX } from 'solid-js';
 import GiBread from '~icons/game-icons/bread';
 import GiCrystal from '~icons/game-icons/crystal-growth';
+import GiEel from '~icons/game-icons/eel';
 import GiEyeball from '~icons/game-icons/eyeball';
 import GiMagicSwirl from '~icons/game-icons/magic-swirl';
 import GiMining from '~icons/game-icons/mining';
@@ -45,6 +46,7 @@ export const BUILDING_ICON: Record<BuildingId, Icon> = {
   knights_barrow: GiTombstone,
   regio_spring: GiSpiralBloom,
   farm: GiWheat,
+  eel_weir: GiEel,
   parchmenter: GiScrollQuill,
   quarry: GiMining,
   sanctum: GiStoneTower,
