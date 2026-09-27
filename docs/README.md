@@ -38,6 +38,7 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 
 | Document | What it's for |
 | --- | --- |
+| [proposals/](proposals/) | Written-up mechanic proposals, judged independently. Not part of the game yet |
 | [backlog.md](backlog.md) | Planned and seriously considered features. Not part of the game yet |
 | [icebox.md](icebox.md) | Parked ideas and set-aside ideas, with reasons. Not part of the game |
 | [archive/](archive/) | Earlier specs, kept as history. Not the current design |
