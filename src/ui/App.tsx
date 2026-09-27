@@ -5,6 +5,7 @@ import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
 import { I } from './icons.tsx';
 import { Button, Dim, Ico, Label, Overlay, Screen, Stack } from './kit.tsx';
+import { Rich } from './Rich.tsx';
 import {
   act,
   confirming,
@@ -192,12 +193,16 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   return (
     <Overlay>
       <h2 class="mb-2 text-2xl">{p.ev.title}</h2>
-      <p class="mb-4 whitespace-pre-line text-[1.05rem]">{p.ev.text}</p>
+      <p class="mb-4 whitespace-pre-line text-[1.1rem] leading-relaxed">
+        <Rich text={p.ev.text} />
+      </p>
       <div class="flex flex-col gap-2">
         <For each={p.ev.options}>
           {(o, i) => (
             <Button primary onClick={() => act({ type: 'choose', option: i() })}>
-              {o.label}
+              <span>
+                <Rich text={o.label} plain />
+              </span>
             </Button>
           )}
         </For>
@@ -228,7 +233,13 @@ function End() {
       <Tagline>{s().outcome?.cause}</Tagline>
       <Label>The Chronicle</Label>
       <ul class="max-w-md italic">
-        <For each={s().chronicle.slice(-5)}>{(c) => <li class="mb-1.5">{c.text}</li>}</For>
+        <For each={s().chronicle.slice(-5)}>
+          {(c) => (
+            <li class="mb-1.5">
+              <Rich text={c.text} />
+            </li>
+          )}
+        </For>
       </ul>
       <dl class="grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-left">
         <For each={stats()}>

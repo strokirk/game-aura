@@ -15,7 +15,57 @@
   --color-btn-line: #435649;
   --color-primary: #4a5c2d;
   --color-primary-line: #92ad58;
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-serif: "EB Garamond Variable", Georgia, "Times New Roman", serif;
+  --color-term: #d9c27a;
+  --color-good: #8fc27a;
+
+  --animate-pop: pop 1.4s ease-out forwards;
+  --animate-card-in: card-in 0.35s ease-out;
+  --animate-beckon: beckon 1.6s ease-in-out infinite;
+  --animate-glow: glow 0.8s ease-out;
+
+  @keyframes pop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, 0.4rem) scale(0.9);
+    }
+    15% {
+      opacity: 1;
+      transform: translate(-50%, 0) scale(1.1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -1.8rem) scale(1);
+    }
+  }
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(1rem) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes beckon {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-gold) 60%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 0.35rem transparent;
+    }
+  }
+  @keyframes glow {
+    from {
+      text-shadow: 0 0 0.6em var(--color-gold);
+      color: var(--color-gold);
+    }
+    to {
+      text-shadow: none;
+    }
+  }
 }
 
 @layer base {
@@ -31,6 +81,18 @@
   }
   body {
     @apply bg-bg font-serif text-ink;
+    /* Fixed-width lining figures, so ticking numbers don't make the layout flicker. */
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion reset must beat utility classes */
+      animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion reset must beat utility classes */
+      animation-iteration-count: 1 !important;
+    }
   }
   h1,
   h2,

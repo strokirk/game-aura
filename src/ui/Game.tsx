@@ -36,7 +36,8 @@ import {
 import { cost, eta, mmss, num, rate } from './format.ts';
 import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
-import { act, game, options, setPaused, setSpeed, speed } from './store.ts';
+import { Rich } from './Rich.tsx';
+import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
 
 type Tab = 'covenant' | 'magi' | 'chronicle';
 const TABS: [Tab, string][] = [
@@ -88,6 +89,27 @@ export function Game() {
   );
 }
 
+/** Floating numbers over a resource when it jumps. */
+function Pops(p: { k: Pop['key'] }) {
+  const mine = () => pops().filter((x) => x.key === p.k);
+  return (
+    <For each={mine()}>
+      {(x) => {
+        const good = p.k === 'notice' ? x.n < 0 : x.n > 0;
+        return (
+          <span
+            aria-hidden="true"
+            class={`pointer-events-none absolute -top-4 left-1/2 z-10 animate-pop [text-shadow:0_0_6px_var(--color-bg)] whitespace-nowrap font-bold ${good ? 'text-good' : 'text-bad'}`}
+          >
+            {x.n > 0 ? '+' : '−'}
+            {num(Math.abs(x.n))}
+          </span>
+        );
+      }}
+    </For>
+  );
+}
+
 function Header(p: { s: State; r: Rates }) {
   const speeds = () => (options().dev ? [0, 1, 2, 8] : [0, 1, 2]);
   const shown = (g: GoodId) => p.s.res[g] > 0 || Math.abs(p.r.net[g]) > 1e-9;
@@ -95,7 +117,10 @@ function Header(p: { s: State; r: Rates }) {
     <header class="border-b border-line bg-bar px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2">
       <div class="flex items-center justify-between gap-2">
         <div>
-          <b>{year(p.s)}</b> <Dim>· {mmss(YEAR - (p.s.t % YEAR))} to next year</Dim>
+          <b>{year(p.s)}</b>{' '}
+          <Show when={speed()} fallback={<b class="text-warn">· Paused</b>}>
+            <Dim>· {mmss(YEAR - (p.s.t % YEAR))} to next year</Dim>
+          </Show>
           <Bar pct={((p.s.t % YEAR) / YEAR) * 100} />
         </div>
         <div class="flex gap-1">
@@ -104,7 +129,7 @@ function Header(p: { s: State; r: Rates }) {
               <Button
                 on={speed() === v}
                 onClick={() => setSpeed(v)}
-                class="min-w-11 px-2"
+                class={`min-w-11 px-2 ${v === 1 && speed() === 0 && !p.s.events.length ? 'animate-beckon' : ''}`}
                 aria-label={v ? `${v}× speed` : 'Pause'}
               >
                 {v === 0 ? <Ico icon={I.pause} /> : `${v}×`}
@@ -117,7 +142,7 @@ function Header(p: { s: State; r: Rates }) {
         </div>
       </div>
       <div class="my-1 text-sm text-gold">
-        Goal: {scenarioOf(p.s).goal}
+        Goal: <Rich text={scenarioOf(p.s).goal} />
         <Show when={options().dev}>
           <Dim> · seed {p.s.seed}</Dim>
         </Show>
@@ -125,7 +150,8 @@ function Header(p: { s: State; r: Rates }) {
       <div class="flex flex-wrap gap-x-4 gap-y-1">
         <For each={GOODS.filter(shown)}>
           {(g) => (
-            <div>
+            <div class="relative">
+              <Pops k={g} />
               <Ico icon={GOOD_ICON[g]} class="mr-1 text-gold" />
               <b class={p.s.res[g] >= GOOD_INFO[g].cap - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
               <Dim>/{num(GOOD_INFO[g].cap)}</Dim>
@@ -135,7 +161,8 @@ function Header(p: { s: State; r: Rates }) {
             </div>
           )}
         </For>
-        <div>
+        <div class="relative">
+          <Pops k="notice" />
           <Ico icon={I.notice} class="mr-1 text-gold" />
           <b>{Math.floor(p.s.notice)}</b>
           <Dim> → {Math.round(p.r.noticeGen * 10)}</Dim>
@@ -230,7 +257,9 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
           </For>
         </span>
       </div>
-      <Dim class="text-sm">{def().blurb}</Dim>
+      <Dim class="text-sm">
+        <Rich text={def().blurb} />
+      </Dim>
       <Show when={n() > 0 && def().slots > 0 && p.id !== 'sanctum'}>
         <Stepper
           label="Workers"
@@ -282,7 +311,9 @@ function Magus(p: { s: State; m: MagusState }) {
       <Show when={p.m.sanctum && !p.m.exp}>
         <div class="my-2 border-t border-line pt-2">
           <h4>{RECIPES.study_vis.name}</h4>
-          <Dim class="text-sm">{RECIPES.study_vis.blurb}</Dim>
+          <Dim class="text-sm">
+            <Rich text={RECIPES.study_vis.blurb} />
+          </Dim>
           <Stepper
             label="Extra Vis"
             value={extra()}
@@ -326,7 +357,7 @@ function Chronicle(p: { s: State }) {
               <Dim>
                 {START_YEAR + Math.floor(c.t / YEAR)} · {mmss(c.t)}
               </Dim>{' '}
-              {c.text}
+              <Rich text={c.text} />
             </li>
           )}
         </For>

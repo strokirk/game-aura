@@ -4,3 +4,4 @@
 | --- | --- | --- |
 | Game icons | [game-icons.net](https://game-icons.net): Lorc, Delapouite and contributors | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 | Interface icons | [Lucide](https://lucide.dev) contributors | ISC |
+| Body font: EB Garamond | Georg Duffner, Octavio Pardo | [SIL Open Font License 1.1](https://openfontlicense.org) |

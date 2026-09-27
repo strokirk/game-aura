@@ -14,6 +14,13 @@ Mobile first: one column, a bottom tab bar, and thumb-sized targets. Desktop use
 | Pause | Overlay, pauses | Resume, Options, Restart, Quit to title |
 | End | Top level | Win or loss variant: title, cause, the Chronicle, stats, Play again |
 
+## Reading the game
+
+- **Runs start paused**, so the player can read the covenant before time moves. The 1× button pulses until play starts. Space pauses and resumes.
+- **Game terms are highlighted in all prose**, Old World style: event cards, choices, blurbs, goals and the Chronicle. Each term shows its icon and a dotted underline; tapping it explains it. Hermetic Arts ("Rego Aquam") are explained as a Technique and a Form. The terms and their explanations are data (`src/data/glossary.ts`).
+- **Sudden changes float**: an experiment's Insight, an event's cost or a botch's Notice rises from the resource as "+150" or "−20", green when it helps and red when it hurts. Steady income doesn't float.
+- **Numbers use tabular figures**, so ticking values don't shift the layout.
+
 The screen stack lives in the UI: a top-level state (Title, Options, Game, End) plus an overlay stack. The core knows nothing about screens; it exposes `outcome: null | {kind: 'win' | 'loss', cause}` and the queue of pending events.
 
 ## Saving

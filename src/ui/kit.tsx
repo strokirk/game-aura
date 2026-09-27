@@ -75,7 +75,9 @@ export function Stepper(p: { label: string; value: number; max?: number; onMinus
 
 export const Overlay = (p: ParentProps) => (
   <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
-    <div class="w-full max-w-md rounded-xl border border-gold bg-card p-4">{p.children}</div>
+    <div class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]">
+      {p.children}
+    </div>
   </div>
 );
 

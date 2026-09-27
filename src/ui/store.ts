@@ -1,15 +1,33 @@
 // UI state: which screen, overlays, options, and the loop that drives the core.
 import { createSignal } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
-import { type Action, apply, createRun, replay, type Save, type State, step, toSave, year } from '../core/index.ts';
-import type { ScenarioId } from '../data/index.ts';
+import {
+  type Action,
+  apply,
+  createRun,
+  rates,
+  replay,
+  type Save,
+  type State,
+  step,
+  toSave,
+  year,
+} from '../core/index.ts';
+import { GOODS, type GoodId, type ScenarioId } from '../data/index.ts';
 
 export type Screen = 'title' | 'options' | 'game' | 'end';
 export const [screen, setScreen] = createSignal<Screen>('title');
 export const [optionsFrom, setOptionsFrom] = createSignal<'title' | 'pause'>('title');
 export const [paused, setPaused] = createSignal(false);
 export const [confirming, setConfirming] = createSignal<{ text: string; yes: () => void } | null>(null);
-export const [speed, setSpeed] = createSignal(1);
+const [speedSignal, setSpeedSignal] = createSignal(0);
+export const speed = speedSignal;
+let lastSpeed = 1;
+export function setSpeed(v: number) {
+  if (v > 0) lastSpeed = v;
+  setSpeedSignal(v);
+}
+export const togglePause = () => setSpeed(speed() ? 0 : lastSpeed);
 export const [toast, setToast] = createSignal('');
 
 let state: State | null = null;
@@ -58,7 +76,34 @@ let flash: ReturnType<typeof setTimeout> | undefined;
 export function say(text: string) {
   setToast(text);
   clearTimeout(flash);
-  flash = setTimeout(() => setToast(''), 2500);
+  flash = setTimeout(() => setToast(''), Math.max(2500, text.length * 55));
+}
+
+// ─── Pops: floating numbers for sudden gains and losses ────────────
+
+export interface Pop {
+  id: number;
+  key: GoodId | 'notice';
+  n: number;
+}
+export const [pops, setPops] = createSignal<Pop[]>([]);
+let popId = 0;
+function pop(key: Pop['key'], n: number) {
+  const id = ++popId;
+  setPops([...pops().slice(-8), { id, key, n }]);
+  setTimeout(() => setPops(pops().filter((x) => x.id !== id)), 1400);
+}
+/** Shows what changed beyond the steady rates: experiment results, event effects, purchases. */
+function popChanges(prev: State, next: State) {
+  const dt = next.t - prev.t;
+  const r = rates(prev);
+  for (const g of GOODS) {
+    const jump = next.res[g] - prev.res[g] - r.net[g] * dt;
+    if (Math.abs(jump) >= 1) pop(g, jump);
+  }
+  const drift = ((r.noticeGen - 0.1 * prev.notice) / 60) * dt;
+  const jump = next.notice - prev.notice - drift;
+  if (Math.abs(jump) >= 1) pop('notice', jump);
 }
 
 export const hasSave = () => readJson<Save>(SAVE_KEY) !== null;
@@ -66,11 +111,13 @@ function save() {
   if (state && !state.outcome) writeJson(SAVE_KEY, toSave(state));
 }
 
+/** Runs start paused, so the player can look around first. */
 function start(s: State) {
   state = s;
   sync();
   setPaused(false);
-  setSpeed(1);
+  setSpeed(0);
+  lastSpeed = 1;
   setScreen('game');
 }
 export function newRun(scenario: ScenarioId, seed = Math.floor(Math.random() * 2 ** 31)) {
@@ -100,6 +147,7 @@ export function act(a: Action) {
   if (!state) return;
   const r = apply(state, a);
   if ('error' in r) return say(r.error);
+  popChanges(state, r);
   state = r;
   sync();
   if (state.outcome) finish();
@@ -121,12 +169,20 @@ function frame(now: number) {
   const y = year(state);
   const next = step(state, real * speed());
   if (next === state) return;
+  popChanges(state, next);
   state = next;
   sync();
   if (year(state) !== y) save();
   if (state.outcome) finish();
 }
 requestAnimationFrame(frame);
+
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || screen() !== 'game' || paused() || (e.target as HTMLElement).closest('input, textarea'))
+    return;
+  e.preventDefault();
+  togglePause();
+});
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && screen() === 'game') {
