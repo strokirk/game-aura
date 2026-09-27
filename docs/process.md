@@ -1,0 +1,34 @@
+# How we design
+
+## Writing design docs
+
+- **Describe the current game in the present tense.** Design docs say what the game is, not how it got there. History belongs in `archive/`; parked and rejected ideas belong in `icebox.md`. Leave out "we changed", "no longer" and "instead of X": they confuse people and agents alike.
+- **Every mechanic answers 5 questions:**
+  1. **Input:** what the player does.
+  2. **System:** what the game calculates, with formulas, conditions and edge cases.
+  3. **Feedback:** what the player sees and hears.
+  4. **Parameters:** concrete numbers, in a table.
+  5. **Why:** what the action is for, what it costs, and what decision it creates. For reactive systems, why the player is forced into it and what they can do about it. Name the game we're borrowing from and what exactly we take from it.
+- **Be specific.** Numbers and names, not "various", "some" or "many".
+- **Mark what isn't settled.** `[PLAYTEST: …]` marks a value to validate. `[OPEN QUESTION: …]` marks an undecided design.
+- **Numbers are starting points.** The balance simulation (`design/balance.md`) is the source of truth for anything that can be computed.
+- **Decide 0, 1 or N up front** (`design/data-model.md`).
+
+## Objective critique
+
+The author of a design never grades it. Reviews go to **independent subagents**: fresh agents that haven't seen the work being produced, given only the file paths and the questions. They judge better than the author because they read what the doc says, not what the author meant.
+
+A review checks 4 things:
+
+| Lens | Question |
+| --- | --- |
+| Specificity | Could someone implement this without guessing? Are there undefined terms, missing numbers, unhandled edge cases? |
+| Purpose | Why does the player do each action? Is it a real decision, or is there a dominant choice? Are there stretches with nothing to decide? |
+| Standalone | Does the doc make sense without this conversation or an older doc? |
+| Maths | Do the numbers add up, and is the game winnable but not trivially, and losable by plausible play? |
+
+Rules for reviews:
+- **Maths is computed, never estimated.** A reviewer runs the sim, a script, or the tests, and reports what it ran and what came out.
+- **Each finding comes with a concrete fix**, with numbers where possible, ranked by severity.
+- **The author fixes, then a new independent reviewer checks the result.** The same reviewer doesn't re-grade its own suggestions.
+- **Generated content** (ink threads, traits, research items) is scored by a separate judge agent against a written rubric, then run through the balance tests to check it doesn't break the target ranges.

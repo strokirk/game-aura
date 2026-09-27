@@ -2,8 +2,9 @@
 
 *The Covenant Must Grow.* An incremental game about a covenant of Ars Magica wizards at Mont-Dol, 1220–1260.
 
-- `docs/spec-v2.md`: the current design. `docs/spec.md` and `prototype/v1.html` are the first prototype.
+- `docs/README.md`: the index of all docs. Start with `docs/vision.md`, then `docs/design/`.
 - `docs/ink/`: story content (ink).
+- `prototype/v1.html`: the first prototype.
 
 ```sh
 pnpm install
