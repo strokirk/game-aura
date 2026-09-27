@@ -14,6 +14,7 @@ Nothing here is part of the game until it moves into `design/`.
 | The Tribunal | 5 rival covenants with attitudes that drift, lobbying, a Library Exchange for books, and a deck of 16 motions including Renunciation | Claude Docs: *Aura MVP — Game Design Spec* §15 |
 | Journeys into the Regio | 4 levels of 5 × 5 rooms, 8 moves per journey, caches, hazards and a Guardian per level; the source of Gate Seals and the Keystone | Claude Docs: *Aura MVP — Game Design Spec* §8 |
 | Eras (Turnings) | Founding, Flourishing and Waning, each entered by a player-chosen Turning with a Charter choice and a lingering penalty for staying too long | Claude Docs: *Aura MVP — Game Design Spec* §14 |
+| Divine intervention | For extreme circumstances only: a covenant that draws the Church's full attention faces the Dominion itself (a saint's miracle, an interdict, the archangel of Mont-Dol), a rarer and harsher judge than the Order | — |
 | Several Notice tracks | Mundane, Church, Order and Faerie tracks with their own thresholds; raids with Hold, Sally and Hide postures; a Quaesitor who walks the covenant looking for violations | Claude Docs: *Aura MVP — Game Design Spec* §12 |
 | Seasons and tides | 4 seasons with their own yields, and a 60 s tide that floods the flats and cuts routes | Claude Docs: *Aura MVP — Game Design Spec* §3 |
 | More Great Projects | The Salt-Wife Breakthrough, Bonisagus's missing Folio, the Tidebound Mystery, the Drowned Man temptation | Claude Docs: *Aura MVP — Game Design Spec* §13 |

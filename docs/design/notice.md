@@ -1,6 +1,8 @@
 # Notice
 
-Notice is the attention the covenant draws from the lord of Dol, the bishop, and above all the Order of Hermes. It's the game's pollution: growth makes it, and too much of it ends the run.
+Notice is the attention the covenant draws, and the Order of Hermes is the one that judges it. The Code of Hermes forbids a magus to bring ruin on the Order through dealings with mundanes. The Order cares little about what the magi do in their labs; it cares that the lord of Dol is asking questions and the bishop is writing letters. So mundane unrest is the evidence, and the Order passes sentence: at 100 the covenant is Renounced. Bribing the lord and endowing the parish calm the witnesses, which is why they lower the Order's Notice.
+
+Notice is the game's pollution: growth makes it, and too much of it ends the run.
 
 **Input:** indirect (what you build and where), plus direct levers: **Endow the Parish**, **Bribe the Lord** (both from year 1226), and the *Aegis* and *Marsh Mist* research.
 

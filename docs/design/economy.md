@@ -41,7 +41,7 @@ Buildings are counted per type. The next one costs base cost × 1.15^owned. Each
 | Cottage | Hearth, Bocage | 30 Silver | 0 | Housing +3 | More hands |
 | Storehouse | Hearth | 50 Silver + 20 Stone | 0 | Stone, Bread and Vellum caps +50% of base | Room to stockpile |
 | Library | Hearth | 40 Silver + 20 Vellum | 0 | Insight cap +500 | Room to save for big research |
-| Eel Weir | Marsh (after `unlock:eel_weir`) | 15 Silver | 1 | 0.3 Bread/s × (1 + 0.5 × eel level) | Cheap food, and the eels' standing temptation (`stories.md`) |
+| Eel Weir | Marsh (after `unlock:eel_weir`) | 15 Silver | 1 | 0.3 Bread/s × (1 + 0.5 × eel level) while the eels thread is open; ×3 for 1 year after the flood; ×1 after a stop | Cheap food, and the eels' standing temptation (`stories.md`) |
 
 The 3 Vis sites are named and individually addressable: the Tide Pool, the Drowned Knight's Barrow, and the Regio Spring. Events can target one of them.
 

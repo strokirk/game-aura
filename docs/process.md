@@ -1,5 +1,13 @@
 # How we design
 
+## Growing the design
+
+Design starts at the endgame: the Drowned Gate, the Rites, the most impressive things a covenant does. The game grows from there in two directions:
+- **Into the middle:** prerequisites, obstacles and distractions that stand between the start and the endgame.
+- **Past the end:** even more impressive things to do once the current endgame is fun.
+
+A new system earns its place by creating decisions, not by filling time. When in doubt, prefer a system that can go wrong loudly to one that makes the player wait.
+
 ## Writing design docs
 
 - **Describe the current game in the present tense.** Design docs say what the game is, not how it got there. History belongs in `archive/`; parked and rejected ideas belong in `icebox.md`. Leave out "we changed", "no longer" and "instead of X": they confuse people and agents alike.

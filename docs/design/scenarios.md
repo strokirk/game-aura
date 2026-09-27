@@ -11,8 +11,8 @@ A **scenario** is data: a start state, an unlock set, and lists of win and loss 
 
 The trial is the default scenario in development (`?scenario=trial` or the dev menu), the first thing an agent's simulation runs, and the tutorial.
 
-- A player who runs one extra-Vis experiment and assigns hands sensibly wins in about 3 minutes.
-- A player who ignores the eels (the Tide Pool's Vis drops to 80%) needs about 4.5 minutes, close to the deadline.
+- A player who runs one extra-Vis experiment and assigns hands sensibly wins in about 2.5 minutes (the sim's median).
+- A player who ignores the eels (taking the weir drops the Tide Pool's Vis to 80%) needs about 4.5 minutes, close to the deadline.
 
 ## Staged unlocks (full run)
 

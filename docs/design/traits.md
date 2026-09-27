@@ -32,7 +32,7 @@ Traits currently attach to magi and Sanctums.
 | Drafty | − | Experiments here cost 20% more Vellum | Paying 60 Silver + 30 Stone to glaze the windows |
 | Haunted | ± | Insight ×1.1, but Notice +0.5 per minute | Paying 100 Silver for an exorcism (loses the bonus too) |
 | Cramped | − | 1 fewer assistant slot | Paying 500 Silver + 250 Stone to expand |
-| Sunken Damp | − | Experiments here cost 20% more Vellum | Paying 100 Silver to raise the floor |
+| Sunken Damp | − | 20% of the Vellum delivered to this Sanctum spoils | Paying 100 Silver to raise the floor |
 | Undercroft | ± | Insight ×1.25, but Notice +0.5 per minute | — |
 
 *Sunken Damp* and *Undercroft* come only from the eels thread (`stories.md`).

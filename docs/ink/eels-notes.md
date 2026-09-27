@@ -61,16 +61,18 @@ The flood costs about two thirds of the salt-works and halves the Tide Pool perm
 - `block:build_salt_pan:<s>`
 - `destroy:tide_pool`
 - `destroy:salt_pan:N`
-- **New, b9:** `#cost:vis:N` as a **choice tag**, inside the brackets (`* [text #cost:vis:25]`). inkjs exposes it on `choice.tags`. The engine greys the choice out when it can't be afforded, and deducts the cost when the choice is picked. There is no separate `res:` tag, so nothing is charged twice. Earlier beats still use ink guards; converting them is optional.
-- **New, b9:** `strike:all:<s>` stops all worker and porter output for that many seconds.
-- **New, b9:** `trait:sanctum:<magus>:<trait_id>` adds a trait to that magus's Sanctum.
-- **New, b9:** `mod:sanctum_<magus>:assistant_slots:-1:0` is an additive delta, which bends the `mod` shape (it is normally a multiplier). A cleaner shape would be `slots:sanctum:<magus>:-1`.
+- **b9:** `#cost:vis:N` as a **choice tag**, inside the brackets (`* [text #cost:vis:25]`). inkjs exposes it on `choice.tags`. The engine greys the choice out when it can't be afforded, and deducts the cost when the choice is picked. There is no separate `res:` tag, so nothing is charged twice. Earlier beats still use ink guards; converting them is optional.
+- **b9:** `strike:all:<s>` stops all worker and porter output for that many seconds.
+- **b9:** `trait:sanctum:<magus>:<trait_id>` adds a trait to that magus's Sanctum.
+- **b9:** `mod:sanctum_<magus>:assistant_slots:-1:0` is an additive delta, which bends the `mod` shape (it is normally a multiplier). A cleaner shape would be `slots:sanctum:<magus>:-1`.
 
 Some tags are dynamic. inkjs evaluates them, and this was tested: `{lost}`, `{sell_notice}`, the trust multiplier, and the magus name in b3. Some effects come from a conditional line that has its own tags, and those tags arrive on the second line after the choice. The engine should collect tags from every line until the knot hits `DONE`.
 
 The `s` guards use `silver >= silver_rate * N`. If `silver_rate ≤ 0`, the choice is free and always shown.
 
-## New building (proposed): Eel Weir
+## The Eel Weir
+
+The building's canonical numbers live in `design/economy.md`; this section records how the thread drives it.
 
 - **Unlock:** `unlock:eel_weir` (b2, the paid option).
 - **Placement and cost:** Marsh, 15 Silver, 1 hand.
@@ -115,7 +117,7 @@ The engine reads `eel_level` and `eels_state`. This is the standing temptation n
 ## Balance risks
 
 - Stops are paid in Vis, which the Tide Pool supplies. A player who spends all their Vis on experiments sees the stop options greyed out and can't take them.
-- Losing the Tide Pool in a late stop removes 1 of 3 Vis sites. Check that the Gate's 0.5 Vis/s requirement is still reachable. The flood's halved Tide Pool plus lost salt-works should still hurt more.
+- Losing the Tide Pool in a late stop removes 1 of 3 Vis sites. Check that the Rites' 0.3 Vis/s requirement is still reachable. The flood's halved Tide Pool plus lost salt-works should still hurt more.
 - Two thirds of the salt-works with no cap is harsh for a salt-heavy build. The `−1` floor stops it ending the run outright, but a player near high Notice could spiral.
 - The weir multiplier reaches ×3.5 at `eel_level` 5. If never stopping turns out to be the dominant food strategy, tune the weir, not the flood.
 - In the trial, the b2 ×0.8 Vis for 600 s outlasts the trial itself. It is meant to be felt, but check that 500 Insight is still winnable after paying for the weir.

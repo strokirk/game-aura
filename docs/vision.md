@@ -8,20 +8,22 @@ Aura is an incremental game about a covenant of Ars Magica wizards at Mont-Dol, 
 
 - **The Covenant must Grow.** Every system pushes outward. Growth is also the crime: the bigger the covenant, the louder it is.
 - **Complexity is Knowledge, and Knowledge is Power.** Systems stack and interlock, and the player who understands them wins. Every number can be read, traced and exploited. The depth is there for whoever wants it, and never needed to start.
-- **Losing is Fun.** A Renounced covenant or a drowned salt-works is a story, not a failure screen. The Chronicle remembers a loss as well as a win.
+- **Losing is Fun.** A Renounced covenant or a drowned salt-works is a story, not a failure screen. The Chronicle remembers a loss as well as a win. A run that loses loudly beats one that stalls: when the covenant is failing, it fails fast and memorably, never into a long wait.
 - **Number go Up!** There is always a next purchase, and multipliers stack until the covenant is absurd.
 
 ## How it should feel
 
 - **The first minutes are small and cosy.** One magus, one pool, a handful of hands, one clear thing to do next.
 - **The middle is plate-spinning.** Experiments finish every minute or two, porters are always one short, Notice creeps up, and something new unlocks just as the last thing settles.
-- **The end is a sprint.** The covenant is enormous, the deadline is close, and the Gate asks for everything at once.
+- **The end is a sprint.** The covenant is enormous, the deadline is close, and the Gate asks for everything at once. The late game never waits: there are more decisions than the player can take, so the covenant either careens toward the edge or runs below its best pace for want of micromanagement. Both are the player's choice, and neither is idle.
 - **Every run tells a story.** The eels, the magi's traits and the choices you made at the Tribunal add up to a Chronicle worth reading.
 - **It fits a phone and an evening.** A 5-minute trial on the bus, or an 80-minute run on the sofa.
 
 ## Who it's for
 
-It's for players who like incremental games and deep, overly complex ones: Civilization, Dwarf Fortress, Aurora 4X, Space Station 14. Aura should feed that appetite, with interlocking rules, numbers worth reading, and stories that emerge from systems, while keeping an incremental game's gentle on-ramp.
+Aura is an incremental game with story and RPG elements. Like Factorio or Cultist Simulator, a run has real challenges and can be lost, but the player can always start again, stronger and wiser.
+
+It's for players who like incremental games and deep, overly complex ones: Civilization, Dwarf Fortress, Aurora 4X, Space Station 14. Aura feeds that appetite with interlocking rules, numbers worth reading, and stories that emerge from systems, while keeping an incremental game's gentle on-ramp. Its depth is concentrated in one place: **the magi and their labs**. Everything else serves them.
 
 ## Inspirations
 

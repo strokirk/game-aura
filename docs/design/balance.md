@@ -11,15 +11,15 @@ The balance simulation is the source of truth for every number in the design. A 
 
 ## Balance tests
 
-`test/balance.test.ts` runs each strategy over 50 seeds and checks outcome ranges. A balance regression fails CI.
+`test/balance.test.ts` runs each strategy over 50 seeds and checks outcome ranges. A balance regression fails CI. Only the trial is simulated so far; the full-run rows are targets for when its scenario and strategies exist.
 
 | Scenario | Strategy | Target |
 | --- | --- | --- |
-| Trial | Sensible | Wins in 2.5–4 min in ≥ 90% of seeds |
+| Trial | Sensible | Wins in 1:30–4:00 in ≥ 90% of seeds, median ≥ 2:00 |
 | Trial | Idle (does nothing) | Loses |
-| Full run | Careful | Wins in 60–75 min |
-| Full run | Reckless, without bribes | Renounced |
-| Full run | Timid | Runs out of time |
+| Full run | Careful | Wins in 60–75 min `[PLAYTEST: not simulated yet]` |
+| Full run | Reckless, without bribes | Renounced `[PLAYTEST: not simulated yet]` |
+| Full run | Timid | Runs out of time `[PLAYTEST: not simulated yet]` |
 
 ## Constraints to keep true
 
