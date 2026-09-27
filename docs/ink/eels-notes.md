@@ -114,7 +114,7 @@ The engine reads `eel_level` and `eels_state`. This is the standing temptation n
 
 ## Balance risks
 
-- Stops are paid in Vis, which the Tide Pool supplies. A player who spends all their Vis on experiments never sees the stop options, because they are hidden when unaffordable. Consider showing them greyed out instead.
+- Stops are paid in Vis, which the Tide Pool supplies. A player who spends all their Vis on experiments sees the stop options greyed out and can't take them.
 - Losing the Tide Pool in a late stop removes 1 of 3 Vis sites. Check that the Gate's 0.5 Vis/s requirement is still reachable. The flood's halved Tide Pool plus lost salt-works should still hurt more.
 - Two thirds of the salt-works with no cap is harsh for a salt-heavy build. The `−1` floor stops it ending the run outright, but a player near high Notice could spiral.
 - The weir multiplier reaches ×3.5 at `eel_level` 5. If never stopping turns out to be the dominant food strategy, tune the weir, not the flood.

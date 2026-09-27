@@ -22,3 +22,36 @@
 - No raw colours or hand-rolled buttons/cards in screens: use the tokens and `kit.tsx`.
 - Icons are referenced only through `ui/icons.tsx`.
 - CC BY assets get a line in `docs/credits.md` and the in-game credits.
+
+## Architecture
+
+**Layout:**
+
+```
+src/core/     state, step, actions, rng, effects, conditions, ink bridge. No DOM, no Date, no Math.random
+src/data/     goods, buildings, research, recipes, traits, scenarios, unlocks
+src/content/  *.ink
+src/ui/       Solid: screens, tabs, overlays
+sim/          CLI + strategies
+test/         unit + balance tests
+```
+
+**The core contract:**
+
+- `createRun(scenarioId, seed): State`
+- `step(state, dt): State`: advances in fixed 0.25 s ticks internally
+- `apply(state, action): State | Rejection`: actions are a typed union (`build`, `assign`, `startExperiment`, `choose`, `research`, `endow`, …)
+- Selectors for everything the UI shows: rates, caps, time to afford, bottlenecks
+
+**Determinism:**
+
+- The same scenario, seed and action log give the same state.
+- The random number generator (sfc32) keeps its state inside `State`.
+- The ink story state (`story.state.ToJson()`) is part of `State`, and ink's random seed comes from the run's generator.
+- Ink effects are tags parsed by the core into the same effect type that research and traits use. Ink never calls game code.
+
+**Stories:** `.ink` files compile to JSON at build time through a small Vite plugin; tests use the same compiler.
+
+**Saves:** `{version, scenario, seed, log}` plus a snapshot for fast loading. Loading replays the log; a mismatch with the snapshot is a bug report.
+
+**Art:** public-domain manuscript art (British Library, Bodleian, Getty, Met Open Access, Wikimedia Commons). Check each image's licence and credit it in `credits.md` from the first image.
