@@ -22,8 +22,8 @@ Win and loss conditions belong to a scenario (`scenarios.md`). Each is a list; a
 
 | Scenario | Win | Loss |
 | --- | --- | --- |
-| Trial of the Tide Pool | 500 Insight before 1222 | Notice 50; 1222 begins |
-| The Covenant Must Grow | The third Rite of the Drowned Gate (`gate.md`) before 1260 | Notice 100 (Renounced); 1260 begins |
+| Trial of the Tide Pool | 500 Insight before 1222 | Notice 50; 1222 begins; the last hand leaves |
+| The Covenant Must Grow | The third Rite of the Drowned Gate (`gate.md`) before 1260 | Notice 100 (Renounced); 1260 begins; the last hand leaves |
 
 ## Glossary
 

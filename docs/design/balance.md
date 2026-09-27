@@ -11,20 +11,20 @@ The balance simulation is the source of truth for every number in the design. A 
 
 ## Balance tests
 
-`test/balance.test.ts` runs each strategy over 50 seeds and checks outcome ranges. A balance regression fails CI. Only the trial is simulated so far; the full-run rows are targets for when its scenario and strategies exist.
+`test/balance.test.ts` runs each strategy over 50 seeds and checks outcome ranges. A balance regression fails CI. The full run and its `careful` strategy exist but aren't balanced yet; its rows are targets, not tests.
 
 | Scenario | Strategy | Target |
 | --- | --- | --- |
 | Trial | Sensible | Wins in 1:30–4:00 in ≥ 90% of seeds, median ≥ 2:00 |
 | Trial | Idle (does nothing) | Loses |
-| Full run | Careful | Wins in 60–75 min `[PLAYTEST: not simulated yet]` |
+| Full run | Careful | Wins in 60–75 min `[PLAYTEST: the careful strategy reaches the first Rite on some seeds and wins none yet]` |
 | Full run | Reckless, without bribes | Renounced `[PLAYTEST: not simulated yet]` |
 | Full run | Timid | Runs out of time `[PLAYTEST: not simulated yet]` |
 
 ## Constraints to keep true
 
 - The Rites' 0.3 Vis/s is reachable with 2 of the 3 Vis sites plus research.
-- The Rites' 8 Stone/s carried into the Marsh is reachable at full-run scale.
+- The Rites' 4 Stone/s delivered to the Gate is reachable at full-run scale.
 - No story thread ends the run on its own; the eels' flood never takes the last salt-works.
 
 ## Playtest register

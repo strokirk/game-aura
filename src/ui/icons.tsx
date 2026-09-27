@@ -1,15 +1,23 @@
 // Every icon in one place. Game art: game-icons.net (CC BY 3.0, credited in docs/credits.md and Options).
 // Interface chrome: Lucide (ISC). Compiled to inline SVG components at build time, so unused icons cost nothing.
 import type { Component, JSX } from 'solid-js';
+import GiAnvil from '~icons/game-icons/anvil';
+import GiBarn from '~icons/game-icons/barn';
+import GiBookshelf from '~icons/game-icons/bookshelf';
 import GiBread from '~icons/game-icons/bread';
+import GiChurch from '~icons/game-icons/church';
+import GiCoinsPile from '~icons/game-icons/coins-pile';
 import GiCrystal from '~icons/game-icons/crystal-growth';
 import GiEel from '~icons/game-icons/eel';
 import GiEyeball from '~icons/game-icons/eyeball';
+import GiMagicGate from '~icons/game-icons/magic-gate';
 import GiMagicSwirl from '~icons/game-icons/magic-swirl';
 import GiMining from '~icons/game-icons/mining';
 import GiMoon from '~icons/game-icons/moon';
 import GiOpenBook from '~icons/game-icons/open-book';
 import GiPerson from '~icons/game-icons/person';
+import GiQuillInk from '~icons/game-icons/quill-ink';
+import GiRingingBell from '~icons/game-icons/ringing-bell';
 import GiSaltShaker from '~icons/game-icons/salt-shaker';
 import GiScrollQuill from '~icons/game-icons/scroll-quill';
 import GiScrollUnfurled from '~icons/game-icons/scroll-unfurled';
@@ -51,6 +59,8 @@ export const BUILDING_ICON: Record<BuildingId, Icon> = {
   quarry: GiMining,
   sanctum: GiStoneTower,
   cottage: GiVillage,
+  storehouse: GiBarn,
+  library: GiBookshelf,
 };
 
 export const I = {
@@ -61,6 +71,13 @@ export const I = {
   tidePool: GiMagicSwirl,
   salt: GiSaltShaker,
   eel: GiEel,
+  research: GiOpenBook,
+  gate: GiMagicGate,
+  rite: GiRingingBell,
+  endow: GiChurch,
+  bribe: GiCoinsPile,
+  device: GiAnvil,
+  labText: GiQuillInk,
   title: GiTowerFlag,
   win: GiSun,
   loss: GiMoon,

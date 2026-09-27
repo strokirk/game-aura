@@ -3,14 +3,18 @@ import {
   buildable,
   buildCost,
   canAfford,
+  cap,
   count,
   experimentPlan,
+  has,
   housing,
   idleHands,
+  isMaxed,
   type MagusState,
   magusName,
   type Rates,
   rates,
+  recipeOpen,
   type State,
   scenarioOf,
   studyCost,
@@ -28,6 +32,7 @@ import {
   GOODS,
   type GoodId,
   RECIPES,
+  type RecipeId,
   START_YEAR,
   YEAR,
   ZONES,
@@ -36,15 +41,20 @@ import {
 import { cost, eta, mmss, num, rate } from './format.ts';
 import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
+import { Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
 import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
 
-type Tab = 'covenant' | 'magi' | 'chronicle';
+type Tab = 'covenant' | 'magi' | 'research' | 'gate' | 'chronicle';
 const TABS: [Tab, string][] = [
   ['covenant', 'Covenant'],
   ['magi', 'Magi'],
+  ['research', 'Research'],
+  ['gate', 'Gate'],
   ['chronicle', 'Chronicle'],
 ];
+/** Tabs appear as their feature is revealed. */
+const tabShown = (s: State, t: Tab) => (t === 'research' || t === 'gate' ? has(s, t) : true);
 
 export function Game() {
   const s = () => game.s as State;
@@ -61,13 +71,19 @@ export function Game() {
           <Match when={tab() === 'magi'}>
             <For each={s().magi}>{(m) => <Magus s={s()} m={m} />}</For>
           </Match>
+          <Match when={tab() === 'research'}>
+            <Research s={s()} r={r()} />
+          </Match>
+          <Match when={tab() === 'gate'}>
+            <Gate s={s()} r={r()} />
+          </Match>
           <Match when={tab() === 'chronicle'}>
             <Chronicle s={s()} />
           </Match>
         </Switch>
       </div>
       <nav class="flex border-t border-line bg-bar pb-[env(safe-area-inset-bottom)]">
-        <For each={TABS}>
+        <For each={TABS.filter(([t]) => tabShown(s(), t))}>
           {([id, label]) => (
             <button
               type="button"
@@ -153,21 +169,23 @@ function Header(p: { s: State; r: Rates }) {
             <div class="relative">
               <Pops k={g} />
               <Ico icon={GOOD_ICON[g]} class="mr-1 text-gold" />
-              <b class={p.s.res[g] >= GOOD_INFO[g].cap - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
-              <Dim>/{num(GOOD_INFO[g].cap)}</Dim>
+              <b class={p.s.res[g] >= cap(p.s, g) - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
+              <Dim>/{num(cap(p.s, g))}</Dim>
               <div class={`text-sm ${p.r.net[g] < -1e-9 ? 'text-bad' : ''}`}>
                 {GOOD_INFO[g].name} {rate(p.r.net[g])}
               </div>
             </div>
           )}
         </For>
-        <div class="relative">
-          <Pops k="notice" />
-          <Ico icon={I.notice} class="mr-1 text-gold" />
-          <b>{Math.floor(p.s.notice)}</b>
-          <Dim> → {Math.round(p.r.noticeGen * 10)}</Dim>
-          <div class="text-sm">Notice (settles at)</div>
-        </div>
+        <Show when={has(p.s, 'notice')}>
+          <div class="relative">
+            <Pops k="notice" />
+            <Ico icon={I.notice} class="mr-1 text-gold" />
+            <b class={p.s.notice >= 75 ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
+            <Dim> → {Math.round(p.r.noticeGen * 10)}</Dim>
+            <div class="text-sm">Notice (settles at)</div>
+          </div>
+        </Show>
       </div>
     </header>
   );
@@ -199,6 +217,9 @@ function Covenant(p: { s: State; r: Rates }) {
           <p class="text-bad">No bread: everyone works at half speed, and hands are leaving.</p>
         </Show>
       </Card>
+      <Show when={has(p.s, 'notice')}>
+        <NoticeCard s={p.s} r={p.r} />
+      </Show>
       <For each={zones()}>
         {(z) => (
           <section class="mb-4">
@@ -237,7 +258,8 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
   const def = () => DEFS[p.id];
   const n = () => count(p.s, p.id);
   const c = () => buildCost(p.s, p.id);
-  const maxed = () => n() >= (def().max ?? Number.POSITIVE_INFINITY);
+  const maxed = () => isMaxed(p.s, p.id);
+  const caps = () => Object.entries(def().caps ?? {}).map(([g, n]) => `+${n} ${GOOD_INFO[g as GoodId].name}`);
   const out = () => p.r.byBuilding[p.id] ?? {};
   return (
     <Card>
@@ -260,9 +282,12 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
       <Dim class="text-sm">
         <Rich text={def().blurb} />
       </Dim>
-      <Show when={n() > 0 && def().slots > 0 && p.id !== 'sanctum'}>
+      <Show when={caps().length}>
+        <Dim class="block text-sm">Storage {caps().join(', ')} each</Dim>
+      </Show>
+      <Show when={n() > 0 && def().slots > 0}>
         <Stepper
-          label="Workers"
+          label={p.id === 'sanctum' ? 'Assistants' : 'Workers'}
           value={p.s.buildings[p.id]?.workers ?? 0}
           max={workerSlots(p.s, p.id)}
           onMinus={() => act({ type: 'workers', building: p.id, delta: -1 })}
@@ -282,9 +307,25 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
   );
 }
 
+const RECIPE_IDS = Object.keys(RECIPES) as RecipeId[];
+
 function Magus(p: { s: State; m: MagusState }) {
   const [extra, setExtra] = createSignal(0);
-  const plan = () => experimentPlan(p.s, p.m.id, 'study_vis', extra());
+  const [recipe, setRecipe] = createSignal<RecipeId>('study_vis');
+  const [target, setTarget] = createSignal<BuildingId | undefined>();
+  const open = () => RECIPE_IDS.filter((id) => recipeOpen(p.s, id));
+  const plan = () => experimentPlan(p.s, p.m.id, recipe(), extra());
+  const def = () => RECIPES[recipe()];
+  const targets = () =>
+    (Object.keys(p.s.buildings) as BuildingId[]).filter((id) => DEFS[id].perWorker && count(p.s, id) > 0);
+  const result = () =>
+    def().result === 'insight'
+      ? `${num(plan().insight)} Insight`
+      : def().result === 'labText'
+        ? `a Lab Text (you have ${p.s.labTexts})`
+        : target()
+          ? `+25% ${DEFS[target() as BuildingId].name}`
+          : 'choose a building';
   const sc = () => studyCost(p.m);
   return (
     <Card>
@@ -294,7 +335,16 @@ function Magus(p: { s: State; m: MagusState }) {
         </Label>
         <span>Lab Total {p.m.lt}</span>
       </div>
-      <Show when={p.m.exp} fallback={<Dim>{p.m.sanctum ? 'Reading in the Sanctum.' : 'No Sanctum.'}</Dim>}>
+      <Show
+        when={p.m.exp}
+        fallback={
+          <Dim>
+            <Rich
+              text={p.m.sanctum ? 'Reading in the Sanctum.' : 'Waiting in the Hall. Build a Sanctum for this magus.'}
+            />
+          </Dim>
+        }
+      >
         {(e) => (
           <div>
             <div class="flex justify-between">
@@ -303,17 +353,40 @@ function Magus(p: { s: State; m: MagusState }) {
             </div>
             <Bar pct={((p.s.t - e().start) / (e().end - e().start)) * 100} />
             <Dim class="text-sm">
-              {num(e().insight)} Insight · {Math.round(e().botch * 100)}% botch
+              <Show when={RECIPES[e().recipe].result === 'insight'}>{num(e().insight)} Insight · </Show>
+              {Math.round(e().botch * 100)}% botch
             </Dim>
           </div>
         )}
       </Show>
       <Show when={p.m.sanctum && !p.m.exp}>
         <div class="my-2 border-t border-line pt-2">
-          <h4>{RECIPES.study_vis.name}</h4>
+          <Show when={open().length > 1}>
+            <div class="mb-1.5 flex flex-wrap gap-1.5">
+              <For each={open()}>
+                {(id) => (
+                  <Button on={recipe() === id} onClick={() => setRecipe(id)} class="px-2 text-sm">
+                    {RECIPES[id].name}
+                  </Button>
+                )}
+              </For>
+            </div>
+          </Show>
+          <h4>{def().name}</h4>
           <Dim class="text-sm">
-            <Rich text={RECIPES.study_vis.blurb} />
+            <Rich text={def().blurb} />
           </Dim>
+          <Show when={def().result === 'device'}>
+            <div class="my-1.5 flex flex-wrap gap-1.5">
+              <For each={targets()}>
+                {(id) => (
+                  <Button on={target() === id} onClick={() => setTarget(id)} class="px-2 text-sm">
+                    <Ico icon={BUILDING_ICON[id]} /> {DEFS[id].name}
+                  </Button>
+                )}
+              </For>
+            </div>
+          </Show>
           <Stepper
             label="Extra Vis"
             value={extra()}
@@ -322,14 +395,16 @@ function Magus(p: { s: State; m: MagusState }) {
             onPlus={() => setExtra(extra() + 1)}
           />
           <div class="text-sm">
-            {num(plan().insight)} Insight · {mmss(plan().time)} · {Math.round(plan().botch * 100)}% botch ·{' '}
+            {result()} · {mmss(plan().time)} · {Math.round(plan().botch * 100)}% botch ·{' '}
             {Math.round(plan().discovery * 100)}% discovery
           </div>
           <Button
             primary
             class="mt-1.5 w-full"
-            disabled={!canAfford(p.s, plan().cost)}
-            onClick={() => act({ type: 'experiment', magus: p.m.id, recipe: 'study_vis', extra: extra() })}
+            disabled={!canAfford(p.s, plan().cost) || (def().result === 'device' && !target())}
+            onClick={() =>
+              act({ type: 'experiment', magus: p.m.id, recipe: recipe(), extra: extra(), target: target() })
+            }
           >
             Begin · {cost(plan().cost)} <span class="text-sm">{eta(timeToAfford(p.s, plan().cost))}</span>
           </Button>

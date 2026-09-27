@@ -37,6 +37,8 @@ export interface BuildingDef {
   /** At most this many. Named sites (the Vis sources) are max 1 and don't use zone slots. */
   max?: number;
   site?: boolean;
+  /** Raises storage caps, per building. */
+  caps?: Cost;
   blurb: string;
 }
 const visSite = (name: string, blurb: string): BuildingDef => ({
@@ -104,9 +106,25 @@ export const BUILDINGS = {
     perWorker: { bread: 0.3 },
     blurb: 'Stakes and wattle across the channel below the Tide Pool. The eels grow bigger every year.',
   },
+  storehouse: {
+    name: 'Storehouse',
+    zone: 'hearth',
+    cost: { silver: 50, stone: 20 },
+    slots: 0,
+    caps: { stone: 100, bread: 100, vellum: 25 },
+    blurb: 'A dry stone barn. More Stone, Bread and Vellum can wait here.',
+  },
+  library: {
+    name: 'Library',
+    zone: 'hearth',
+    cost: { silver: 40, vellum: 20 },
+    slots: 0,
+    caps: { insight: 500 },
+    blurb: 'Shelves, a lectern and a chain for every book. Room for more Insight.',
+  },
   cottage: {
     name: 'Cottage',
-    zone: 'hearth',
+    zone: 'bocage',
     cost: { silver: 30 },
     slots: 0,
     housing: 3,
@@ -135,8 +153,9 @@ export interface RecipeDef {
   name: string;
   cost: Cost;
   time: number;
-  /** Insight per point of Lab Total. */
-  insightPerLT: number;
+  /** What a success gives: Insight (per point of Lab Total), a Lab Text, or a Device for a chosen building. */
+  result: 'insight' | 'labText' | 'device';
+  insightPerLT?: number;
   blurb: string;
 }
 export const RECIPES = {
@@ -144,8 +163,24 @@ export const RECIPES = {
     name: 'Study the Vis',
     cost: { vis: 5 },
     time: 60,
+    result: 'insight',
     insightPerLT: 15,
     blurb: 'Burn a measure of raw vis and write down what it does.',
+  },
+  lab_text: {
+    name: 'Write a Lab Text',
+    cost: { vellum: 20 },
+    time: 180,
+    result: 'labText',
+    blurb:
+      'Copy out what the lab has learned, so the next experiment starts further along. +10% to all experiment yields, for good.',
+  },
+  device: {
+    name: 'Enchant a Device',
+    cost: { vis: 10, stone: 50 },
+    time: 240,
+    result: 'device',
+    blurb: 'Bind a Rego Terram effect into a tool. +25% output for one kind of building, for good.',
   },
 } as const satisfies Record<string, RecipeDef>;
 export type RecipeId = keyof typeof RECIPES;
@@ -158,6 +193,141 @@ export const EXPERIMENT = {
   botch: 0.05,
   discovery: 0.05,
   botchNotice: 5,
+  /** The halfway check-in, for experiments of at least this many seconds. */
+  checkInAt: 120,
+  pushYield: 0.3,
+  pushBotch: 0.1,
+  labText: 0.1,
+  device: 0.25,
+};
+
+/** Research and other permanent bonuses, all applied in one place (`rates()`). */
+export type Modifier =
+  | { kind: 'output'; building: BuildingId; mult: number }
+  | { kind: 'carry'; zone?: ZoneId; mult: number }
+  | { kind: 'cap'; good: GoodId; mult?: number; add?: number }
+  | { kind: 'botch'; mult: number }
+  | { kind: 'assistants'; add: number }
+  | { kind: 'zoneNotice'; zone: ZoneId; factor: number }
+  | { kind: 'baseline'; mult: number }
+  | { kind: 'noticeGen'; mult: number }
+  | { kind: 'reveal'; id: string };
+
+export interface ResearchDef {
+  name: string;
+  cost: Cost;
+  effects: readonly Modifier[];
+  /** Repeatable research doubles its cost each time. */
+  repeatable?: boolean;
+  blurb: string;
+}
+/** In the order the Research tab reveals them. */
+export const RESEARCH = {
+  salt_rakes: {
+    name: 'Salt Rakes',
+    cost: { insight: 50 },
+    effects: [{ kind: 'output', building: 'salt_pan', mult: 1.5 }],
+    blurb: 'Salt-works ×1.5. Rakes that find the saltiest sand.',
+  },
+  plough: {
+    name: 'Self-Tilling Plough',
+    cost: { insight: 120 },
+    effects: [{ kind: 'output', building: 'farm', mult: 2 }],
+    blurb: 'Farms ×2. It turns the furrow, the hands walk behind.',
+  },
+  mule_trains: {
+    name: 'Mule Trains',
+    cost: { insight: 250 },
+    effects: [{ kind: 'carry', mult: 2 }],
+    blurb: 'Porters carry ×2.',
+  },
+  accounts: {
+    name: 'Hermetic Accounts',
+    cost: { insight: 300 },
+    effects: [{ kind: 'cap', good: 'silver', mult: 2 }],
+    blurb: 'Silver storage ×2. Double-entry, and a lock on the chest.',
+  },
+  strongbox: {
+    name: 'Strongbox',
+    cost: { insight: 400 },
+    effects: [{ kind: 'cap', good: 'silver', add: 500 }],
+    repeatable: true,
+    blurb: 'Silver storage +500. Can be bought again, at double the price.',
+  },
+  reed_pen: {
+    name: 'Reed Pen of Diligent Copying',
+    cost: { insight: 500 },
+    effects: [{ kind: 'output', building: 'parchmenter', mult: 2 }],
+    blurb: 'Parchmenters ×2.',
+  },
+  notebooks: {
+    name: 'Lab Notebooks',
+    cost: { insight: 600 },
+    effects: [{ kind: 'botch', mult: 0.5 }],
+    blurb: 'Botch chance halved. Write it down before you burn it.',
+  },
+  apprentice_rooms: {
+    name: 'Apprentice Rooms',
+    cost: { insight: 800 },
+    effects: [{ kind: 'assistants', add: 1 }],
+    blurb: '+1 assistant in every Sanctum.',
+  },
+  lead_chests: {
+    name: 'Lead-Lined Chests',
+    cost: { insight: 900 },
+    effects: [{ kind: 'cap', good: 'vis', add: 30 }],
+    blurb: 'Vis storage +30.',
+  },
+  stones_carry: {
+    name: 'Stones That Carry',
+    cost: { insight: 1500 },
+    effects: [{ kind: 'carry', zone: 'marsh', mult: 3 }],
+    blurb: 'Marsh porters ×3. Rego Terram in the paving of the causeway.',
+  },
+  aegis: {
+    name: 'Aegis of the Hearth',
+    cost: { insight: 2000, vis: 20 },
+    effects: [
+      { kind: 'zoneNotice', zone: 'hearth', factor: 0 },
+      { kind: 'baseline', mult: 1.25 },
+      { kind: 'reveal', id: 'gate' },
+    ],
+    blurb: 'The Hearth draws no Notice; baseline Insight ×1.25; the Drowned Gate can be found.',
+  },
+  marsh_mist: {
+    name: 'Marsh Mist',
+    cost: { insight: 2500, vis: 10 },
+    effects: [{ kind: 'noticeGen', mult: 0.6 }],
+    blurb: 'All Notice ×0.6. The flats are hard to see from Dol most mornings.',
+  },
+} as const satisfies Record<string, ResearchDef>;
+export type ResearchId = keyof typeof RESEARCH;
+export const RESEARCH_DEFS: Record<ResearchId, ResearchDef> = RESEARCH;
+/** How many unbought items the Research tab shows at once. */
+export const RESEARCH_SHOWN = 3;
+
+/** Notice events, fired when Notice rises past them and re-armed once it falls 5 below (`notice.md`). */
+export const NOTICE = {
+  rearm: 5,
+  tax: { at: 50, share: 0.1 },
+  strike: { at: 75, secs: 60, payShare: 0.05 },
+  audit: { at: 90 },
+  endow: { base: 500, growth: 2, gen: 1 },
+  bribe: { base: 100, growth: 2, notice: 20 },
+};
+
+/** The Drowned Gate (`gate.md`). */
+export const GATE = {
+  found: { silver: 200, stone: 100 } as Cost,
+  raise: 1500,
+  stonePerS: 4,
+  visPerS: 0.3,
+  window: 60,
+  rites: [
+    { name: 'The Bells Beneath the Tide', insight: 20000 },
+    { name: 'The Knight Unburied', insight: 25000 },
+    { name: 'The Tide Stands Still', insight: 30000 },
+  ],
 };
 
 /** What choices, research and traits do. Ink tags parse into these (`docs/design/stories.md`). */
@@ -168,7 +338,11 @@ export type Effect =
   | { kind: 'mod'; id: string; good: GoodId; mult: number; secs: number }
   /** Blocks an action key such as `experiment:aldric`, `experiment:all` or `build_salt_pan`. */
   | { kind: 'block'; what: string; secs: number }
-  | { kind: 'unlock'; id: string };
+  | { kind: 'unlock'; id: string }
+  /** The halfway check-in's answer for a running experiment. */
+  | { kind: 'checkIn'; magus: MagusId; choice: 'push' | 'steady' | 'abort' }
+  /** Ends a strike at once. */
+  | { kind: 'endStrike' };
 
 export interface EventDef {
   title: string;
@@ -187,8 +361,23 @@ export interface StoryBeat {
 
 export type Condition =
   | { kind: 'res'; good: GoodId; atLeast: number }
+  /** Stock below this share of its cap. */
+  | { kind: 'below'; good: GoodId; share: number }
   | { kind: 'time'; atLeast: number }
-  | { kind: 'notice'; atLeast: number };
+  | { kind: 'notice'; atLeast: number }
+  | { kind: 'hands'; atLeast: number }
+  | { kind: 'noHands' }
+  | { kind: 'insightMade'; atLeast: number }
+  | { kind: 'researched'; atLeast: number }
+  | { kind: 'rites'; atLeast: number };
+
+/** Something the scenario reveals when its condition is first met: buildings, recipes, tabs, magi. */
+export interface UnlockDef {
+  when: Condition;
+  /** Building ids, `recipe:<id>`, `magus:<id>`, or a feature: `research`, `notice`, `endow`, `gate`. */
+  reveal: readonly string[];
+  card?: { title: string; text: string };
+}
 
 export interface ScenarioDef {
   name: string;
@@ -201,6 +390,9 @@ export interface ScenarioDef {
     magi: readonly { id: MagusId; sanctum: boolean }[];
   };
   allowed: readonly BuildingId[];
+  /** Revealed from the start: recipes and features (see UnlockDef). */
+  unlocked: readonly string[];
+  unlocks?: readonly UnlockDef[];
   win: readonly { when: Condition; cause: string }[];
   loss: readonly { when: Condition; cause: string }[];
   intro?: EventDef;
@@ -226,6 +418,7 @@ export const SCENARIOS = {
       magi: [{ id: 'aldric', sanctum: true }],
     },
     allowed: ['salt_pan', 'tide_pool', 'knights_barrow'],
+    unlocked: ['notice'],
     win: [
       {
         when: { kind: 'res', good: 'insight', atLeast: 500 },
@@ -234,11 +427,85 @@ export const SCENARIOS = {
     ],
     loss: [
       { when: { kind: 'notice', atLeast: 50 }, cause: 'The Order takes Notice.' },
+      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. Nobody is left to carry the vis.' },
       { when: { kind: 'time', atLeast: 2 * YEAR }, cause: 'The year 1222 begins, and the book is still thin.' },
     ],
     intro: {
       title: 'Spring 1220',
       text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. Five hundred pages of Insight by 1222 and the Order will take the covenant seriously.',
+      options: [{ label: 'Begin', effects: [] }],
+    },
+    story: [
+      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
+      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
+    ],
+  },
+  grow: {
+    name: 'The Covenant Must Grow',
+    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    start: {
+      res: { silver: 60, bread: 150, vis: 5 },
+      hands: 6,
+      buildings: {
+        sanctum: { count: 1, workers: 0 },
+        salt_pan: { count: 1, workers: 1 },
+        tide_pool: { count: 1, workers: 1 },
+      },
+      porters: { marsh: 1 },
+      magi: [{ id: 'aldric', sanctum: true }],
+    },
+    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
+    unlocked: [],
+    unlocks: [
+      { when: { kind: 'insightMade', atLeast: 1 }, reveal: ['research'] },
+      {
+        when: { kind: 'below', good: 'bread', share: 0.5 },
+        reveal: ['farm', 'cottage'],
+        card: {
+          title: 'The hands are hungry',
+          text: 'The cook has started counting loaves. Beyond the hedges of the Bocage there is land for Farms, and room for Cottages. Every hand eats Bread, and every hand you house will want more.',
+        },
+      },
+      {
+        when: { kind: 'researched', atLeast: 1 },
+        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device'],
+        card: {
+          title: 'Granite and barrows',
+          text: 'Mont-Dol is granite to the root. Quarry it for Stone: Sanctums, Storehouses and one day greater things are built of it. Out on the flats the hands have found a second place where vis gathers: the Drowned Knight’s Barrow.',
+        },
+      },
+      {
+        when: { kind: 'hands', atLeast: 10 },
+        reveal: ['parchmenter', 'library', 'regio_spring', 'recipe:lab_text', 'magus:sabine', 'magus:herve'],
+        card: {
+          title: 'Two more magi',
+          text: 'Word has reached the Order that Mont-Dol can feed a covenant. Sabine and Hervé arrive with their books in a cart. Each needs a Sanctum before they can work. They know of a third vis source, the Regio Spring, and they want Vellum for Lab Texts.',
+        },
+      },
+      { when: { kind: 'notice', atLeast: 1 }, reveal: ['notice'] },
+      {
+        when: { kind: 'time', atLeast: 6 * YEAR },
+        reveal: ['endow'],
+        card: {
+          title: 'Friends in Dol',
+          text: 'The parish would take an Endowment, and the lord of Dol a gift. Endowing calms the covenant’s Notice for good; a bribe buys quiet for a few years.',
+        },
+      },
+    ],
+    win: [
+      {
+        when: { kind: 'rites', atLeast: 3 },
+        cause: 'The tide stands still, and the Drowned Gate opens.',
+      },
+    ],
+    loss: [
+      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
+      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
+      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+    ],
+    intro: {
+      title: 'Spring 1220',
+      text: 'Aldric has a tower on Mont-Dol, six hands, a salt-works and the Tide Pool. Under the marsh lies a drowned regio, and a Gate into it. Open it before 1260. Every building will be noticed in Dol, and the Order watches what Dol notices.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: [

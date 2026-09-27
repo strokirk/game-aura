@@ -18,7 +18,7 @@ For every concept, decide up front whether it can ever be **0**, **1** or **N**.
 | Hands | A count per job | Counts, with named people as a separate list | Named hands may arrive through events |
 | Zones | 3 | List, with carry distance as data, not a formula tied to 3 | New zones or a map later |
 | Vis sites | 3 | List of named, addressable sites | Events already target them individually |
-| Buildings per zone rule | Several | List of allowed zones on each building definition | Cottages already go in 2 zones |
+| Zones a building can go in | 1 each | 1 zone per building definition | A building in 2 zones needs per-zone counts; add a list when one needs it |
 | Research, and its effects | About 15, 1–3 effects each | Registry; each item has a list of effects | New research is pure data |
 | Experiment recipes | 3 | Registry | More recipes are content |
 | Modifiers (research, traits, Lab Texts, Devices, ink) | Dozens | One list of modifier objects, applied in one place | No effect is special-cased in code |
