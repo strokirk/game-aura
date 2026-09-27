@@ -2,6 +2,8 @@
 
 ## Growing the design
 
+Design starts from a story. Like Tarn Adams writing a freeform story before building the Dwarf Fortress mechanics to produce it, write what should happen in a run in plain prose first, then design mechanics that can interact, sometimes in surprising ways, to make that story possible. The eels thread began this way.
+
 Design starts at the endgame: the Drowned Gate, the Rites, the most impressive things a covenant does. The game grows from there in two directions:
 - **Into the middle:** prerequisites, obstacles and distractions that stand between the start and the endgame.
 - **Past the end:** even more impressive things to do once the current endgame is fun.
@@ -10,7 +12,7 @@ A new system earns its place by creating decisions, not by filling time. When in
 
 ## Writing design docs
 
-- **Describe the current game in the present tense.** Design docs say what the game is, not how it got there. History belongs in `archive/`; parked and rejected ideas belong in `icebox.md`. Leave out "we changed", "no longer" and "instead of X": they confuse people and agents alike.
+- **Describe the current game in the present tense.** Design docs say what the game is, not how it got there. History belongs in `archive/`; planned features belong in `backlog.md`; parked and rejected ideas belong in `icebox.md`. Leave out "we changed", "no longer" and "instead of X": they confuse people and agents alike.
 - **Every mechanic answers 5 questions:**
   1. **Input:** what the player does.
   2. **System:** what the game calculates, with formulas, conditions and edge cases.

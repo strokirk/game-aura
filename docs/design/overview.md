@@ -38,7 +38,7 @@ Win and loss conditions belong to a scenario (`scenarios.md`). Each is a list; a
 | Lab Total (LT) | A magus's skill number |
 | Experiment | A timed lab action a magus starts; the main source of Insight |
 | Insight | The research currency |
-| Vis | Raw magic, harvested at 3 named Vis sites |
+| Vis | Raw magic, harvested at 3 named Vis sites. All the covenant's vis is Vim vis, the Form of magic itself |
 | Notice | The attention the covenant draws from the lord of Dol, the bishop and the Order of Hermes. At 100 the covenant is Renounced |
 | Order of Hermes | The society of wizards the covenant belongs to. Its judges (Quaesitores) punish covenants that draw too much attention |
 | Aegis of the Hearth | A protective ritual around the covenant's home |

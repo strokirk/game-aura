@@ -40,6 +40,10 @@ It's for players who like incremental games and deep, overly complex ones: Civil
 | Card plate-spinners with tech trees | A dozen small timers running at once, and a tech tree to climb between them |
 | Civilization, Aurora 4X, Space Station 14 | Rules that interlock deeply enough to reward years of play |
 
+## A story generator
+
+Like Dwarf Fortress and the sim games that followed it, Aura is an interactive story generator. The game lays out events; the player's mind, which finds patterns and stories in everything, does the rest, and retells them afterwards the way Dwarf Fortress players retell Boatmurdered. So Aura's randomness should feel meaningful, not like independent dice: a simple storyteller picks events that follow from what the covenant has done and what just happened (`backlog.md`, *A storyteller*).
+
 ## A little learning
 
 Playing Aura should teach small, true things, the way a good historical novel does, through flavour text, event cards and codex entries, never quizzes. Where the rules or the world get in the way of fun, we bend them on purpose.
@@ -66,4 +70,4 @@ These are the directions the game can take once the core is fun. Each one is a c
 - **Mods:** everything in data, so new content never needs new code.
 - **Platforms:** installable on phones, and wrapped for desktop and iOS.
 
-Parked ideas, and ideas we tried and set aside, live in `icebox.md`.
+Planned features live in `backlog.md`. Parked ideas, and ideas we tried and set aside, live in `icebox.md`.
