@@ -7,7 +7,7 @@ The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
 | Zone | Building slots | Notice factor | Carry distance | Allowed buildings |
 | --- | --- | --- | --- | --- |
 | Hearth | 8 | 0.5 (0 after the Aegis) | 0 (no porters needed) | Sanctum, Quarry, Storehouse, Library |
-| Bocage | 12 | 1.5 | 1 | Farm, Parchmenter, Cottage |
+| Bocage | 12 | 1.5 | 1 | Farm, Parchmenter, Pilgrims' Hostel, Cottage |
 | Marsh | 10, plus 3 Vis sites | 0.5 | 2 | Salt Pan, Vis Source (Vis sites only), Eel Weir (when unlocked) |
 
 - Each building uses 1 slot in its zone. Cottages live in the loud Bocage, so housing more hands costs Notice.
@@ -19,7 +19,7 @@ The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
 
 - **Start:** 4 hands in the trial, 6 in the full run.
 - **Housing:** the Hall houses 8. Each Cottage houses 3 more.
-- **Food:** each hand eats 0.05 Bread/s.
+- **Food:** each hand eats 0.05 Bread/s. **Fish days:** medieval Christians ate no meat on about a third of days, so Eels stand in for up to 1/3 of what the hands eat, 1 Eel for 1 Bread, whenever there are Eels in stock or coming in.
 - **Growth:** while there is free housing, Bread stock is above 0 and net Bread is ≥ 0, 1 new hand arrives every 20 s.
 - **Hunger:** at 0 Bread, every job runs at 50% and 1 hand leaves every 30 s. When the last hand leaves, the run is lost: a covenant that starves loses loudly instead of idling to the deadline.
 - **Jobs:** a hand is a **worker** (assigned to a building type) or a **porter** (assigned to a zone). Unassigned hands are idle and still eat.
@@ -33,16 +33,17 @@ Buildings are counted per type. The next one costs base cost × 1.15^owned. Each
 
 | Building | Zone | Base cost | Worker slots | Per worker | Why build it |
 | --- | --- | --- | --- | --- | --- |
-| Salt Pan | Marsh | 20 Silver | 2 | 0.25 Salt/s | The main income: Salt is sold on arrival at the Hall, 1 Salt = 1 Silver |
+| Salt Pan | Marsh | 20 Silver | 2 | 0.25 Salt/s | The main income: the Hall sells Salt for 1 Silver each, or keeps it to preserve food (below) |
 | Farm | Bocage | 20 Silver | 2 | 0.2 Bread/s | Bread feeds the hands |
 | Quarry | Hearth | 40 Silver | 2 | 0.25 Stone/s | Stone pays for Sanctums, Storehouses and the Gate |
 | Parchmenter | Bocage | 30 Silver | 1 | 0.15 Vellum/s | Vellum pays for Lab Texts and Libraries |
 | Vis Source | Marsh Vis site (max 3) | 40 Silver | 2 | 0.08 Vis/s | Vis fuels experiments, the Aegis and the Gate |
 | Sanctum | Hearth (max 3, 1 per magus) | 100 Silver + 50 Stone | 2 assistants | +25% to the magus's baseline Insight and experiment speed per assistant | A magus without a Sanctum does nothing |
+| Pilgrims' Hostel | Bocage (with Quarries) | 40 Silver + 20 Stone | 1 | Uses 0.2 Bread/s, makes 0.3 Silver/s | Bread becomes money: the *miquelots* cross the bay to Mont-Saint-Michel. Idle while Bread is out |
 | Cottage | Bocage | 30 Silver | 0 | Housing +3 | More hands |
 | Storehouse | Hearth | 50 Silver + 20 Stone | 0 | Stone, Bread and Vellum caps +50% of base | Room to stockpile |
 | Library | Hearth | 40 Silver + 20 Vellum | 0 | Insight cap +500 | Room to save for big research |
-| Eel Weir | Marsh (after `unlock:eel_weir`) | 15 Silver | 1 | 0.3 Bread/s × (1 + 0.5 × eel level) while the eels thread is open; ×3 for 1 year after the flood; ×1 after a stop | Cheap food, and the eels' standing temptation (`stories.md`) |
+| Eel Weir | Marsh (after `unlock:eel_weir`) | 15 Silver | 1 | 0.3 Eels/s × (1 + 0.5 × eel level) while the eels thread is open; ×1 after it ends | Eels for fish days, and the eels' standing temptation (`stories.md`) |
 
 The 3 Vis sites are named and individually addressable: the Tide Pool, the Drowned Knight's Barrow, and the Regio Spring. Events can target one of them.
 
@@ -57,6 +58,12 @@ Goods made outside the Hearth count only once porters bring them to the Hall.
 - **Feedback:** each zone header says it plainly: "Marsh: carried 1.8 of 2.4 goods/s · 3 porters". When porters are the bottleneck, the zone's porter + button pulses.
 - **Why:** distance matters and the bottleneck is visible, without drawing any lines. Porters compete with workers for the same hands.
 
+## Salt: sell or keep
+
+- **Input:** a switch on the Salt-works card: **Selling** (the default) or **Keeping**.
+- **System:** while selling, all Salt reaching the Hall is sold at 1 Silver each. While keeping, Salt stays in store up to its cap and only the overflow is sold. Every 5 Salt in store raises the Bread and Eels caps by 1. Switching back to selling sells the whole store at once.
+- **Why:** salt was how the bay preserved its food. Keeping Salt trades Silver now for room to stockpile Bread for alms and Eels for fish days.
+
 ## Storage caps
 
 Every good has a cap. At the cap, new production of that good is wasted and the resource shows red "full".
@@ -65,7 +72,9 @@ Every good has a cap. At the cap, new production of that good is wasted and the 
 | --- | --- | --- |
 | Silver | 500 | *Hermetic Accounts* (×2); *Strongbox* (+500 each, repeatable) |
 | Stone | 200 | Storehouse (+100 each) |
-| Bread | 200 | Storehouse (+100 each) |
+| Salt | 500 | — |
+| Bread | 200 | Storehouse (+100 each); +1 per 5 Salt in stock |
+| Eels | 200 | +1 per 5 Salt in stock |
 | Vellum | 50 | Storehouse (+25 each) |
 | Vis | 30 | *Lead-Lined Chests* (+30) |
 | Insight | 1,000 | Library (+500 each). Once founded, the Drowned Gate holds Insight with no cap (`gate.md`) |

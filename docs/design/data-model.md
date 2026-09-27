@@ -8,7 +8,7 @@ For every concept, decide up front whether it can ever be **0**, **1** or **N**.
 | Entity types a trait can attach to | 1 each | List on the trait definition | A trait may later fit both a magus and a place |
 | Notice tracks | 1 | Map track → value, with zone factors, thresholds and levers per track | Separate lord, church and Order tracks are a likely direction |
 | Kinds of Vis | 1 (Vim) | Goods registry; Vis is 1 entry | Ars Magica has 10 Forms of vis; more can join Vim later |
-| Goods | 6 + Insight | Registry of good definitions | New goods must never need code changes |
+| Goods | 7 + Insight | Registry of good definitions | New goods must never need code changes |
 | Win conditions | 1 per scenario | List of condition objects; any met = win | Alternative victories are likely |
 | Loss conditions | 2 per scenario | List of condition objects; any met = loss | Already N |
 | Scenarios | 2 | Registry | More will come |

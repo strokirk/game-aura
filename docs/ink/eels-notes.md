@@ -22,15 +22,15 @@ Eel size by beat: an arm's length (b1), 3 ft (b3), 12 ft (b5). After an early st
 
 | Knot | Trigger | Summary | Choices → effects |
 |---|---|---|---|
-| `eels_1_first_catch` | 1220, about 60 s in (trial) | Guillaume pays double rent; some eels are longer than his arm | **Salt them:** `bread +15`, took++. **Sell at Dol:** `silver +10, notice +2`, took++. **One stick:** `bread +6`, trust++ |
+| `eels_1_first_catch` | 1220, about 60 s in (trial) | Guillaume pays double rent; some eels are longer than his arm | **Salt them:** `eels +15`, took++. **Sell at Dol:** `silver +10, notice +2`, took++. **One stick:** `bread +6`, trust++ |
 | `eels_2_the_weir` | year ≥ 1221 (trial, about 150 s in) | The fishers want a weir below the Tide Pool; Aldric notes the pool yields less | **Pay 20 Silver:** `unlock:eel_weir, mod:tide_pool:vis:0.8:600`, took++. **Let them build:** `mod:eel_share:bread:1.3:240` if trust > 0, else 1.15; also `mod:tide_pool:vis:0.8:600`, took++. **Look:** Sabine if `has_sabine`, else Aldric. `block:experiment:<who>:60`, sets `looked`, `looker` and `looked_year`, and avoids the Vis penalty |
 | `eels_3_the_font` | year ≥ 1224, open | The priest brings a 3 ft eel from the font and asks what the magi keep | **Lid:** `silver -30s, notice -6`. **Shrug:** `notice +8`. **Stop (early):** if looked, `vis -5`; if not, `vis -8` and `block:experiment:<sabine or aldric>:180`. Either way `notice -5`. Rego Aquam ward |
-| `eels_4_the_pits` | year ≥ 1229, open | Eels in the salt-works' filter pits; Perrine asks if the magi breed them | **Diggers:** `silver -40s, notice -5`. **Leave it:** `mod:eel_pits:silver:0.85:300, bread +25, notice +6`, took++. **Stop (mid):** `vis -10, block:experiment:aldric:300, notice -5`. The cause is stated here, and the looker's year is recalled |
+| `eels_4_the_pits` | year ≥ 1229, open | Eels in the salt-works' filter pits; Perrine asks if the magi breed them | **Diggers:** `silver -40s, notice -5`. **Leave it:** `mod:eel_pits:silver:0.85:300, eels +25, notice +6`, took++. **Stop (mid):** `vis -10, block:experiment:aldric:300, notice -5`. The cause is stated here, and the looker's year is recalled |
 | `eels_5_the_road` | year ≥ 1235, open | Hamon, the bishop's sergeant, counts eels on the road; a 12 ft eel | **Bribe:** `silver -60s, notice -10`. **Lie:** `notice +10`. **Stop (late):** `vis -20, destroy:tide_pool`, `block:experiment` 300 on Aldric plus Sabine or Hervé (whoever exists), `notice -8`. Perdo Aquam |
-| `eels_6_spring_tide` | year ≥ 1241, open | Aude pays (took×10+10) sticks and warns about the spring tide | **Stop (late):** `vis -20, destroy:tide_pool, block:experiment:all:600, notice -8`. **Bank the salt-works:** `silver -120s` if trust > 0 (her cousins dig), else `-180s`; `notice +6`; sets `pans_banked`. **Buy the cart:** `bread +40, notice +5`, took++ |
-| `eels_7_flood` | first year boundary ≥ 1245, open | Eel flood | All choices get `mod:tide_pool:vis:0.5:0`, plus `destroy:salt_pan:{lost}` only if lost > 0. **Shovel:** `bread +60, notice +6, block:build_salt_pan:240`. **Sell:** `silver +60s, notice +min(6 + 2×took, 12)`. **Burn:** `notice +8, block:build_salt_pan:120` |
+| `eels_6_spring_tide` | year ≥ 1241, open | Aude pays (took×10+10) sticks and warns about the spring tide | **Stop (late):** `vis -20, destroy:tide_pool, block:experiment:all:600, notice -8`. **Bank the salt-works:** `silver -120s` if trust > 0 (her cousins dig), else `-180s`; `notice +6`; sets `pans_banked`. **Buy the cart:** `eels +40, notice +5`, took++ |
+| `eels_7_flood` | first year boundary ≥ 1245, open | Eel flood | All choices get `mod:tide_pool:vis:0.5:0`, plus `destroy:salt_pan:{lost}` only if lost > 0. **Shovel:** `eels +60, notice +6, block:build_salt_pan:240`. **Sell:** `silver +60s, notice +min(6 + 2×took, 12)`. **Burn:** `notice +8, block:build_salt_pan:120` |
 | `eels_9_the_wyrm` | `eels_state == 4` and year ≥ `eels_end_year + 1` | A 90 ft wyrm leaves the Tide Pool hollow for the sea, cutting a 12 ft channel; one magus's Sanctum starts sinking (`sinking_magus`) | **Ritual:** choice tag `cost:vis:25`; `block:experiment:<magus>:600, notice +12`. **Timber:** `strike:all:60, notice +15`. **Let it sink:** `mod:sanctum_<magus>:assistant_slots:-1:0`, `trait:sanctum:<magus>:sunken_damp`, `trait:sanctum:<magus>:undercroft`, `notice +12` |
-| `eels_8_rent` | `eels_state > 0` and year ≥ `eels_end_year + 3` | Epilogue, with one line per ending | **Rent, trust > 0:** `bread +5, notice -5`. **Rent, trust ≤ 0:** `bread +5`. **Flood, bony salt:** `silver +30s, notice +5` |
+| `eels_8_rent` | `eels_state > 0` and year ≥ `eels_end_year + 3` | Epilogue, with one line per ending | **Rent, trust > 0:** `eels +5, notice -5`. **Rent, trust ≤ 0:** `eels +5`. **Flood, bony salt:** `silver +30s, notice +5` |
 
 **Flood loss.**
 
@@ -76,8 +76,8 @@ The building's canonical numbers live in `design/economy.md`; this section recor
 
 - **Unlock:** `unlock:eel_weir` (b2, the paid option).
 - **Placement and cost:** Marsh, 15 Silver, 1 hand.
-- **Output:** Bread. Eels are food, so no new good is needed.
-- **Rate while open:** 0.3 Bread/s × (1 + 0.5 × `eel_level`).
+- **Output:** Eels, the good the hands eat on fish days (`design/economy.md`). The thread's gifts of eels are Eels too.
+- **Rate while open:** 0.3 Eels/s × (1 + 0.5 × `eel_level`).
 - **Rate after a stop:** ×1.
 - **Rate after a flood:** ×3 for one year, then ×1.
 

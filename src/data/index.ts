@@ -1,13 +1,15 @@
 // All game data. Typed, checked by tsc; no runtime parsing.
 
-export const GOODS = ['silver', 'stone', 'bread', 'vellum', 'vis', 'insight'] as const;
+export const GOODS = ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'vis', 'insight'] as const;
 export type GoodId = (typeof GOODS)[number];
 export type Cost = Partial<Record<GoodId, number>>;
 
 export const GOOD_INFO: Record<GoodId, { name: string; cap: number }> = {
   silver: { name: 'Silver', cap: 500 },
+  salt: { name: 'Salt', cap: 500 },
   stone: { name: 'Stone', cap: 200 },
   bread: { name: 'Bread', cap: 200 },
+  eels: { name: 'Eels', cap: 200 },
   vellum: { name: 'Vellum', cap: 50 },
   vis: { name: 'Vis', cap: 30 },
   insight: { name: 'Insight', cap: 1000 },
@@ -37,6 +39,8 @@ export interface BuildingDef {
   /** At most this many. Named sites (the Vis sources) are max 1 and don't use zone slots. */
   max?: number;
   site?: boolean;
+  /** Goods each worker consumes per second. The building stands idle while any of them is out of stock. */
+  uses?: Cost;
   /** Raises storage caps, per building. */
   caps?: Cost;
   blurb: string;
@@ -57,8 +61,8 @@ export const BUILDINGS = {
     zone: 'marsh',
     cost: { silver: 20 },
     slots: 2,
-    perWorker: { silver: 0.25 },
-    blurb: 'Salt-sand boiled to salt, sold at the Hall.',
+    perWorker: { salt: 0.25 },
+    blurb: 'Salt-sand boiled to salt. The Hall sells it for Silver, or keeps it to preserve food.',
   },
   tide_pool: visSite('The Tide Pool', 'A pool on the flats that never quite drains. Its water holds vis.'),
   knights_barrow: visSite(
@@ -103,7 +107,7 @@ export const BUILDINGS = {
     zone: 'marsh',
     cost: { silver: 15 },
     slots: 1,
-    perWorker: { bread: 0.3 },
+    perWorker: { eels: 0.3 },
     blurb: 'Stakes and wattle across the channel below the Tide Pool. The eels grow bigger every year.',
   },
   storehouse: {
@@ -122,6 +126,15 @@ export const BUILDINGS = {
     caps: { insight: 500 },
     blurb: 'Shelves, a lectern and a chain for every book. Room for more Insight.',
   },
+  hostel: {
+    name: "Pilgrims' Hostel",
+    zone: 'bocage',
+    cost: { silver: 40, stone: 20 },
+    slots: 1,
+    uses: { bread: 0.2 },
+    perWorker: { silver: 0.3 },
+    blurb: 'Bread and a roof for the miquelots on their way across the bay to Mont-Saint-Michel. They pay in Silver.',
+  },
   cottage: {
     name: 'Cottage',
     zone: 'bocage',
@@ -137,6 +150,12 @@ export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
 export const HAND_FOOD = 0.05; // Bread per hand per second
+/** Fish days: Eels can stand in for this share of what the hands eat, 1 Eel for 1 Bread. */
+export const FISH_SHARE = 1 / 3;
+/** Every this many Salt in stock raises the Bread and Eels caps by 1. */
+export const PRESERVE = 5;
+/** Silver per Salt sold at the Hall. */
+export const SALT_PRICE = 1;
 export const COST_GROWTH = 1.15;
 export const NOTICE_K = 0.35;
 export const SANCTUM_ASSIST = 0.25;
@@ -313,6 +332,8 @@ export const NOTICE = {
   strike: { at: 75, secs: 60, payShare: 0.05 },
   audit: { at: 90 },
   endow: { base: 500, growth: 2, gen: 1 },
+  /** Alms to the poor of Dol: Endow's Bread twin. */
+  alms: { base: 200, growth: 2, gen: 1 },
   bribe: { base: 100, growth: 2, notice: 20 },
 };
 
@@ -524,7 +545,7 @@ export const SCENARIOS = {
       },
       {
         when: { kind: 'researched', atLeast: 1 },
-        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device'],
+        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device', 'hostel'],
         card: {
           title: 'Granite and barrows',
           text: 'Mont-Dol is granite to the root. Quarry it for Stone: Sanctums, Storehouses and one day greater things are built of it. Out on the flats the hands have found a second place where vis gathers: the Drowned Knight’s Barrow.',
@@ -613,6 +634,7 @@ export const SCENARIOS = {
       'regio_spring',
       'recipe:device',
       'recipe:lab_text',
+      'hostel',
       'magus:sabine',
       'magus:herve',
     ],
@@ -689,6 +711,7 @@ export const SCENARIOS = {
       'regio_spring',
       'recipe:device',
       'recipe:lab_text',
+      'hostel',
       'magus:sabine',
       'magus:herve',
       'gate',

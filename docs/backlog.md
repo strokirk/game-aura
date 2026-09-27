@@ -120,16 +120,7 @@ At the endgame the covenant is a machine, and the player should be able to see i
 
 ### Suggested order to build
 
-1. **Bread with uses:** alms and pilgrims. Eels as a good with fish days. Salt kept as a good with a market. This is the smallest change that makes surplus welcome, and it needs no bells. Starting numbers:
-
-   | Piece | Rule |
-   | --- | --- |
-   | Salt | Cap 500. The Hall sells Salt above a reserve the player sets (default 0) at 1 Silver each, so by default the trial plays as today |
-   | Preserve | Every 5 Salt in stock raises the Bread and Eels caps by 1 |
-   | Eels | Cap 200. The Eel Weir makes 0.3 Eels/s per worker, with the thread's `eel_level` multiplier moved from Bread to Eels |
-   | Fish days | Eels cover up to 1/3 of what hands eat, 1 Eel for 1 Bread |
-   | Alms | 200 × 2^n Bread: Notice generation −1/min for good |
-   | Pilgrims' hostel | Bocage, 40 Silver + 20 Stone, 1 worker: 0.2 Bread/s in, 0.3 Silver/s out |
+1. ~~Bread with uses~~: built. Salt sold or kept, Eels and fish days, alms and the Pilgrims' Hostel are in `design/economy.md` and `design/notice.md`.
 2. **Dikes and terraces**, then remove *Pull down*.
 3. **The trees**, replacing the late flat research, so numbers can climb.
 4. **Bells 1–3** replacing the 3 Rites, with the win at bell 3 while the rest is built. Then bells 4–7.

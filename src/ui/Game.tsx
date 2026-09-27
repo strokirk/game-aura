@@ -35,6 +35,7 @@ import {
   GOOD_INFO,
   GOODS,
   type GoodId,
+  PRESERVE,
   RECIPES,
   type RecipeId,
   START_YEAR,
@@ -167,26 +168,24 @@ function Header(p: { s: State; r: Rates }) {
           <Dim> · seed {p.s.seed}</Dim>
         </Show>
       </div>
-      <div class="flex flex-wrap gap-x-4 gap-y-1">
+      <div class="grid grid-cols-5 gap-x-2 gap-y-1 sm:grid-cols-10">
         <div class="relative">
           <Pops k="hands" />
           <Ico icon={I.hands} class="mr-1 text-gold" />
           <b class={idleHands(p.s) > 0 ? 'text-warn' : ''}>{idleHands(p.s)}</b>
           <Dim> idle</Dim>
-          <div class="text-sm">
-            Hands {p.s.hands}/{housing(p.s)}
+          <div class="text-xs text-dim">
+            of {p.s.hands}/{housing(p.s)}
           </div>
         </div>
         <For each={GOODS.filter(shown)}>
           {(g) => (
-            <div class="relative">
+            // Compact: 8 goods share one strip. The name and cap are in the tooltip; red means full.
+            <div class="relative" title={`${GOOD_INFO[g].name}: ${num(p.s.res[g])} of ${num(cap(p.s, g))}`}>
               <Pops k={g} />
-              <Ico icon={GOOD_ICON[g]} class="mr-1 text-gold" />
+              <Ico icon={GOOD_ICON[g]} label={GOOD_INFO[g].name} class="mr-1 text-gold" />
               <b class={p.s.res[g] >= cap(p.s, g) - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
-              <Dim>/{num(cap(p.s, g))}</Dim>
-              <div class={`text-sm ${p.r.net[g] < -1e-9 ? 'text-bad' : ''}`}>
-                {GOOD_INFO[g].name} {rate(p.r.net[g])}
-              </div>
+              <div class={`text-xs ${p.r.net[g] < -1e-9 ? 'text-bad' : 'text-dim'}`}>{rate(p.r.net[g])}</div>
             </div>
           )}
         </For>
@@ -195,8 +194,7 @@ function Header(p: { s: State; r: Rates }) {
             <Pops k="notice" />
             <Ico icon={I.notice} class="mr-1 text-gold" />
             <b class={p.s.notice >= 75 ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
-            <Dim> → {Math.round(p.r.noticeGen * 10)}</Dim>
-            <div class="text-sm">Notice (settles at)</div>
+            <div class="text-xs text-dim">settles {Math.round(p.r.noticeGen * 10)}</div>
           </div>
         </Show>
       </div>
@@ -298,6 +296,16 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
       </Dim>
       <Show when={caps().length}>
         <Dim class="block text-sm">Storage {caps().join(', ')} each</Dim>
+      </Show>
+      <Show when={def().uses}>
+        {(u) => <Dim class="block text-sm">Each worker uses {cost(u())}/s, and stands idle without it</Dim>}
+      </Show>
+      <Show when={p.id === 'salt_pan' && n() > 0}>
+        <Button on={p.s.keepSalt} class="mt-1.5 w-full text-sm" onClick={() => act({ type: 'keepSalt' })}>
+          {p.s.keepSalt
+            ? `Keeping Salt: every ${PRESERVE} in store keeps 1 more Bread and Eel. Tap to sell it all`
+            : 'Selling Salt for Silver. Tap to keep it and preserve food'}
+        </Button>
       </Show>
       <Show when={n() > 0 && def().slots > 0}>
         <Stepper
