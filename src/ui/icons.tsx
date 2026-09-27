@@ -1,0 +1,65 @@
+// Every icon in one place. Game art: game-icons.net (CC BY 3.0, credited in docs/credits.md and Options).
+// Interface chrome: Lucide (ISC). Compiled to inline SVG components at build time, so unused icons cost nothing.
+import type { Component, JSX } from 'solid-js';
+import GiBread from '~icons/game-icons/bread';
+import GiCrystal from '~icons/game-icons/crystal-growth';
+import GiEyeball from '~icons/game-icons/eyeball';
+import GiMagicSwirl from '~icons/game-icons/magic-swirl';
+import GiMining from '~icons/game-icons/mining';
+import GiMoon from '~icons/game-icons/moon';
+import GiOpenBook from '~icons/game-icons/open-book';
+import GiPerson from '~icons/game-icons/person';
+import GiSaltShaker from '~icons/game-icons/salt-shaker';
+import GiScrollQuill from '~icons/game-icons/scroll-quill';
+import GiScrollUnfurled from '~icons/game-icons/scroll-unfurled';
+import GiSpiralBloom from '~icons/game-icons/spiral-bloom';
+import GiStoneBlock from '~icons/game-icons/stone-block';
+import GiStoneTower from '~icons/game-icons/stone-tower';
+import GiSun from '~icons/game-icons/sun';
+import GiTombstone from '~icons/game-icons/tombstone';
+import GiTowerFlag from '~icons/game-icons/tower-flag';
+import GiTwoCoins from '~icons/game-icons/two-coins';
+import GiVillage from '~icons/game-icons/village';
+import GiWheat from '~icons/game-icons/wheat';
+import GiWizardStaff from '~icons/game-icons/wizard-staff';
+import LuMenu from '~icons/lucide/menu';
+import LuMinus from '~icons/lucide/minus';
+import LuPause from '~icons/lucide/pause';
+import LuPlus from '~icons/lucide/plus';
+import type { BuildingId, GoodId } from '../data/index.ts';
+
+export type Icon = Component<JSX.SvgSVGAttributes<SVGSVGElement>>;
+
+export const GOOD_ICON: Record<GoodId, Icon> = {
+  silver: GiTwoCoins,
+  stone: GiStoneBlock,
+  bread: GiBread,
+  vellum: GiScrollUnfurled,
+  vis: GiCrystal,
+  insight: GiOpenBook,
+};
+
+export const BUILDING_ICON: Record<BuildingId, Icon> = {
+  salt_pan: GiSaltShaker,
+  tide_pool: GiMagicSwirl,
+  knights_barrow: GiTombstone,
+  regio_spring: GiSpiralBloom,
+  farm: GiWheat,
+  parchmenter: GiScrollQuill,
+  quarry: GiMining,
+  sanctum: GiStoneTower,
+  cottage: GiVillage,
+};
+
+export const I = {
+  notice: GiEyeball,
+  hands: GiPerson,
+  magus: GiWizardStaff,
+  title: GiTowerFlag,
+  win: GiSun,
+  loss: GiMoon,
+  pause: LuPause,
+  menu: LuMenu,
+  plus: LuPlus,
+  minus: LuMinus,
+} satisfies Record<string, Icon>;

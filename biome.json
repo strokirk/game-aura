@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": { "includes": ["**", "!prototype", "!docs", "!dist"] },
+  "formatter": { "indentStyle": "space", "lineWidth": 120 },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "javascript": { "formatter": { "quoteStyle": "single" } },
+  "linter": {
+    "rules": {
+      "recommended": true,
+      "style": { "noNonNullAssertion": "off", "noDescendingSpecificity": "off" }
+    }
+  }
+}

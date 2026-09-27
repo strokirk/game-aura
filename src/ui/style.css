@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Design tokens. Components use these via utilities (bg-card, text-gold …); no other colours. */
+@theme {
+  --color-bg: #101814;
+  --color-bar: #131d18;
+  --color-card: #1a241f;
+  --color-line: #2f3e37;
+  --color-ink: #ebe4cf;
+  --color-dim: #939a8f;
+  --color-gold: #e0b450;
+  --color-bad: #e0705a;
+  --color-warn: #f0a830;
+  --color-btn: #26332d;
+  --color-btn-line: #435649;
+  --color-primary: #4a5c2d;
+  --color-primary-line: #92ad58;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+@layer base {
+  :root {
+    font-size: 16px;
+    color-scheme: dark;
+  }
+  :root[data-text="small"] {
+    font-size: 14px;
+  }
+  :root[data-text="large"] {
+    font-size: 19px;
+  }
+  body {
+    @apply bg-bg font-serif text-ink;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-normal text-gold;
+  }
+}
