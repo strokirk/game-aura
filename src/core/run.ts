@@ -183,7 +183,7 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     events: sc.intro ? [structuredClone(sc.intro) as EventDef] : [],
     ink: null,
     fired: [],
-    story: { eel_level: 0, eels_state: 0 },
+    story: { eel_level: 0, eels_state: 0, eels_end_year: 0 },
     mods: [],
     blocks: {},
     unlocked: [...sc.unlocked],
@@ -477,7 +477,7 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
   }
 }
 
-function met(s: State, c: Condition) {
+function met(s: State, c: Condition): boolean {
   switch (c.kind) {
     case 'res':
       return s.res[c.good] >= c.atLeast;
@@ -497,6 +497,12 @@ function met(s: State, c: Condition) {
       return keys(s.research).length >= c.atLeast;
     case 'rites':
       return (s.gate?.rites ?? 0) >= c.atLeast;
+    case 'story':
+      return s.story[c.v] >= (c.atLeast ?? -Infinity) && s.story[c.v] <= (c.atMost ?? Infinity);
+    case 'yearsAfter':
+      return year(s) >= s.story[c.v] + c.years;
+    case 'all':
+      return c.of.every((x) => met(s, x));
   }
 }
 function checkOutcome(s: State) {
@@ -741,7 +747,15 @@ function applyEffects(s: State, effects: readonly Effect[]) {
       s.mods.push({ id: e.id, good: e.good, mult: e.mult, until: e.secs ? s.t + e.secs : null });
     else if (e.kind === 'block') s.blocks[e.what] = Math.max(s.blocks[e.what] ?? 0, s.t + e.secs);
     else if (e.kind === 'unlock') reveal(s, e.id);
-    else if (e.kind === 'endStrike') {
+    else if (e.kind === 'destroy') {
+      const b = s.buildings[e.building];
+      // A drained Vis site stays gone.
+      if (isSite(e.building)) s.blocks[`build_${e.building}`] = Number.MAX_SAFE_INTEGER;
+      if (!b) continue;
+      b.count = Math.max(0, b.count - e.n);
+      b.workers = Math.min(b.workers, workerSlots(s, e.building));
+      if (b.count === 0) delete s.buildings[e.building];
+    } else if (e.kind === 'endStrike') {
       for (const k of Object.keys(s.blocks)) if (k.startsWith('strike:')) delete s.blocks[k];
     } else {
       const m = s.magi.find((x) => x.id === e.magus);

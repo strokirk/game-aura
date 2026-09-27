@@ -349,6 +349,8 @@ export type Effect =
   /** Blocks an action key such as `experiment:aldric`, `experiment:all` or `build_salt_pan`. */
   | { kind: 'block'; what: string; secs: number }
   | { kind: 'unlock'; id: string }
+  /** Removes n buildings; their workers go idle. A Vis site removed this way can't be worked again. */
+  | { kind: 'destroy'; building: BuildingId; n: number }
   /** The halfway check-in's answer for a running experiment. */
   | { kind: 'checkIn'; magus: MagusId; choice: 'push' | 'steady' | 'abort' }
   /** Ends a strike at once. */
@@ -379,7 +381,15 @@ export type Condition =
   | { kind: 'noHands' }
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
-  | { kind: 'rites'; atLeast: number };
+  | { kind: 'rites'; atLeast: number }
+  /** An ink variable the engine reads back (`stories.md`). */
+  | { kind: 'story'; v: StoryVar; atLeast?: number; atMost?: number }
+  /** The year is at least `years` after the year held in an ink variable. */
+  | { kind: 'yearsAfter'; v: StoryVar; years: number }
+  | { kind: 'all'; of: readonly Condition[] };
+
+/** The whitelist of ink variables the engine reads back. */
+export type StoryVar = 'eel_level' | 'eels_state' | 'eels_end_year';
 
 /** Something the scenario reveals when its condition is first met: buildings, recipes, tabs, magi. */
 export interface UnlockDef {
@@ -422,6 +432,35 @@ export interface ScenarioDef {
 export const YEAR = 120;
 export const START_YEAR = 1220;
 
+const inYear = (y: number): Condition => ({ kind: 'time', atLeast: (y - START_YEAR) * YEAR });
+/** A beat that plays in year `y` or later while the eels thread is open. */
+const open = (knot: string, title: string, y: number): StoryBeat => ({
+  knot,
+  title,
+  when: { kind: 'all', of: [inYear(y), { kind: 'story', v: 'eels_state', atMost: 0 }] },
+});
+/** The eels thread (`docs/ink/eels-notes.md`). The wyrm (`eels_9_the_wyrm`) waits on Sanctum traits. */
+const EELS: readonly StoryBeat[] = [
+  { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
+  { knot: 'eels_2_the_weir', title: 'The weir', when: inYear(1221) },
+  open('eels_3_the_font', 'The font', 1224),
+  open('eels_4_the_pits', 'Eels in the brine', 1229),
+  open('eels_5_the_road', 'The Dol road', 1235),
+  open('eels_6_spring_tide', 'The spring tide', 1241),
+  open('eels_7_flood', 'The flood', 1245),
+  {
+    knot: 'eels_8_rent',
+    title: 'The eel rent',
+    when: {
+      kind: 'all',
+      of: [
+        { kind: 'story', v: 'eels_state', atLeast: 1 },
+        { kind: 'yearsAfter', v: 'eels_end_year', years: 3 },
+      ],
+    },
+  },
+];
+
 export const SCENARIOS = {
   trial: {
     name: 'Trial of the Tide Pool',
@@ -455,10 +494,7 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. Five hundred pages of Insight by 1222 and the Order will take the covenant seriously.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: [
-      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
-      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
-    ],
+    story: EELS,
   },
   grow: {
     name: 'The Covenant Must Grow',
@@ -528,10 +564,7 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, six hands, a salt-works and the Tide Pool. Under the marsh lies a drowned regio, and a Gate into it. Open it before 1260. Every building will be noticed in Dol, and the Order watches what Dol notices.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: [
-      { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
-      { knot: 'eels_2_the_weir', title: 'The weir', when: { kind: 'time', atLeast: YEAR } },
-    ],
+    story: EELS,
   },
   middle: {
     name: 'Stage: the Middle Years',

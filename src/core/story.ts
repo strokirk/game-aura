@@ -3,7 +3,15 @@
 // The story's state lives in State as ink's own JSON, so saves and replays cover it.
 import { Story } from 'inkjs';
 import eels from '../content/eels.json' with { type: 'json' };
-import { type Effect, GOODS, type GoodId, type StoryBeat } from '../data/index.ts';
+import {
+  type BuildingId,
+  DEFS,
+  type Effect,
+  GOODS,
+  type GoodId,
+  type StoryBeat,
+  type StoryVar,
+} from '../data/index.ts';
 
 /** What the engine tells ink before each knot (`stories.md`, "What ink can read"). */
 export interface InkInputs {
@@ -17,11 +25,7 @@ export interface InkInputs {
   has_herve: boolean;
   sinking_magus: string;
 }
-/** The whitelist of ink variables the engine reads back. */
-export interface InkOutputs {
-  eel_level: number;
-  eels_state: number;
-}
+export type InkOutputs = Record<StoryVar, number>;
 
 /** A fresh story seeds itself from the clock; `seed` keeps ink's randomness on the run's seed. */
 function load(saved: string | null, seed = 0): Story {
@@ -45,6 +49,7 @@ function runOn(story: Story) {
 const outputs = (story: Story): InkOutputs => ({
   eel_level: Number(story.variablesState.eel_level),
   eels_state: Number(story.variablesState.eels_state),
+  eels_end_year: Number(story.variablesState.eels_end_year),
 });
 
 /** Plays a knot up to its choices. Returns the card and the saved story state. */
@@ -103,6 +108,9 @@ export function parseTag(tag: string): Effect {
     }
     case 'unlock':
       if (p[0]) return { kind: 'unlock', id: p[0] };
+      break;
+    case 'destroy':
+      if (p[0] && p[0] in DEFS) return { kind: 'destroy', building: p[0] as BuildingId, n: p[1] ? num(p[1]) : 1 };
   }
   throw new Error(`Unknown effect tag "${tag}"`);
 }
