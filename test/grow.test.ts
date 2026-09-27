@@ -6,13 +6,16 @@ import {
   apply,
   cap,
   createRun,
+  dikeCost,
   housing,
   idleHands,
   rates,
   replay,
   type State,
   stepTo,
+  terraces,
   toSave,
+  zoneSlots,
   zoneUsed,
 } from '../src/core/index.ts';
 import { FISH_SHARE, HAND_FOOD, ZONES } from '../src/data/index.ts';
@@ -81,17 +84,35 @@ describe('the full run', () => {
     expect(s.magi.every((m) => m.sanctum)).toBe(true);
   });
 
-  it('pulling down a building refunds half, frees its slot and idles its workers', () => {
-    const s0 = ok(apply(createRun('gate', 1), { type: 'choose', option: 0 }));
-    expect(zoneUsed(s0, 'hearth')).toBe(ZONES.hearth.slots);
-    expect(apply(s0, { type: 'build', building: 'quarry' })).toEqual({ error: 'The Hearth is full' });
-    const idle = idleHands(s0);
-    const s = ok(apply(s0, { type: 'demolish', building: 'quarry' }));
-    expect(zoneUsed(s, 'hearth')).toBe(ZONES.hearth.slots - 1);
-    expect(s.res.silver).toBeCloseTo(s0.res.silver + Math.floor((40 * 1.15) / 2));
-    expect(idleHands(s)).toBe(idle + 2);
-    expect(apply(s, { type: 'demolish', building: 'sanctum' })).toEqual({ error: 'That cannot be pulled down' });
-    expect(apply(s, { type: 'demolish', building: 'tide_pool' })).toEqual({ error: 'That cannot be pulled down' });
+  it('a full Bocage reveals dikes; each dike wins 2 Polder plots at a rising price', () => {
+    let s = begin();
+    s.buildings.farm = { count: ZONES.bocage.slots, workers: 0 };
+    s = stepTo(s, s.t + 1);
+    expect(s.events[0]?.title).toBe('Land from the sea');
+    s = ok(apply(s, { type: 'choose', option: 0 }));
+    expect(zoneSlots(s, 'polder')).toBe(0);
+    s.res.stone = 200;
+    s.res.bread = 200;
+    s = ok(apply(s, { type: 'dike' }));
+    expect(zoneSlots(s, 'polder')).toBe(2);
+    expect(dikeCost(s)).toEqual({ stone: 150, bread: 150 });
+    s.res.silver = 100;
+    s = ok(apply(s, { type: 'build', building: 'salt_meadow' }));
+    expect(zoneUsed(s, 'polder')).toBe(1);
+  });
+
+  it('quarrying cuts terraces that open Hearth plots, each after 1.6x more Stone, up to 10', () => {
+    const s = ok(apply(createRun('gate', 1), { type: 'choose', option: 0 }));
+    expect(zoneUsed(s, 'hearth')).toBe(ZONES.hearth.slots);
+    expect(apply(s, { type: 'build', building: 'quarry' })).toEqual({ error: 'The Hearth is full' });
+    s.quarried = 2000 + 3200 - 1;
+    expect(terraces(s)).toEqual({ n: 1, next: 1 });
+    s.quarried = 1e9;
+    expect(terraces(s).n).toBe(10);
+    expect(zoneSlots(s, 'hearth')).toBe(ZONES.hearth.slots + 10);
+    // The Gate stage starts above the tax line; let the collector call first.
+    const t = stepTo({ ...s, quarried: 1999, noticeFired: ['tax', 'strike'] }, s.t + 5);
+    expect(terraces(t).n).toBe(1);
   });
 });
 

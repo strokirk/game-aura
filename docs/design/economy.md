@@ -1,5 +1,107 @@
 # Economy: zones, hands, buildings, carrying and storage
 
+## The whole economy
+
+Every good and how it turns into the others. Any change that adds a good, a building that makes or uses one, or a way to spend one updates this diagram.
+
+```mermaid
+flowchart LR
+  %% Goods are boxes. Buildings, labs and actions are rounded. Dotted lines are effects rather than flows.
+  Hands([Hands])
+  subgraph Lands[The lands: hands work, porters carry]
+    SaltPan(Salt-works)
+    Farm(Farm)
+    Meadow(Salt Meadow)
+    Weir(Eel Weir)
+    Quarry(Quarry)
+    Parch(Parchmenter)
+    Sites(Vis sites)
+    Hostel(Pilgrims' Hostel)
+  end
+  subgraph Hall[Goods at the Hall]
+    Silver[Silver]
+    Salt[Salt]
+    Stone[Stone]
+    Bread[Bread]
+    Eels[Eels]
+    Vellum[Vellum]
+    Vis[Vis]
+    Insight[Insight]
+  end
+  subgraph Labs[The labs]
+    Sanctum(Sanctum and magus)
+    Study(Study the Vis)
+    LabText(Write a Lab Text)
+    Device(Enchant a Device)
+    Research(Research)
+  end
+  subgraph Levers[Notice]
+    Notice{{Notice}}
+    Endow(Endow the Parish)
+    Alms(Give Alms)
+    Bribe(Bribe the Lord)
+  end
+  subgraph Growth[Growing]
+    Buildings(Buildings)
+    Dike(Dike)
+  end
+  Gate(The Drowned Gate)
+
+  Hands -->|work| SaltPan(Salt-works) --> Salt
+  Hands -->|work| Farm(Farm) --> Bread
+  Hands -->|work| Meadow(Salt Meadow) --> Bread
+  Meadow --> Vellum
+  Hands -->|work| Weir(Eel Weir) --> Eels
+  Hands -->|work| Quarry(Quarry) --> Stone
+  Hands -->|work| Parch(Parchmenter) --> Vellum
+  Hands -->|work| Sites(Vis sites) --> Vis
+  Hands -->|assist| Sanctum(Sanctum and magus)
+
+  Salt -->|sold at the Hall| Silver
+  Salt -.->|5 in store: +1 cap| Bread
+  Salt -.->|5 in store: +1 cap| Eels
+  Bread -->|eaten; feeds growth| Hands
+  Eels -->|eaten on fish days| Hands
+  Bread --> Hostel(Pilgrims' Hostel) --> Silver
+  Hands -->|work| Hostel
+
+  Silver -->|build| Buildings(Buildings)
+  Stone -->|build| Buildings
+  Vellum -->|Library| Buildings
+  Buildings -.->|every building| Notice
+  Buildings -.->|Cottages house| Hands
+  Stone --> Dike(Dike)
+  Bread --> Dike
+  Dike -.->|Polder plots| Meadow
+  Quarry -.->|terraces: Hearth plots| Buildings
+
+  Sanctum -->|reading| Insight
+  Vis --> Study(Study the Vis) --> Insight
+  Vellum --> LabText(Write a Lab Text)
+  LabText -.->|+10% yields| Study
+  Vis --> Device(Enchant a Device)
+  Stone --> Device
+  Device -.->|+25% output| Buildings
+  Insight --> Research(Research)
+  Research -.->|multipliers| Buildings
+  Insight -->|Study| Sanctum
+
+  Silver --> Endow(Endow the Parish)
+  Bread --> Alms(Give Alms)
+  Silver --> Bribe(Bribe the Lord)
+  Endow -.->|lowers| Notice
+  Alms -.->|lowers| Notice
+  Bribe -.->|lowers| Notice
+  Study -.->|botch| Notice
+  Notice -.->|tax, strike, audit| Silver
+
+  Silver --> Gate(The Drowned Gate)
+  Stone -->|Gate porters| Gate
+  Vis -->|Vis to the Gate| Gate
+  Insight -->|poured| Gate
+  Gate --> Rites(The Rites: the win)
+```
+
 ## Zones
 
 The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
@@ -9,11 +111,22 @@ The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
 | Hearth | 8 | 0.5 (0 after the Aegis) | 0 (no porters needed) | Sanctum, Quarry, Storehouse, Library |
 | Bocage | 12 | 1.5 | 1 | Farm, Parchmenter, Pilgrims' Hostel, Cottage |
 | Marsh | 10, plus 3 Vis sites | 0.5 | 2 | Salt Pan, Vis Source (Vis sites only), Eel Weir (when unlocked) |
+| Polder | 2 per dike | 1.0 | 1 | Salt Meadow |
 
 - Each building uses 1 slot in its zone. Cottages live in the loud Bocage, so housing more hands costs Notice.
 - Vis Sources use the 3 named Vis sites, not the Marsh's 10 slots.
-- **Pull down:** any building except a Sanctum or a Vis site can be pulled down. It refunds half of what the last one cost, its workers go idle, and its slot is free. When a zone is full, its Build buttons give way to "full"; pulling down is how the covenant reshapes itself, and pulling down a Bocage building lowers Notice.
-- **Why:** slots cap breadth. Once a zone is full, growth comes from research multipliers, Devices, putting more hands to work, and trading one building for another. A full Hearth forces the late-game trade: a Library holds Insight, a Quarry makes the Stone the Rites need.
+- Buildings are never pulled down: the covenant only grows. When a zone is full, its Build buttons say how to make room: terraces for the Hearth, dikes for new land.
+- **Why:** slots cap breadth, and new land is a purchase of its own. Once a zone is full, growth comes from research multipliers, Devices, putting more hands to work, and winning more land.
+
+## Land from the sea
+
+The Marais de Dol really was won from the sea with dikes, from the 11th century on.
+
+- **Dikes. Input:** once the Bocage is full, a card reveals the Polder zone and its **Build a dike** button.
+- **System:** a dike costs 100 Stone + 100 Bread (for the diggers), ×1.5 per dike built, and adds 2 Polder plots. The Polder holds Salt Meadows, needs porters at distance 1, and has a Notice factor of 1.0, between the quiet Marsh and the loud Bocage.
+- **Terraces. System:** quarrying Mont-Dol cuts terraces. The first opens after 2,000 Stone quarried over the run, each next one after 1.6× more (3,200, 5,120…), up to 10. Each adds 1 Hearth plot. The Hearth card shows the Stone still needed.
+- **Feedback:** a Chronicle line for each dike and terrace; the zone header counts plots.
+- **Why:** a full zone asks for a new purchase, not a demolition. Dikes turn Stone and Bread into land, so a Bread surplus is always welcome; terraces make every Quarry a slow investment in the Hearth. Both grow the covenant toward the endgame's great reclamation (`backlog.md`, *No More Sea*).
 
 ## Hands
 
@@ -39,7 +152,8 @@ Buildings are counted per type. The next one costs base cost × 1.15^owned. Each
 | Parchmenter | Bocage | 30 Silver | 1 | 0.15 Vellum/s | Vellum pays for Lab Texts and Libraries |
 | Vis Source | Marsh Vis site (max 3) | 40 Silver | 2 | 0.08 Vis/s | Vis fuels experiments, the Aegis and the Gate |
 | Sanctum | Hearth (max 3, 1 per magus) | 100 Silver + 50 Stone | 2 assistants | +25% to the magus's baseline Insight and experiment speed per assistant | A magus without a Sanctum does nothing |
-| Pilgrims' Hostel | Bocage (with Quarries) | 40 Silver + 20 Stone | 1 | Uses 0.2 Bread/s, makes 0.3 Silver/s | Bread becomes money: the *miquelots* cross the bay to Mont-Saint-Michel. Idle while Bread is out |
+| Pilgrims' Hostel | Bocage (with Quarries) | 40 Silver + 20 Stone | 1 | Uses 0.5 Bread/s, makes 0.8 Silver/s | Bread becomes money: the *miquelots* cross the bay to Mont-Saint-Michel. Idle while Bread is out |
+| Salt Meadow | Polder | 30 Silver | 2 | 0.1 Bread/s + 0.05 Vellum/s | Sheep on the salt grass: mutton and skins, food and the labs' Vellum from one building |
 | Cottage | Bocage | 30 Silver | 0 | Housing +3 | More hands |
 | Storehouse | Hearth | 50 Silver + 20 Stone | 0 | Stone, Bread and Vellum caps +50% of base | Room to stockpile |
 | Library | Hearth | 40 Silver + 20 Vellum | 0 | Insight cap +500 | Room to save for big research |
@@ -57,6 +171,18 @@ Goods made outside the Hearth count only once porters bring them to the Hall.
 - Goods going *out* to the Marsh (Stone for the Drowned Gate) are carried by the Marsh's porters at the same rates, sharing their capacity with goods coming in.
 - **Feedback:** each zone header says it plainly: "Marsh: carried 1.8 of 2.4 goods/s · 3 porters". When porters are the bottleneck, the zone's porter + button pulses.
 - **Why:** distance matters and the bottleneck is visible, without drawing any lines. Porters compete with workers for the same hands.
+
+## Two incomes
+
+Salt and pilgrims pay about the same Silver per hand, in different ways. Counting the hands that make a hostel's Bread and the porters on both sides:
+
+| Income | Silver per hand | Costs |
+| --- | --- | --- |
+| Salt-works, no research | 0.17 | Many hands, quiet (Marsh, Notice ×0.5) |
+| Salt-works with *Salt Rakes* and *Mule Trains* | about 0.27 | As above |
+| Pilgrims' Hostel with *Self-Tilling Plough* and *Mule Trains* | about 0.27 | Few hands, but loud (the hostel and its Farms are in the Bocage, Notice ×1.5), and it stops when Bread runs out |
+
+`[PLAYTEST: neither should dominate: salt suits a covenant short of Notice headroom, pilgrims one short of hands or with Bread to spare.]`
 
 ## Salt: sell or keep
 

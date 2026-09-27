@@ -8,6 +8,7 @@ import {
   type Condition,
   type Cost,
   DEFS,
+  DIKE,
   type Effect,
   type EventDef,
   EXPERIMENT,
@@ -36,6 +37,7 @@ import {
   type ScenarioDef,
   type ScenarioId,
   START_YEAR,
+  TERRACE,
   YEAR,
   ZONES,
   type ZoneId,
@@ -89,7 +91,7 @@ export interface GateState {
 }
 export type Action =
   | { type: 'build'; building: BuildingId }
-  | { type: 'demolish'; building: BuildingId }
+  | { type: 'dike' }
   | { type: 'workers'; building: BuildingId; delta: number }
   | { type: 'porters'; zone: ZoneId; delta: number }
   | { type: 'experiment'; magus: MagusId; recipe: RecipeId; extra: number; target?: BuildingId }
@@ -130,6 +132,9 @@ export interface State {
   bribes: number;
   alms: number;
   keepSalt: boolean;
+  dikes: number;
+  /** Stone quarried over the run; it opens terraces. */
+  quarried: number;
   research: Partial<Record<ResearchId, number>>;
   labTexts: number;
   devices: Partial<Record<BuildingId, number>>;
@@ -186,6 +191,8 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     bribes: 0,
     alms: 0,
     keepSalt: false,
+    dikes: 0,
+    quarried: 0,
     research: { ...sc.start.research },
     labTexts: sc.start.labTexts ?? 0,
     devices: { ...sc.start.devices },
@@ -266,17 +273,27 @@ export const buildable = (s: State, id: BuildingId) =>
 export const isBlocked = (s: State, key: string) => (s.blocks[key] ?? 0) > s.t;
 export const recipeOpen = (s: State, r: RecipeId) => r === 'study_vis' || has(s, `recipe:${r}`);
 
-/** Sanctums belong to their magus and the Vis sites are places, not buildings: neither can be pulled down. */
-export const canDemolish = (s: State, id: BuildingId) => count(s, id) > 0 && id !== 'sanctum' && !isSite(id);
-/** Pulling one down refunds half of what the last one cost. */
-export function demolishRefund(s: State, id: BuildingId): Cost {
-  const c: Cost = {};
-  const base = B[id].cost;
-  for (const g of keys(base)) c[g] = Math.floor(((base[g] ?? 0) * COST_GROWTH ** (count(s, id) - 1)) / 2);
-  return c;
-}
 /** A zone with no free slot. */
-export const zoneFull = (s: State, z: ZoneId) => zoneUsed(s, z) >= ZONES[z].slots;
+export const zoneFull = (s: State, z: ZoneId) => zoneUsed(s, z) >= zoneSlots(s, z);
+/** Terraces cut so far, and the Stone quarried still needed for the next (Infinity at the last). */
+export function terraces(s: State) {
+  let n = 0;
+  let need = TERRACE.first;
+  let left = s.quarried;
+  while (n < TERRACE.max && left >= need) {
+    left -= need;
+    need *= TERRACE.growth;
+    n++;
+  }
+  return { n, next: n < TERRACE.max ? need - left : Number.POSITIVE_INFINITY };
+}
+export const zoneSlots = (s: State, z: ZoneId) =>
+  ZONES[z].slots + (z === 'polder' ? DIKE.slots * s.dikes : 0) + (z === 'hearth' ? terraces(s).n : 0);
+export const dikeCost = (s: State): Cost => {
+  const c: Cost = {};
+  for (const g of keys(DIKE.cost)) c[g] = Math.ceil((DIKE.cost[g] ?? 0) * DIKE.growth ** s.dikes);
+  return c;
+};
 
 export function buildCost(s: State, id: BuildingId): Cost {
   const c: Cost = {};
@@ -521,6 +538,8 @@ function met(s: State, c: Condition): boolean {
       return keys(s.research).length >= c.atLeast;
     case 'rites':
       return (s.gate?.rites ?? 0) >= c.atLeast;
+    case 'zoneFull':
+      return zoneFull(s, c.zone);
     case 'story':
       return s.story[c.v] >= (c.atLeast ?? -Infinity) && s.story[c.v] <= (c.atMost ?? Infinity);
     case 'yearsAfter':
@@ -689,6 +708,10 @@ function tick(s: State) {
   }
   if (s.gate?.pour) gainInsight(s, r.gate.insight * DT);
   tickGate(s, r);
+  const cut = terraces(s).n;
+  s.quarried += (r.byBuilding.quarry?.stone ?? 0) * DT;
+  if (terraces(s).n > cut)
+    log(s, 'The quarry has cut a new terrace into Mont-Dol: room for one more building on the Hearth.');
 
   if (s.res.bread <= 0) {
     s.hungerT += DT;
@@ -805,8 +828,7 @@ function act(s: State, a: Action): string | undefined {
       if (isBlocked(s, `build_${a.building}`)) return `No one will build a ${def.name} yet`;
       if (isMaxed(s, a.building))
         return a.building === 'sanctum' ? 'Every magus has a Sanctum' : `There is only one ${def.name}`;
-      if (!isSite(a.building) && zoneUsed(s, def.zone) >= ZONES[def.zone].slots)
-        return `The ${ZONES[def.zone].name} is full`;
+      if (!isSite(a.building) && zoneFull(s, def.zone)) return `The ${ZONES[def.zone].name} is full`;
       const c = buildCost(s, a.building);
       if (!canAfford(s, c)) return 'Not enough';
       pay(s, c);
@@ -822,15 +844,13 @@ function act(s: State, a: Action): string | undefined {
       }
       return;
     }
-    case 'demolish': {
-      if (!canDemolish(s, a.building)) return 'That cannot be pulled down';
-      const b = s.buildings[a.building];
-      if (!b) return 'Nothing to pull down';
-      for (const [g, n] of Object.entries(demolishRefund(s, a.building)) as [GoodId, number][]) addRes(s, g, n);
-      b.count--;
-      b.workers = Math.min(b.workers, workerSlots(s, a.building));
-      if (b.count === 0) delete s.buildings[a.building];
-      log(s, `The covenant pulls down a ${B[a.building].name}.`);
+    case 'dike': {
+      if (!has(s, 'dike')) return 'Not yet';
+      const c = dikeCost(s);
+      if (!canAfford(s, c)) return 'Not enough';
+      pay(s, c);
+      s.dikes++;
+      log(s, 'The diggers close another dike across the flats. The sea gives up two fields of salt grass.');
       return;
     }
     case 'workers': {

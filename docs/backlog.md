@@ -121,7 +121,7 @@ At the endgame the covenant is a machine, and the player should be able to see i
 ### Suggested order to build
 
 1. ~~Bread with uses~~: built. Salt sold or kept, Eels and fish days, alms and the Pilgrims' Hostel are in `design/economy.md` and `design/notice.md`.
-2. **Dikes and terraces**, then remove *Pull down*.
+2. ~~Dikes and terraces~~: built, and *Pull down* is gone (`design/economy.md`, *Land from the sea*). The polder's salt-meadow-then-fields years wait for a need.
 3. **The trees**, replacing the late flat research, so numbers can climb.
 4. **Bells 1–3** replacing the 3 Rites, with the win at bell 3 while the rest is built. Then bells 4–7.
 5. **Routes**, and the covenant graph.
