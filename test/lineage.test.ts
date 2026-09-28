@@ -4,6 +4,7 @@ import {
   apprenticeBoost,
   aura,
   auraBoosts,
+  cap,
   createRun,
   divine,
   nameOf,
@@ -15,8 +16,9 @@ import {
   stepTo,
   toSave,
   visibleResearch,
+  zoneSlots,
 } from '../src/core/index.ts';
-import { APPRENTICE, AURA, EELS, SCENARIOS, YEAR } from '../src/data/index.ts';
+import { APPRENTICE, AURA, EEL_RENT, SCENARIOS, STORE_MULT, YEAR } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -40,14 +42,22 @@ describe('the Tide Remembers', () => {
   });
 
   it('a new hand costs eels, and none come without them', () => {
-    // Farms that feed everyone, so only the eels decide.
-    const fed = { buildings: { farm: { count: 3, workers: 5 } }, porters: { bocage: 1 } };
-    const s0 = { ...begin(), ...fed, res: { ...begin().res, eels: 0 } } as State;
+    const s0 = { ...begin(), buildings: {}, porters: {}, res: { ...begin().res, eels: 0 } } as State;
     expect(run(s0, 60).hands).toBe(s0.hands);
     const s1 = { ...s0, res: { ...s0.res, eels: 50 } } as State;
     const s = run(s1, 21);
     expect(s.hands).toBe(s0.hands + 1);
-    expect(s.res.eels).toBeCloseTo(50 - EELS.hand);
+    expect(s.res.eels).toBeCloseTo(50 - EEL_RENT);
+  });
+
+  it('storage multiplies caps, so it always outgrows its price; land can be bought', () => {
+    const s0 = begin();
+    const s = { ...s0, buildings: { ...s0.buildings, storehouse: { count: 2, workers: 0 } } } as State;
+    expect(cap(s, 'silver')).toBe(Math.floor(500 * STORE_MULT ** 2));
+    expect(cap(s, 'insight')).toBe(1000);
+    const rich = { ...s0, res: { ...s0.res, silver: 500, stone: 200 } } as State;
+    const x = ok(apply(rich, { type: 'expand', zone: 'hearth' }));
+    expect(zoneSlots(x, 'hearth')).toBe(zoneSlots(rich, 'hearth') + 2);
   });
 
   it('raising the aura boosts the labs and costs Notice; Endowing and the friars bring the Dominion', () => {

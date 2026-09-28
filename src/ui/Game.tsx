@@ -46,6 +46,7 @@ import {
   type RecipeDef,
   type RecipeId,
   START_YEAR,
+  STORE_MULT,
   TWILIGHT_TRAITS,
   WARP,
   YEAR,
@@ -310,7 +311,7 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
   const n = () => count(p.s, p.id);
   const c = () => buildCost(p.s, p.id);
   const maxed = () => isMaxed(p.s, p.id);
-  const caps = () => Object.entries(def().caps ?? {}).map(([g, n]) => `+${n} ${GOOD_INFO[g as GoodId].name}`);
+  const caps = () => (def().stores ?? []).map((g) => GOOD_INFO[g].name);
   const out = () => p.r.byBuilding[p.id] ?? {};
   return (
     <Card>
@@ -334,7 +335,9 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
         <Rich text={def().blurb} />
       </Dim>
       <Show when={caps().length}>
-        <Dim class="block text-sm">Storage {caps().join(', ')} each</Dim>
+        <Dim class="block text-sm">
+          Storage ×{STORE_MULT} each: {caps().join(', ')}
+        </Dim>
       </Show>
       <Show when={def().uses}>
         {(u) => <Dim class="block text-sm">Each worker uses {cost(u())}/s, and stands idle without it</Dim>}

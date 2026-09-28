@@ -14,7 +14,8 @@ function lean<R extends State | { error: string }>(s: State, f: (bare: State) =>
 const act = (s: State, a: Action) => lean(s, (x) => apply(x, a));
 
 /** Plays a whole run headlessly: the strategy acts once per game second; a card takes the strategy's `choose`, else its first option. */
-export function simulate(scenario: ScenarioId, seed: number, strategy: Strategy, maxT = 100_000): State {
+/** With no deadline, a run the strategy cannot finish stops at maxT: 150 minutes of play. */
+export function simulate(scenario: ScenarioId, seed: number, strategy: Strategy, maxT = 9_000): State {
   let s = createRun(scenario, seed);
   while (!s.outcome && s.t < maxT) {
     while (s.events.length) {
