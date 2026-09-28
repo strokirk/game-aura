@@ -964,17 +964,9 @@ export const SCENARIOS = {
     unlocks: [
       // Aldric reads from the first second, so the tab waits for the first Study the Vis instead.
       { when: { kind: 'experiments', atLeast: 1 }, reveal: ['research'] },
-      { when: { kind: 'notice', atLeast: 1 }, reveal: ['notice'] },
     ],
     research: ['salt_rakes'],
     guide: [
-      {
-        // Shown only if a botch has blown up the Salt-works.
-        text: 'Build a Salt-works.',
-        done: { kind: 'built', building: 'salt_pan', atLeast: 1 },
-        tab: 'covenant',
-        building: 'salt_pan',
-      },
       {
         text: 'Put 2 hands to work in the Salt-works.',
         done: { kind: 'workers', building: 'salt_pan', atLeast: 2 },
@@ -1035,12 +1027,6 @@ export const SCENARIOS = {
     ],
     loss: [
       {
-        when: { kind: 'notice', atLeast: 50 },
-        cause: 'The Order takes Notice.',
-        title: 'RENOUNCED',
-        line: 'The Tribunal will not charter a covenant all of Dol is talking about.',
-      },
-      {
         when: { kind: 'time', atLeast: 4 * YEAR },
         cause: 'The year 1224 begins, and the book is still thin.',
         title: 'THE BOOK IS THIN',
@@ -1052,7 +1038,12 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, four idle hands and a salt-works on the flats. Out on the flats is a pool the tide never empties, and the pool holds vis.\n\nThe Tribunal meets in 1224 to decide whether to charter the covenant. Bring it five hundred pages of Insight: sell salt for Silver, buy the pool, and burn its vis in the lab.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: EELS,
+    // The weir is built below the Tide Pool: in the trial it waits until there is one.
+    story: EELS.map((b) =>
+      b.knot === 'eels_2_the_weir'
+        ? { ...b, when: { kind: 'all', of: [b.when, { kind: 'built', building: 'tide_pool', atLeast: 1 }] } }
+        : b,
+    ),
   },
   grow: {
     name: 'The Covenant Must Grow',

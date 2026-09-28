@@ -19,6 +19,7 @@ import {
   has,
   housing,
   idleHands,
+  isBlocked,
   isMaxed,
   labTotal,
   type MagusState,
@@ -137,13 +138,7 @@ export function Game() {
               class={`min-h-13 flex-1 cursor-pointer ${tab() === id ? 'text-gold shadow-[inset_0_3px_0_var(--color-gold)]' : ''} ${guide()?.tab === id && tab() !== id ? 'animate-beckon text-gold' : ''}`}
             >
               {label}
-              <Show
-                when={
-                  (id === 'magi' &&
-                    s().magi.some((m) => present(m) && !m.exp && maxExtraVis(s(), m.id, 'study_vis') >= 0)) ||
-                  (id === 'covenant' && short())
-                }
-              >
+              <Show when={(id === 'magi' && s().magi.some((m) => labReady(s(), m))) || (id === 'covenant' && short())}>
                 <span class="ml-1 text-warn" aria-hidden="true">
                   •
                 </span>
@@ -155,6 +150,10 @@ export function Game() {
     </div>
   );
 }
+
+/** A magus who could start Study the Vis right now: in the Sanctum, free, not blocked, and with the Vis. */
+const labReady = (s: State, m: MagusState) =>
+  present(m) && !m.exp && !isBlocked(s, `experiment:${m.id}`) && maxExtraVis(s, m.id, 'study_vis') >= 0;
 
 /** Floating numbers over a resource when it jumps. */
 function Pops(p: { k: Pop['key'] }) {
@@ -231,9 +230,9 @@ function Header(p: { s: State; r: Rates }) {
           <Ico icon={I.hands} class="mr-1 text-gold" />
           <b class={idleHands(p.s) > 0 ? 'text-warn' : ''}>{idleHands(p.s)}</b>
           <Dim> idle</Dim>
-          <div class="text-xs text-dim">
+          <span class="block text-xs text-dim">
             of {p.s.hands}/{housing(p.s)}
-          </div>
+          </span>
         </Chip>
         <For each={GOODS.filter(shown)}>
           {(g) => (
@@ -243,7 +242,7 @@ function Header(p: { s: State; r: Rates }) {
             >
               <Ico icon={GOOD_ICON[g]} label={GOOD_INFO[g].name} class="mr-1 text-gold" />
               <b class={p.s.res[g] >= cap(p.s, g) - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
-              <div class={`text-xs ${p.r.net[g] < -1e-9 ? 'text-bad' : 'text-dim'}`}>{rate(p.r.net[g])}</div>
+              <span class={`block text-xs ${p.r.net[g] < -1e-9 ? 'text-bad' : 'text-dim'}`}>{rate(p.r.net[g])}</span>
             </Chip>
           )}
         </For>
@@ -254,7 +253,7 @@ function Header(p: { s: State; r: Rates }) {
           >
             <Ico icon={I.notice} class="mr-1 text-gold" />
             <b class={p.s.notice >= NOTICE.strike.at ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
-            <div class="text-xs text-dim">settles {Math.round(noticeRest(p.s, p.r))}</div>
+            <span class="block text-xs text-dim">settles {Math.round(noticeRest(p.s, p.r))}</span>
           </Chip>
         </Show>
         <Show when={has(p.s, 'aura')}>
@@ -263,7 +262,7 @@ function Header(p: { s: State; r: Rates }) {
           >
             <Ico icon={I.aura} class="mr-1 text-gold" />
             <b class={aura(p.s) < AURA.base ? 'text-bad' : ''}>{aura(p.s)}</b>
-            <div class="text-xs text-dim">aura</div>
+            <span class="block text-xs text-dim">aura</span>
           </Chip>
         </Show>
       </div>

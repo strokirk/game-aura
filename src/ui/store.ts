@@ -120,12 +120,15 @@ function announce(prev: State, next: State) {
     const now = next.magi.find((x) => x.id === m.id);
     if (!e || !now || now.exp?.start === e.start) continue;
     const what = RECIPES[e.recipe];
-    const doubled = next.stats.discoveries > prev.stats.discoveries;
+    // This magus's own lines in the Chronicle tell a botch or a discovery apart from another magus's.
+    const own = next.chronicle.slice(prev.chronicle.length).filter((c) => c.text.startsWith(nameOf(m)));
+    const botched = own.some((c) => c.text.includes('goes wrong'));
+    const doubled = own.some((c) => c.text.includes('finds something'));
     // Before its timer ends, an experiment only ends by being put aside at a check-in.
     const result =
       next.t < e.end
         ? 'was put aside'
-        : next.stats.botches > prev.stats.botches
+        : botched
           ? 'went wrong'
           : `is done${what.result === 'insight' ? `: +${Math.round(e.insight * (doubled ? 2 : 1))} Insight` : ''}`;
     say(`${nameOf(m)}'s ${what.name} ${result}. Start another in the Magi tab.`);

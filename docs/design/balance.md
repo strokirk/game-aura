@@ -19,7 +19,7 @@ The balance simulation is the source of truth for every number in the design. A 
 | --- | --- | --- |
 | Trial | Guided (the guide to the letter, a click every 8 s) | Wins by 6:30 in ≥ 90% of seeds |
 | Trial | Sensible (efficient) | Wins in 2:30–5:00 in ≥ 90% of seeds, median ≥ 3:00 |
-| Trial | Random | Wins about 3 runs in 4: the trial is forgiving by design, and only neglect loses it |
+| Trial | Random | Wins most runs (43 of 50): the trial is forgiving by design, and neglect, or a click slower than every 30 s, loses it |
 | Trial | Idle (does nothing) | Loses |
 | Trial, full run | Random (legal actions at random) | A fuzzer: never crashes, replays exactly |
 | Full run | Careful | Wins in 60–75 min `[PLAYTEST: careful rings 2 of the 7 bells by about minute 75 on seeds 1–2 and stalls there; seed 3 is Renounced at minute 54]` |
