@@ -88,7 +88,8 @@ export const BUILDINGS = {
     cost: { silver: 60, stone: 30 },
     slots: 3,
     perWorker: { bog_oak: 0.1 },
-    blurb: 'Saws and sledges among the drowned stumps of Scissy. Black oak that never rots. Only while the tide is out.',
+    blurb:
+      'Saws and sledges among the drowned stumps of Scissy. Black oak that never rots. Only while the tide is out.',
   },
   farm: {
     name: 'Farm',
@@ -243,7 +244,8 @@ export const RECIPES = {
     time: 300,
     result: 'device',
     power: 4,
-    blurb: 'Bind a Rego Terram effect into a frame of bog-oak that will outlast the hill. +100% output for one kind of building, for good.',
+    blurb:
+      'Bind a Rego Terram effect into a frame of bog-oak that will outlast the hill. +100% output for one kind of building, for good.',
   },
 } as const satisfies Record<string, RecipeDef>;
 export type RecipeId = keyof typeof RECIPES;
@@ -276,16 +278,34 @@ export interface TwilightTrait {
 }
 export const TWILIGHT_TRAITS: readonly TwilightTrait[] = [
   { name: 'Tide-Sight', text: 'sees where the vis runs, like water under sand. Experiment yields ×1.5.', yield: 1.5 },
-  { name: 'The Hours Fold', text: 'works as if the day had more hours in it. Experiments take ×0.6 the time.', time: 0.6 },
+  {
+    name: 'The Hours Fold',
+    text: 'works as if the day had more hours in it. Experiments take ×0.6 the time.',
+    time: 0.6,
+  },
   {
     name: 'Hears the Bells',
     text: 'hears bells under the bay and cannot stop listening. Yields ×2, botch chance +10 points.',
     yield: 2,
     botch: 0.1,
   },
-  { name: 'Stone-Speaker', text: 'talks to the granite, and it answers. Quarries ×1.5.', building: 'quarry', mult: 1.5 },
-  { name: 'Salt in the Blood', text: 'can taste the brine from the tower. Salt-works ×1.5.', building: 'salt_pan', mult: 1.5 },
-  { name: 'Drowned Eyes', text: 'came back with eyes like a drowned man’s, and the lab work suffers. Yields ×0.7.', yield: 0.7 },
+  {
+    name: 'Stone-Speaker',
+    text: 'talks to the granite, and it answers. Quarries ×1.5.',
+    building: 'quarry',
+    mult: 1.5,
+  },
+  {
+    name: 'Salt in the Blood',
+    text: 'can taste the brine from the tower. Salt-works ×1.5.',
+    building: 'salt_pan',
+    mult: 1.5,
+  },
+  {
+    name: 'Drowned Eyes',
+    text: 'came back with eyes like a drowned man’s, and the lab work suffers. Yields ×0.7.',
+    yield: 0.7,
+  },
 ];
 
 export const EXPERIMENT = {
@@ -331,7 +351,15 @@ export interface ResearchDef {
 }
 /** A Form tree: repeatable, costs ×2.5 each time, revealed by the Aegis. */
 function tree(art: string, good: Cost, effects: Modifier[], blurb: string): ResearchDef {
-  return { name: `The ${art} tree`, cost: { insight: 2000, ...good }, effects, repeatable: true, growth: 2.5, needs: 'trees', blurb };
+  return {
+    name: `The ${art} tree`,
+    cost: { insight: 2000, ...good },
+    effects,
+    repeatable: true,
+    growth: 2.5,
+    needs: 'trees',
+    blurb,
+  };
 }
 /** In the order the Research tab reveals them. */
 export const RESEARCH = {
@@ -405,7 +433,8 @@ export const RESEARCH = {
       { kind: 'reveal', id: 'gate' },
       { kind: 'reveal', id: 'trees' },
     ],
-    blurb: 'The Hearth draws no Notice; baseline Insight ×1.25; the Drowned Gate can be found, and the Form trees open.',
+    blurb:
+      'The Hearth draws no Notice; baseline Insight ×1.25; the Drowned Gate can be found, and the Form trees open.',
   },
   marsh_mist: {
     name: 'Marsh Mist',
@@ -414,30 +443,55 @@ export const RESEARCH = {
     blurb: 'All Notice ×0.6. The flats are hard to see from Dol most mornings.',
   },
   // The Form trees: revealed by the Aegis, repeatable forever, each paid in Insight and its own good.
-  terram: tree('Terram', { stone: 100 }, [
-    { kind: 'output', building: 'quarry', mult: 1.5 },
-    { kind: 'output', building: 'bog_camp', mult: 1.5 },
-  ], 'Quarries and Bog-oak Camps ×1.5. The Form of earth and stone.'),
-  aquam: tree('Aquam', { salt: 100 }, [
-    { kind: 'output', building: 'salt_pan', mult: 1.5 },
-    { kind: 'output', building: 'eel_weir', mult: 1.5 },
-  ], 'Salt-works and Eel Weirs ×1.5. The Form of water, brine and tide.'),
-  herbam: tree('Herbam', { bread: 100 }, [
-    { kind: 'output', building: 'farm', mult: 1.5 },
-    { kind: 'output', building: 'salt_meadow', mult: 1.5 },
-    { kind: 'output', building: 'parchmenter', mult: 1.5 },
-  ], 'Farms, Salt Meadows and Parchmenters ×1.5. The Form of plants and all that grows.'),
-  vim: tree('Vim', { vis: 20 }, [
-    { kind: 'yield', mult: 2 },
-    { kind: 'output', building: 'tide_pool', mult: 1.25 },
-    { kind: 'output', building: 'knights_barrow', mult: 1.25 },
-    { kind: 'output', building: 'regio_spring', mult: 1.25 },
-    { kind: 'output', building: 'wormwood', mult: 1.25 },
-  ], 'Experiment yields ×2, Vis sites ×1.25. The Form of magic itself.'),
-  mentem: tree('Mentem', { vellum: 30 }, [
-    { kind: 'baseline', mult: 2 },
-    { kind: 'noticeGen', mult: 0.85 },
-  ], 'Reading ×2, Notice ×0.85. The Form of minds: yours, and Dol’s.'),
+  terram: tree(
+    'Terram',
+    { stone: 100 },
+    [
+      { kind: 'output', building: 'quarry', mult: 1.5 },
+      { kind: 'output', building: 'bog_camp', mult: 1.5 },
+    ],
+    'Quarries and Bog-oak Camps ×1.5. The Form of earth and stone.',
+  ),
+  aquam: tree(
+    'Aquam',
+    { salt: 100 },
+    [
+      { kind: 'output', building: 'salt_pan', mult: 1.5 },
+      { kind: 'output', building: 'eel_weir', mult: 1.5 },
+    ],
+    'Salt-works and Eel Weirs ×1.5. The Form of water, brine and tide.',
+  ),
+  herbam: tree(
+    'Herbam',
+    { bread: 100 },
+    [
+      { kind: 'output', building: 'farm', mult: 1.5 },
+      { kind: 'output', building: 'salt_meadow', mult: 1.5 },
+      { kind: 'output', building: 'parchmenter', mult: 1.5 },
+    ],
+    'Farms, Salt Meadows and Parchmenters ×1.5. The Form of plants and all that grows.',
+  ),
+  vim: tree(
+    'Vim',
+    { vis: 20 },
+    [
+      { kind: 'yield', mult: 2 },
+      { kind: 'output', building: 'tide_pool', mult: 1.25 },
+      { kind: 'output', building: 'knights_barrow', mult: 1.25 },
+      { kind: 'output', building: 'regio_spring', mult: 1.25 },
+      { kind: 'output', building: 'wormwood', mult: 1.25 },
+    ],
+    'Experiment yields ×2, Vis sites ×1.25. The Form of magic itself.',
+  ),
+  mentem: tree(
+    'Mentem',
+    { vellum: 30 },
+    [
+      { kind: 'baseline', mult: 2 },
+      { kind: 'noticeGen', mult: 0.85 },
+    ],
+    'Reading ×2, Notice ×0.85. The Form of minds: yours, and Dol’s.',
+  ),
 } as const satisfies Record<string, ResearchDef>;
 export type ResearchId = keyof typeof RESEARCH;
 export const RESEARCH_DEFS: Record<ResearchId, ResearchDef> = RESEARCH;
@@ -660,7 +714,13 @@ export interface ScenarioDef {
 
 export const YEAR = 120;
 /** Won once the seventh bell has rung and its story has been told. */
-const YS_WON: Condition = { kind: 'all', of: [{ kind: 'bells', atLeast: 7 }, { kind: 'fired', knot: 'ys_7' }] };
+const YS_WON: Condition = {
+  kind: 'all',
+  of: [
+    { kind: 'bells', atLeast: 7 },
+    { kind: 'fired', knot: 'ys_7' },
+  ],
+};
 export const START_YEAR = 1220;
 
 const inYear = (y: number): Condition => ({ kind: 'time', atLeast: (y - START_YEAR) * YEAR });
@@ -675,7 +735,15 @@ const open = (knot: string, title: string, y: number): StoryBeat => ({
 const YS: readonly StoryBeat[] = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
   thread: 'ys',
   knot: `ys_${n}`,
-  title: ['The drowned forest', 'The red bay', 'Wormwood', 'The hidden hour', 'The Pit', 'The four winds', 'No more sea'][n - 1]!,
+  title: [
+    'The drowned forest',
+    'The red bay',
+    'Wormwood',
+    'The hidden hour',
+    'The Pit',
+    'The four winds',
+    'No more sea',
+  ][n - 1]!,
   when: { kind: 'bells', atLeast: n },
 }));
 const EELS: readonly StoryBeat[] = [
@@ -794,9 +862,7 @@ export const SCENARIOS = {
         },
       },
     ],
-    win: [
-      { when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' },
-    ],
+    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
       { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },

@@ -11,13 +11,13 @@ import {
   housing,
   idleHands,
   isMaxed,
+  labTotal,
   type MagusState,
   magusName,
-  type Rates,
-  rates,
-  labTotal,
   maxExtraVis,
   present,
+  type Rates,
+  rates,
   readingRate,
   recipeOpen,
   type State,
@@ -42,12 +42,12 @@ import {
   GOODS,
   type GoodId,
   PRESERVE,
-  TWILIGHT_TRAITS,
-  WARP,
   RECIPES,
   type RecipeDef,
   type RecipeId,
   START_YEAR,
+  TWILIGHT_TRAITS,
+  WARP,
   YEAR,
   ZONES,
   type ZoneId,
@@ -413,21 +413,21 @@ function Magus(p: { s: State; m: MagusState }) {
         <span>
           <Rich text="Lab Total" /> <b>{labTotal(p.m)}</b>
           <Show when={p.m.warp}>
-            <Dim class="text-sm"> ({p.m.lt} + {p.m.warp} Warping)</Dim>
+            <Dim class="text-sm">
+              {' '}
+              ({p.m.lt} + {p.m.warp} Warping)
+            </Dim>
           </Show>
         </span>
       </div>
       <Show when={p.m.twilight}>
-        {(t) => (
-          <p class="text-warn">
-            In Twilight: back in {mmss(Math.max(0, t() - p.s.t))}. Nothing to do but wait.
-          </p>
-        )}
+        {(t) => <p class="text-warn">In Twilight: back in {mmss(Math.max(0, t() - p.s.t))}. Nothing to do but wait.</p>}
       </Show>
       <For each={p.m.traits.filter((x) => x.until > p.s.t)}>
         {(x) => (
           <Dim class="block text-sm">
-            <b class="text-gold">{TWILIGHT_TRAITS[x.i]?.name}</b> · {TWILIGHT_TRAITS[x.i]?.text} {mmss(x.until - p.s.t)} left
+            <b class="text-gold">{TWILIGHT_TRAITS[x.i]?.name}</b> · {TWILIGHT_TRAITS[x.i]?.text} {mmss(x.until - p.s.t)}{' '}
+            left
           </Dim>
         )}
       </For>

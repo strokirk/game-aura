@@ -83,7 +83,11 @@ export function Stepper(p: {
 
 export const Overlay = (p: ParentProps) => (
   <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
-    <div class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]"
+    >
       {p.children}
     </div>
   </div>

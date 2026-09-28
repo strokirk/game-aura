@@ -2,21 +2,21 @@
 import { For, Show } from 'solid-js';
 import {
   almsCost,
+  bellStatus,
   bribeCost,
   canAfford,
+  dark,
   endowCost,
   giftCost,
   has,
   idleHands,
+  lowTide,
   type Rates,
   researchCost,
-  bellStatus,
-  dark,
-  lowTide,
-  year,
   type State,
   timeToAfford,
   visibleResearch,
+  year,
 } from '../core/index.ts';
 import { GATE, GOOD_INFO, GOODS, type GoodId, NOTICE, RESEARCH_DEFS, ZONES, type ZoneId } from '../data/index.ts';
 import { cost, eta, num } from './format.ts';
@@ -168,11 +168,17 @@ export function Gate(p: { s: State; r: Rates }) {
               />
               <Dim class="text-sm">{num(p.r.gateStone)} Stone/s from the Hall to the Gate</Dim>
               <Label>Pour into the Gate</Label>
-              <Dim class="mb-1 block text-sm">A poured good's income goes to the Gate, which has no cap, instead of the Hall.</Dim>
+              <Dim class="mb-1 block text-sm">
+                A poured good's income goes to the Gate, which has no cap, instead of the Hall.
+              </Dim>
               <div class="grid grid-cols-3 gap-1.5">
                 <For each={GOODS.filter((k) => p.s.res[k] > 0 || gate().store[k] > 0 || need().includes(k))}>
                   {(k) => (
-                    <Button on={gate().pour.includes(k)} class="px-1.5 text-sm" onClick={() => act({ type: 'pour', good: k })}>
+                    <Button
+                      on={gate().pour.includes(k)}
+                      class="px-1.5 text-sm"
+                      onClick={() => act({ type: 'pour', good: k })}
+                    >
                       <Ico icon={GOOD_ICON[k]} /> {num(gate().store[k])}
                     </Button>
                   )}
@@ -196,7 +202,16 @@ export function Gate(p: { s: State; r: Rates }) {
               return (
                 <div class={have() >= want() ? 'text-good' : ''}>
                   <Ico icon={GOOD_ICON[k]} /> {GOOD_INFO[k].name} in the Gate: <b>{num(have())}</b>
-                  <Dim>/{num(want())}</Dim> <Dim class="text-sm">{eta(want() > have() && p.r.gate[k] > 0 ? (want() - have()) / p.r.gate[k] : want() > have() ? Number.POSITIVE_INFINITY : 0)}</Dim>
+                  <Dim>/{num(want())}</Dim>{' '}
+                  <Dim class="text-sm">
+                    {eta(
+                      want() > have() && p.r.gate[k] > 0
+                        ? (want() - have()) / p.r.gate[k]
+                        : want() > have()
+                          ? Number.POSITIVE_INFINITY
+                          : 0,
+                    )}
+                  </Dim>
                   <Bar pct={(have() / want()) * 100} />
                 </div>
               );
@@ -223,7 +238,10 @@ export function Gate(p: { s: State; r: Rates }) {
           <For each={GATE.bells.slice(0, g()?.bells ?? 0)}>
             {(b) => (
               <div class="mb-1 text-sm">
-                <b>{b.name}.</b> <Dim>{b.opens} {b.wakes}</Dim>
+                <b>{b.name}.</b>{' '}
+                <Dim>
+                  {b.opens} {b.wakes}
+                </Dim>
               </div>
             )}
           </For>
@@ -234,7 +252,8 @@ export function Gate(p: { s: State; r: Rates }) {
           </Show>
           <Show when={(g()?.bells ?? 0) >= 4}>
             <div class={`text-sm ${dark(p.s) ? 'text-gold' : ''}`}>
-              <Ico icon={I.dark} /> {dark(p.s) ? 'The hidden hour: Notice stops, experiments run twice as fast' : 'Daylight'}
+              <Ico icon={I.dark} />{' '}
+              {dark(p.s) ? 'The hidden hour: Notice stops, experiments run twice as fast' : 'Daylight'}
             </div>
           </Show>
           <Show when={(g()?.bells ?? 0) >= 6}>
@@ -248,7 +267,11 @@ export function Gate(p: { s: State; r: Rates }) {
             <div class="grid grid-cols-3 gap-1.5">
               <For each={Object.keys(ZONES) as ZoneId[]}>
                 {(z) => (
-                  <Button on={p.s.couesnon?.zone === z} class="px-1.5 text-sm" onClick={() => act({ type: 'couesnon', zone: z })}>
+                  <Button
+                    on={p.s.couesnon?.zone === z}
+                    class="px-1.5 text-sm"
+                    onClick={() => act({ type: 'couesnon', zone: z })}
+                  >
                     {ZONES[z].name}
                   </Button>
                 )}

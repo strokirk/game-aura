@@ -1,6 +1,7 @@
 import {
   type Action,
   apply,
+  bellStatus,
   buildable,
   buildCost,
   canAfford,
@@ -12,9 +13,9 @@ import {
   housing,
   idleHands,
   isMaxed,
+  present,
   rates,
   researchCost,
-  riteStatus,
   type State,
   studyCost,
   visibleResearch,
@@ -26,6 +27,7 @@ import {
   type BuildingId,
   DEFS,
   EXPERIMENT,
+  GOODS,
   NOTICE,
   RECIPES,
   RESEARCH,
@@ -68,7 +70,11 @@ const CANDIDATES: { [K in Action['type']]: (s: State) => Extract<Action, { type:
   bribe: () => [{ type: 'bribe' }],
   alms: () => [{ type: 'alms' }],
   keepSalt: () => [{ type: 'keepSalt' }],
-  gate: () => (['found', 'pour', 'vis', 'rite'] as const).map((op) => ({ type: 'gate', op })),
+  gift: () => [{ type: 'gift' }],
+  gate: () => (['found', 'bell'] as const).map((op) => ({ type: 'gate', op })),
+  pour: () => GOODS.map((good) => ({ type: 'pour', good })),
+  couesnon: () => keys(ZONES).map((zone) => ({ type: 'couesnon', zone })),
+  devFill: () => [], // a cheat, never played
   choose: (s) => (s.events[0]?.options ?? []).map((_, option) => ({ type: 'choose', option })),
 };
 const KINDS = keys(CANDIDATES);
@@ -185,7 +191,7 @@ export const STRATEGIES: Record<string, Strategy> = {
         buildable(s, id) &&
         !isMaxed(s, id) &&
         room(id) &&
-        (settles < 60 || DEFS[id].site || id === 'sanctum') &&
+        (settles < 60 || DEFS[id].site || id === 'sanctum' || id === 'library') &&
         canAfford(s, buildCost(s, id)),
     );
     if (pick) out.push({ type: 'build', building: pick });
@@ -195,14 +201,14 @@ export const STRATEGIES: Record<string, Strategy> = {
     if (has(s, 'endow') && settles > 55 && canAfford(s, endowCost(s))) out.push({ type: 'endow' });
     if (has(s, 'endow') && s.notice > NOTICE.strike.at - 5) out.push({ type: 'bribe' });
     if (has(s, 'gate') && !s.gate) out.push({ type: 'gate', op: 'found' });
-    const allLearned = visibleResearch(s).every((id) => (s.research[id] ?? 0) > 0);
-    if (s.gate && !s.gate.pour && allLearned) out.push({ type: 'gate', op: 'pour' });
-    if (s.gate?.raised && !s.gate.visToGate) out.push({ type: 'gate', op: 'vis' });
-    if (riteStatus(s).ready) out.push({ type: 'gate', op: 'rite' });
+    // Once the Gate is raised, pour into it exactly what the next bell asks for. Ring whenever a bell is paid.
+    const next = bellStatus(s).next;
+    if (s.gate?.raised && next)
+      for (const k of GOODS) if (s.gate.pour.includes(k) !== k in next.price) out.push({ type: 'pour', good: k });
+    if (bellStatus(s).ready) out.push({ type: 'gate', op: 'bell' });
     // The lab: Lab Texts while Vellum lasts, Devices on the quarries once the Gate needs Stone, else Study the Vis.
-    const readyForRite = s.gate?.raised && riteStatus(s).insight >= (riteStatus(s).next?.insight ?? Infinity);
     for (const m of s.magi) {
-      if (!m.sanctum || m.exp || readyForRite) continue;
+      if (!present(m) || m.exp) continue;
       if (s.labTexts < 6 && s.res.vellum >= 20 && has(s, 'recipe:lab_text'))
         out.push({ type: 'experiment', magus: m.id, recipe: 'lab_text', extra: 0 });
       else if (

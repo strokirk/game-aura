@@ -230,7 +230,11 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
       <div class="flex flex-col gap-2">
         <For each={p.ev.options}>
           {(o, i) => (
-            <Button primary disabled={!!o.cost && !canAfford(game.s as State, o.cost)} onClick={() => act({ type: 'choose', option: i() })}>
+            <Button
+              primary
+              disabled={!!o.cost && !canAfford(game.s as State, o.cost)}
+              onClick={() => act({ type: 'choose', option: i() })}
+            >
               <span>
                 <Rich text={o.label} plain />
               </span>

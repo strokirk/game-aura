@@ -14,9 +14,9 @@ import {
   EXPERIMENT,
   FUEL_MULT,
   GATE,
+  type GateStart,
   GOOD_INFO,
   GOODS,
-  type GateStart,
   type GoodId,
   HALL_HOUSING,
   MAGI,
@@ -37,10 +37,10 @@ import {
   SCENARIOS,
   type ScenarioDef,
   type ScenarioId,
-  type Thread,
-  TWILIGHT_TRAITS,
   START_YEAR,
   TERRACE,
+  type Thread,
+  TWILIGHT_TRAITS,
   WARP,
   YEAR,
   ZONES,
@@ -441,7 +441,8 @@ export function experimentPlan(s: State, magus: MagusId, recipe: RecipeId, extra
 
 /** The most extra Vis affordable for this experiment, up to the maximum; -1 if even the base cost isn't. */
 export function maxExtraVis(s: State, magus: MagusId, recipe: RecipeId) {
-  for (let x = EXPERIMENT.maxExtraVis; x >= 0; x--) if (canAfford(s, experimentPlan(s, magus, recipe, x).cost)) return x;
+  for (let x = EXPERIMENT.maxExtraVis; x >= 0; x--)
+    if (canAfford(s, experimentPlan(s, magus, recipe, x).cost)) return x;
   return -1;
 }
 
@@ -503,18 +504,18 @@ export function rates(s: State): Rates {
     }
   }
   for (const m of s.magi) if (present(m) && !m.exp) net.insight += readingRate(s, m, mods);
-  const reserve = s.keepSalt ? cap(s, 'salt', mods) : 0;
-  if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
-    net.silver += net.salt * SALT_PRICE;
-    net.salt = 0;
-  }
-  // Poured goods go to the Gate, uncapped, instead of the Hall.
+  // Poured goods go to the Gate, uncapped, instead of the Hall (and poured Salt isn't sold).
   const gate = zeroGoods();
   for (const g of s.gate?.pour ?? [])
     if (net[g] > 0) {
       gate[g] = net[g];
       net[g] = 0;
     }
+  const reserve = s.keepSalt ? cap(s, 'salt', mods) : 0;
+  if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
+    net.silver += net.salt * SALT_PRICE;
+    net.salt = 0;
+  }
   const gateStone = s.gate ? s.gate.porters * ZONES.marsh.carry * carryMult(mods, 'marsh') : 0;
   if (rung >= 2) wakes += GATE.bloodNotice;
   const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
@@ -544,7 +545,10 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
     s.stats.botches++;
     s.notice += EXPERIMENT.botchNotice;
     m.warp++;
-    log(s, `${name}'s experiment goes wrong. The tower smokes for a day and Dol talks about it. ${name} is Warped (${m.warp}).`);
+    log(
+      s,
+      `${name}'s experiment goes wrong. The tower smokes for a day and Dol talks about it. ${name} is Warped (${m.warp}).`,
+    );
     if (nextRandom(s.rng) < WARP.destroy) {
       const pool = keys(s.buildings).filter((id) => id !== 'sanctum' && !isSite(id));
       const id = pool[Math.floor(nextRandom(s.rng) * pool.length)];
@@ -590,7 +594,11 @@ function returnFromTwilight(s: State, m: MagusState) {
   m.traits.push({ i, until: s.t + secs });
   if (t.building && t.mult) s.mods.push({ id: t.building, good: goodOf(t.building), mult: t.mult, until: s.t + secs });
   const name = magusName(m.id);
-  card(s, `${name} returns: ${t.name}`, `${name} comes back from Twilight, and ${t.text} For about ${Math.round(secs / 60)} minutes.`);
+  card(
+    s,
+    `${name} returns: ${t.name}`,
+    `${name} comes back from Twilight, and ${t.text} For about ${Math.round(secs / 60)} minutes.`,
+  );
 }
 /** The good a building makes (its first). */
 const goodOf = (id: BuildingId) => (Object.keys(B[id].perWorker ?? {})[0] ?? 'silver') as GoodId;
@@ -747,7 +755,9 @@ function tickGate(s: State, r: Rates) {
     }
   }
   for (const k of GOODS) {
-    g.store[k] += r.gate[k] * DT;
+    // Poured Stone raises the Gate first.
+    if (k === 'stone' && !g.raised) g.stone += r.gate[k] * DT;
+    else g.store[k] += r.gate[k] * DT;
     if (k === 'insight') s.stats.insightMade += r.gate[k] * DT;
   }
 }
@@ -798,7 +808,11 @@ function yearly(s: State) {
   }
   if (bells(s) >= 6 && s.dikes > 0)
     card(s, 'The storm', 'The four winds meet over the bay, and a dike goes. The sea is in the polder to the knee.', [
-      { label: `Mend it. (${GATE.storm.mend.stone} Stone, ${GATE.storm.mend.bread} Bread)`, effects: [], cost: GATE.storm.mend },
+      {
+        label: `Mend it. (${GATE.storm.mend.stone} Stone, ${GATE.storm.mend.bread} Bread)`,
+        effects: [],
+        cost: GATE.storm.mend,
+      },
       { label: 'Let it breach. (Lose a dike)', effects: [{ kind: 'dikes', n: -1 }] },
     ]);
 }
