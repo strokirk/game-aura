@@ -1,19 +1,27 @@
 // The full run's panels: research, the Notice levers and the Drowned Gate.
 import { For, Show } from 'solid-js';
 import {
+  aura,
+  auraBoosts,
   bribeCost,
   canAfford,
+  count,
+  divine,
   endowCost,
+  friars,
   has,
   idleHands,
+  noticeDecay,
+  offerCost,
   type Rates,
   researchCost,
   riteStatus,
   type State,
+  stains,
   timeToAfford,
   visibleResearch,
 } from '../core/index.ts';
-import { GATE, NOTICE, RESEARCH_DEFS } from '../data/index.ts';
+import { AURA, EELS, FAERIE, GATE, NOTICE, RESEARCH_DEFS } from '../data/index.ts';
 import { cost, eta, num } from './format.ts';
 import { I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
@@ -86,7 +94,8 @@ export function NoticeCard(p: { s: State; r: Rates }) {
               <Ico icon={I.endow} /> Endow the Parish
             </span>
             <Dim class="text-sm">
-              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good
+              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good · every second one: Divine +1,
+              aura −1
             </Dim>
           </Button>
           <Button disabled={!canAfford(p.s, bribeCost(p.s))} onClick={() => act({ type: 'bribe' })} class="flex-col">
@@ -94,9 +103,77 @@ export function NoticeCard(p: { s: State; r: Rates }) {
               <Ico icon={I.bribe} /> Bribe the Lord
             </span>
             <Dim class="text-sm">
-              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min
+              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min · an Infernal stain: all output ×
+              {AURA.stain} for {AURA.stainSecs / 120} years
             </Dim>
           </Button>
+        </div>
+      </Show>
+    </Card>
+  );
+}
+
+const pct = (x: number) => `${x >= 1 ? '+' : '−'}${Math.round(Math.abs(x - 1) * 100)}%`;
+
+/** The covenant's aura: its realms, the boosts it gives, and the offerings and eel sales that feed it. */
+export function AuraCard(p: { s: State; r: Rates }) {
+  const b = () => auraBoosts(p.s);
+  const a = () => aura(p.s);
+  const tiers = (): [number, string, string][] => [
+    [0, 'Lab Insight', pct(b().insight)],
+    [AURA.speedFrom, 'Experiment speed', pct(b().speed)],
+    [AURA.agingFrom, 'Aging', pct(b().aging)],
+    [AURA.discoveryFrom, 'Discovery', `+${Math.round(b().discovery * 100)} points`],
+    [AURA.visFrom, 'Vis sites', pct(b().vis)],
+    [AURA.ltFrom, 'Lab Total', `+${b().lt}`],
+  ];
+  return (
+    <Card warn={a() < AURA.base}>
+      <Label>
+        <Ico icon={I.aura} /> Aura {a()}
+      </Label>
+      <div class="text-sm">
+        <Rich
+          text={`Magic ${p.s.aura.magic} − Divine ${divine(p.s)} (${p.s.endowments} Endowments, ${friars(p.s)} houses of friars${p.s.aura.aegisAt !== null ? ', held off by the Aegis' : ''})`}
+        />
+        <Show when={stains(p.s)}>
+          <Rich text={` · Infernal stains ${stains(p.s)}: all output ×${(AURA.stain ** stains(p.s)).toFixed(2)}`} />
+        </Show>
+        <Show when={p.s.faerie.level}>
+          <Rich text={` · Faerie ${p.s.faerie.level}: Notice fades ${Math.round(noticeDecay(p.s) * 100)}% a minute`} />
+        </Show>
+      </div>
+      <ul class="mt-1 grid grid-cols-2 gap-x-3 text-sm">
+        <For each={tiers()}>
+          {([from, name, v]) => (
+            <li class={a() >= from ? '' : 'text-dim'}>
+              {name}: <b>{a() >= from ? v : `at aura ${from}`}</b>
+            </li>
+          )}
+        </For>
+      </ul>
+      <Show when={has(p.s, 'monks') || (has(p.s, 'faerie') && count(p.s, 'regio_spring') > 0)}>
+        <div class="mt-1.5 grid grid-cols-2 gap-2">
+          <Show when={has(p.s, 'monks')}>
+            <Button class="flex-col" disabled={p.s.res.eels < EELS.stick} onClick={() => act({ type: 'sellEels' })}>
+              <span>
+                <Ico icon={I.eel} /> Sell a stick to the Mont
+              </span>
+              <Dim class="text-sm">
+                {EELS.stick} Eels → {EELS.stickSilver} Silver, Notice −{EELS.stickNotice}
+              </Dim>
+            </Button>
+          </Show>
+          <Show when={has(p.s, 'faerie') && count(p.s, 'regio_spring') > 0}>
+            <Button class="flex-col" disabled={!canAfford(p.s, offerCost(p.s))} onClick={() => act({ type: 'offer' })}>
+              <span>
+                <Ico icon={I.faerie} /> Leave an offering
+              </span>
+              <Dim class="text-sm">
+                {cost(offerCost(p.s))} · mostly lost; sometimes Faerie +1 (max {FAERIE.max}); a gift, if you're in need
+              </Dim>
+            </Button>
+          </Show>
         </div>
       </Show>
     </Card>

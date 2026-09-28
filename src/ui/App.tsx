@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from 'solid-js';
-import { magusName, year } from '../core/index.ts';
-import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
+import { chairName, nameOf, scenarioOf, year } from '../core/index.ts';
+import { type MagusId, SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
 import { I } from './icons.tsx';
@@ -12,6 +12,7 @@ import {
   continueRun,
   game,
   hasSave,
+  legacy,
   newRun,
   options,
   optionsFrom,
@@ -222,9 +223,39 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   );
 }
 
+/** The end screen's huge word, by how the run ended. */
+function endTitle(cause: string, won: boolean) {
+  if (won) return 'THE TIDE STANDS STILL';
+  if (/renounce/i.test(cause)) return 'RENOUNCED';
+  if (/apprentice|magus dies/i.test(cause)) return 'THE LINE IS BROKEN';
+  return 'THE HILL IS EMPTY';
+}
+const END_LINES: Record<string, string> = {
+  RENOUNCED:
+    'The Tribunal has spoken your name backward. Your sigils are struck from the books. Your hill is only salt again.',
+  'THE LINE IS BROKEN':
+    'The last magus closed their eyes, and no young voice answered. The aura sinks back into the marsh like a stone into black water.',
+  'THE HILL IS EMPTY': 'The last hand has walked down to Dol. Nobody carries the vis now, and the tower goes dark.',
+  'THE TIDE STANDS STILL': 'The bells ring under the water, and the Drowned Gate opens.',
+};
+
+/** The nag: what the next covenant will inherit. */
+function inheritance(): string {
+  const lg = legacy();
+  if (!lg.covenants) return '';
+  const heir = (id: MagusId) => chairName(id, (lg.gens[id] ?? 0) + 1);
+  const parts = [
+    lg.labTexts ? `${lg.labTexts} Lab Texts under the hill` : '',
+    lg.magic ? `a hill that already hums at Magic ${3 + lg.magic}` : '',
+    lg.heirlooms.length ? `${lg.heirlooms.length} enchanted heirloom${lg.heirlooms.length > 1 ? 's' : ''}` : '',
+  ].filter(Boolean);
+  return `${heir('aldric')} will climb the hill${parts.length ? ` and find ${parts.join(', ')}` : ''}.`;
+}
+
 function End() {
   const s = () => game.s!;
   const won = () => s().outcome?.kind === 'win';
+  const title = () => endTitle(s().outcome?.cause ?? '', won());
   const stats = (): [string, string][] => [
     ['Ended', `${year(s())}, after ${mmss(s().t)}`],
     ['Insight gathered', num(s().stats.insightMade)],
@@ -233,15 +264,22 @@ function End() {
     [
       'Magi',
       s()
-        .magi.map((m) => `${magusName(m.id)} (Lab Total ${m.lt})`)
-        .join(', '),
+        .magi.map((m) => `${nameOf(m)} (Lab Total ${m.lt}, age ${Math.floor(m.age)})`)
+        .join(', ') || 'none',
     ],
+    ['Aura', `Magic ${s().aura.magic}, peak ${s().aura.peak}`],
   ];
   return (
     <Screen>
-      <Ico icon={won() ? I.win : I.loss} class="size-20 text-gold" />
-      <Big>{won() ? 'Victory' : 'The covenant fails'}</Big>
+      <Ico icon={won() ? I.win : I.loss} class={`size-20 ${won() ? 'text-gold' : 'text-bad'}`} />
+      <h1 class="text-center font-bold text-4xl uppercase tracking-[0.2em] text-bad sm:text-6xl">{title()}</h1>
       <Tagline>{s().outcome?.cause}</Tagline>
+      <p class="max-w-md text-center">{END_LINES[title()]}</p>
+      <Show when={s().outcome?.kind === 'loss' && scenarioOf(s()).legacy}>
+        <p class="max-w-md text-center italic text-gold">
+          But the Gate still waits under the tide, and the Gate remembers. {inheritance()}
+        </p>
+      </Show>
       <Label>The Chronicle</Label>
       <ul class="max-w-md italic">
         <For each={s().chronicle.slice(-5)}>
@@ -264,7 +302,7 @@ function End() {
       </dl>
       <Stack>
         <Button primary onClick={restartRun}>
-          Try again
+          {scenarioOf(s()).legacy ? 'Found a new covenant' : 'Try again'}
         </Button>
         <Button onClick={() => setScreen('title')}>Title</Button>
       </Stack>

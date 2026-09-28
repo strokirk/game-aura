@@ -1,5 +1,8 @@
 import { createMemo, createSignal, For, Match, Show, Switch } from 'solid-js';
 import {
+  agingChance,
+  apprenticeBoost,
+  aura,
   buildable,
   buildCost,
   canAfford,
@@ -12,8 +15,10 @@ import {
   housing,
   idleHands,
   isMaxed,
+  labTotal,
   type MagusState,
   magusName,
+  nameOf,
   type Rates,
   rates,
   readingRate,
@@ -28,6 +33,9 @@ import {
   zoneUsed,
 } from '../core/index.ts';
 import {
+  AGING,
+  APPRENTICE,
+  AURA,
   BUILDINGS,
   type BuildingId,
   DEFS,
@@ -45,7 +53,7 @@ import {
 import { cost, eta, mmss, num, rate } from './format.ts';
 import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Odds, Stepper } from './kit.tsx';
-import { Gate, NoticeCard, Research } from './Panels.tsx';
+import { AuraCard, Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
 import { act, game, options, type Pop, pops, setConfirming, setPaused, setSpeed, speed } from './store.ts';
 
@@ -74,6 +82,7 @@ export function Game() {
           </Match>
           <Match when={tab() === 'magi'}>
             <For each={s().magi}>{(m) => <Magus s={s()} m={m} />}</For>
+            <Chairs s={s()} />
           </Match>
           <Match when={tab() === 'research'}>
             <Research s={s()} r={r()} />
@@ -198,6 +207,11 @@ function Header(p: { s: State; r: Rates }) {
             <Dim> → {Math.round(p.r.noticeGen * 10)}</Dim>
             <div class="text-sm">Notice (settles at)</div>
           </div>
+          <div>
+            <Ico icon={I.aura} class="mr-1 text-gold" />
+            <b class={aura(p.s) < AURA.base ? 'text-bad' : ''}>{aura(p.s)}</b>
+            <div class="text-sm">Aura</div>
+          </div>
         </Show>
       </div>
     </header>
@@ -232,6 +246,7 @@ function Covenant(p: { s: State; r: Rates }) {
       </Card>
       <Show when={has(p.s, 'notice')}>
         <NoticeCard s={p.s} r={p.r} />
+        <AuraCard s={p.s} r={p.r} />
       </Show>
       <For each={zones()}>
         {(z) => (
@@ -360,20 +375,34 @@ function Magus(p: { s: State; m: MagusState }) {
       ? `${num(plan().insight)} Insight`
       : def().result === 'labText'
         ? `a Lab Text (you have ${p.s.labTexts})`
-        : target()
-          ? `+25% ${DEFS[target() as BuildingId].name}`
-          : 'choose a building';
+        : def().result === 'longevity'
+          ? p.m.longevity
+            ? 'already done'
+            : 'aging chance halved, for life'
+          : target()
+            ? `+25% ${DEFS[target() as BuildingId].name}`
+            : 'choose a building';
   const sc = () => studyCost(p.m);
   return (
     <Card>
       <div class="flex items-center justify-between">
         <Label>
-          <Ico icon={I.magus} /> {magusName(p.m.id)}
+          <Ico icon={I.magus} /> {nameOf(p.m)}
         </Label>
         <span>
-          <Rich text="Lab Total" /> <b>{p.m.lt}</b>
+          <Rich text="Lab Total" /> <b>{labTotal(p.s, p.m)}</b>
         </span>
       </div>
+      <Dim class="block text-sm">
+        Age {Math.floor(p.m.age)}
+        <Show when={p.m.decrepitude}>
+          {' '}
+          · <Rich text={`Decrepitude ${p.m.decrepitude} of ${AGING.death}`} />
+        </Show>
+        <Show when={agingChance(p.s, p.m) > 0}> · {Math.round(agingChance(p.s, p.m) * 100)}% a year to grow older</Show>
+        <Show when={p.m.longevity}> · Longevity Ritual</Show>
+      </Dim>
+      <Apprentice s={p.s} m={p.m} />
       <Dim class="mb-1 block text-sm">
         Reading: +{readingRate(p.s, p.m).toFixed(2)} Insight/s · Study the Vis: {RECIPES.study_vis.insightPerLT} Insight
         per point
@@ -475,6 +504,69 @@ function Magus(p: { s: State; m: MagusState }) {
         </span>
       </Button>
     </Card>
+  );
+}
+
+function Apprentice(p: { s: State; m: MagusState }) {
+  const a = () => p.s.apprentices.find((x) => x.chair === p.m.id);
+  return (
+    <Show
+      when={a()}
+      fallback={
+        <Show when={has(p.s, 'apprentices')}>
+          <Button
+            class="my-1 w-full text-sm"
+            disabled={!canAfford(p.s, APPRENTICE.cost)}
+            onClick={() => act({ type: 'apprentice', magus: p.m.id })}
+          >
+            Take an apprentice · {cost(APPRENTICE.cost)}
+            <Dim class="text-sm"> · −25% Insight at first, +25% after 4 years; heir to the chair</Dim>
+          </Button>
+        </Show>
+      }
+    >
+      {(x) => (
+        <div class="text-sm">
+          <Rich text={x().ready ? 'Journeyman' : 'Apprentice'} />:{' '}
+          {x().ready ? 'waiting for an empty chair' : `Gauntlet in ${mmss(APPRENTICE.gauntlet - (p.s.t - x().start))}`}{' '}
+          ·{' '}
+          <span class={apprenticeBoost(p.s, p.m.id) < 0 ? 'text-bad' : 'text-good'}>
+            {apprenticeBoost(p.s, p.m.id) >= 0 ? '+' : '−'}
+            {Math.round(Math.abs(apprenticeBoost(p.s, p.m.id)) * 100)}% Insight
+          </span>
+        </div>
+      )}
+    </Show>
+  );
+}
+
+/** Empty chairs, and apprentices whose master has died. */
+function Chairs(p: { s: State }) {
+  const orphans = () => p.s.apprentices.filter((a) => !p.s.magi.some((m) => m.id === a.chair));
+  return (
+    <Show when={p.s.vacant.length || orphans().length}>
+      <Card warn>
+        <Label>Empty chairs</Label>
+        <For each={p.s.vacant}>
+          {(v) => (
+            <div class="text-sm">
+              <Rich
+                text={`${magusName(v.chair)}'s chair stands empty. The next journeyman to pass the Gauntlet takes it, and the name.`}
+              />
+            </div>
+          )}
+        </For>
+        <For each={orphans()}>
+          {(a) => (
+            <div class="text-sm">
+              <Rich
+                text={`The late ${magusName(a.chair)}'s apprentice studies alone: ${a.ready ? 'ready' : `Gauntlet in ${mmss(APPRENTICE.gauntlet - (p.s.t - a.start))}`}.`}
+              />
+            </div>
+          )}
+        </For>
+      </Card>
+    </Show>
   );
 }
 

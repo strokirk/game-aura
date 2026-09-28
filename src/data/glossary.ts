@@ -73,6 +73,34 @@ export const GLOSSARY = {
   aldric: { forms: ['Aldric'], text: 'A founder of the covenant, and its first magus.' },
   sabine: { forms: ['Sabine'], text: 'A founder of the covenant.' },
   herve: { forms: ['Hervé'], text: 'A founder of the covenant.' },
+  aura: {
+    forms: ['aura', 'Aura'],
+    text: 'A place’s supernatural character. The covenant’s aura is its Magic less the Divine that presses on it. A strong aura makes every lab richer, faster and longer-lived; below 3 it starves them. Raise it with research, at a price in Notice.',
+  },
+  divine: {
+    forms: ['Divine', 'Dominion'],
+    text: 'The power of the Church. Every Endowment, and every house of friars that comes to Dol each decade, takes a point from the aura.',
+  },
+  infernal: {
+    forms: ['Infernal'],
+    text: 'Sin leaves a mark. Every bribe stains the covenant’s lands for 5 years: each stain costs 5% of all output.',
+  },
+  faerie: {
+    forms: ['Faerie', 'fae'],
+    text: 'The folk of the Regio Spring. Offerings mostly vanish; some please them, which makes Dol forget the covenant faster; and to a covenant in real need they sometimes give a gift.',
+  },
+  decrepitude: {
+    forms: ['Decrepitude', 'decrepit'],
+    text: 'The toll of age. From 45, each year may bring a point; each costs a point of Lab Total, and at 5 the magus dies. The Longevity Ritual halves the chance.',
+  },
+  apprentice: {
+    forms: ['apprentice', 'apprentices', 'Apprentice'],
+    text: 'A Gifted child trained by a magus. A burden at first (−25% to the master’s Insight), a help after four years (+25%). After six years they pass the Gauntlet and wait to take the next empty chair, and its name.',
+  },
+  eels: {
+    forms: ['Eels', 'eels'],
+    text: 'Rent on the marsh is paid in eels. Every new hand who comes up the hill costs 10 of them, and the monks across the bay buy them by the stick.',
+  },
   montDol: {
     forms: ['Mont-Dol'],
     text: 'A granite hill in the marsh, where legend says the archangel Michael fought the Devil and left his footprint in the rock.',

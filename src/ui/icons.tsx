@@ -41,6 +41,7 @@ export type Icon = Component<JSX.SvgSVGAttributes<SVGSVGElement>>;
 
 export const GOOD_ICON: Record<GoodId, Icon> = {
   silver: GiTwoCoins,
+  eels: GiEel,
   stone: GiStoneBlock,
   bread: GiBread,
   vellum: GiScrollUnfurled,
@@ -74,6 +75,8 @@ export const I = {
   research: GiOpenBook,
   gate: GiMagicGate,
   rite: GiRingingBell,
+  aura: GiMagicSwirl,
+  faerie: GiSpiralBloom,
   endow: GiChurch,
   bribe: GiCoinsPile,
   device: GiAnvil,
