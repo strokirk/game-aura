@@ -5,7 +5,7 @@ A **scenario** is data: a start state, an unlock set, and lists of win and loss 
 | Scenario | Start | Win | Loss | Length |
 | --- | --- | --- | --- | --- |
 | **Trial of the Tide Pool** | 4 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool worked, 60 Silver. Aldric only | 500 Insight before 1222 | Notice 50; 1222 begins | 3–5 min at 1× |
-| **The Covenant Must Grow** | 6 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool, 60 Silver, 150 Bread. Sabine and Hervé arrive later | The third Rite (`gate.md`) before 1260 | Notice 100; 1260 begins | 60–80 min |
+| **The Covenant Must Grow** | 6 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool, 60 Silver, no Bread. Sabine and Hervé arrive later | The seventh bell (`gate.md`) before 1260 | Notice 100; 1260 begins | 60–80 min |
 
 ## The trial
 
@@ -22,7 +22,7 @@ Nothing appears before it matters. Each unlock is an entry in data: a condition 
 | --- | --- |
 | Start | The Hall, Aldric's Sanctum, Salt Pans, the Tide Pool, hands, Silver, Vis and Insight |
 | First Insight | *Study the Vis*; the Research tab with its first 3 items |
-| Bread below 50% of its cap | The Bocage zone, Farms, Cottages; a "The hands are hungry" card |
+| 8 hands (the Hall is full) | The Bocage zone, Farms, Cottages; a "The Hall is full" card |
 | First research bought | Stone, Quarries, Storehouses, the Drowned Knight's Barrow, *Enchant a Device* |
 | 10 hands | Parchmenters, Vellum, Libraries, the Regio Spring, *Write a Lab Text*; Sabine and Hervé arrive |
 | Notice above 1 | The Notice gauge (around minute 4–6) |
@@ -39,7 +39,7 @@ Stage scenarios start partway through the full run with the covenant already bui
 | Stage | Starts | The situation |
 | --- | --- | --- |
 | **The Middle Years** | Spring 1236, 20 min left | 3 magi (Lab Totals 14, 12, 12), 26 hands, 6 salt-works, all 3 Vis sites, 2 Quarries, 2 Parchmenters, a Library and a Storehouse. 7 research items and 2 Lab Texts known. Notice 45 and settling at 66, above the tax line. The Aegis and the Gate are still ahead |
-| **The Gate** | Spring 1250, 10 years (20 min) left | Everything researched; 6 Lab Texts; 8 Devices on the Quarries. The Gate is raised and holds 12,000 of the 20,000 Insight Rite 1 needs. Stone reaches 3/s against the Rites' 4, with the Hearth and the Bocage full. Sending Vis to the Gate starves the labs of the Vis that makes Insight and Devices |
+| **The Gate** | Spring 1250, 10 years (20 min) left | Everything researched and the Form trees open; 6 Lab Texts; 8 Devices on the Quarries. The Gate is raised, holds 4,000 of the 10,000 Insight the first bell needs, and Insight pours into it. With the dev menu's *Fill the Gate*, every bell can be tried here |
 
 - **Why:** the full run is 80 minutes, too long to reach the late game every time a rule changes. Stage scenarios let a playtester (or the sim) start at the stage being tested, the way strategy games ship scenario starts.
 - Every production line runs from the first second: food is positive, porters keep up, and every building fits its zone. A test checks this.

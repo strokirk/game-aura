@@ -1,6 +1,6 @@
 # Overview
 
-Aura is a single-player incremental game. The player runs a covenant of wizards at Mont-Dol from Spring 1220. Buildings make goods; servants called **hands** work them and carry the goods home; magi turn goods into **Insight** through experiments; Insight buys research. Every building raises **Notice**. The full run is won by opening the Drowned Gate before 1260, and lost if Notice reaches 100 or time runs out.
+Aura is a single-player incremental game. The player runs a covenant of wizards at Mont-Dol from Spring 1220. Buildings make goods; servants called **hands** work them and carry the goods home; magi turn goods into **Insight** through experiments; Insight buys research. Every building raises **Notice**. The full run is won by ringing the Seven Bells of Ys at the Drowned Gate before 1260, and lost if Notice reaches 100 or time runs out.
 
 ## Pillars
 
@@ -22,8 +22,8 @@ Win and loss conditions belong to a scenario (`scenarios.md`). Each is a list; a
 
 | Scenario | Win | Loss |
 | --- | --- | --- |
-| Trial of the Tide Pool | 500 Insight before 1222 | Notice 50; 1222 begins; the last hand leaves |
-| The Covenant Must Grow | The third Rite of the Drowned Gate (`gate.md`) before 1260 | Notice 100 (Renounced); 1260 begins; the last hand leaves |
+| Trial of the Tide Pool | 500 Insight before 1222 | Notice 50; 1222 begins |
+| The Covenant Must Grow | The seventh bell of Ys (`gate.md`) before 1260 | Notice 100 (Renounced); 1260 begins |
 
 ## Glossary
 
@@ -43,6 +43,8 @@ Win and loss conditions belong to a scenario (`scenarios.md`). Each is a list; a
 | Order of Hermes | The society of wizards the covenant belongs to. Its judges (Quaesitores) punish covenants that draw too much attention |
 | Aegis of the Hearth | A protective ritual around the covenant's home |
 | Drowned Gate | The entrance to the Drowned Regio, a hidden magical realm under the marsh |
+| Ys | The drowned city in the regio. Its seven bells hold back the sea; ringing them wins the run (`gate.md`) |
+| Warping, Twilight | What botched magic leaves on a magus: more power, and a risk of being taken away for a while (`magi.md`) |
 | Trait | A short named quality on a magus or a Sanctum, with an effect, a story line and a tone (positive, negative or mixed) |
 | Bocage | Hedged farmland, typical of the region |
 

@@ -162,7 +162,7 @@ export const BUILDINGS = {
     cost: { silver: 40, stone: 20 },
     slots: 1,
     uses: { bread: 0.5 },
-    perWorker: { silver: 0.8 },
+    perWorker: { silver: 1 },
     blurb: 'Bread and a roof for the miquelots on their way across the bay to Mont-Saint-Michel. They pay in Silver.',
   },
   cottage: {
@@ -657,7 +657,6 @@ export type Condition =
   | { kind: 'time'; atLeast: number }
   | { kind: 'notice'; atLeast: number }
   | { kind: 'hands'; atLeast: number }
-  | { kind: 'noHands' }
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
   | { kind: 'bells'; atLeast: number }
@@ -792,7 +791,6 @@ export const SCENARIOS = {
     ],
     loss: [
       { when: { kind: 'notice', atLeast: 50 }, cause: 'The Order takes Notice.' },
-      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. Nobody is left to carry the vis.' },
       { when: { kind: 'time', atLeast: 2 * YEAR }, cause: 'The year 1222 begins, and the book is still thin.' },
     ],
     intro: {
@@ -865,7 +863,6 @@ export const SCENARIOS = {
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
       { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
     ],
     intro: {
@@ -931,7 +928,6 @@ export const SCENARIOS = {
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
       { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
     ],
     intro: {
@@ -1008,11 +1004,11 @@ export const SCENARIOS = {
       'magus:sabine',
       'magus:herve',
       'gate',
+      'trees',
     ],
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
       { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
     ],
     intro: {

@@ -361,6 +361,10 @@ export function researchCost(s: State, id: ResearchId): Cost {
   return c;
 }
 /** What the Research tab lists: everything bought, plus the next few in order. */
+/** Research may draw Insight from the Gate's store as well as the Hall. */
+export const canAffordResearch = (s: State, c: Cost) =>
+  canAfford(s, { ...c, insight: Math.max(0, (c.insight ?? 0) - (s.gate?.store.insight ?? 0)) });
+
 export function visibleResearch(s: State): ResearchId[] {
   const out: ResearchId[] = [];
   let fresh = 0;
@@ -615,8 +619,6 @@ function met(s: State, c: Condition): boolean {
       return s.notice >= c.atLeast;
     case 'hands':
       return s.hands >= c.atLeast;
-    case 'noHands':
-      return s.hands <= 0;
     case 'insightMade':
       return s.stats.insightMade >= c.atLeast;
     case 'researched':
@@ -1036,8 +1038,11 @@ function act(s: State, a: Action): string | undefined {
       const def = RESEARCH_DEFS[a.id];
       if ((s.research[a.id] ?? 0) > 0 && !def.repeatable) return 'Already known';
       const c = researchCost(s, a.id);
-      if (!canAfford(s, c)) return 'Not enough';
-      pay(s, c);
+      if (!canAffordResearch(s, c)) return 'Not enough';
+      // Insight comes from the Hall first, then from the Gate.
+      const fromHall = Math.min(s.res.insight, c.insight ?? 0);
+      if (s.gate) s.gate.store.insight -= (c.insight ?? 0) - fromHall;
+      pay(s, { ...c, insight: fromHall });
       s.research[a.id] = (s.research[a.id] ?? 0) + 1;
       for (const x of def.effects) if (x.kind === 'reveal') reveal(s, x.id);
       log(s, `The covenant learns ${def.name}.`);

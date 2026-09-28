@@ -5,6 +5,7 @@ import {
   bellStatus,
   bribeCost,
   canAfford,
+  canAffordResearch,
   dark,
   endowCost,
   giftCost,
@@ -55,7 +56,7 @@ export function Research(p: { s: State; r: Rates }) {
               <Show when={!done()}>
                 <Button
                   class="mt-1.5 w-full"
-                  disabled={!canAfford(p.s, c())}
+                  disabled={!canAffordResearch(p.s, c())}
                   onClick={() => act({ type: 'research', id })}
                 >
                   Learn · {cost(c())} <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>

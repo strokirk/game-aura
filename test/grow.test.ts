@@ -64,11 +64,6 @@ describe('the full run', () => {
     expect(rates(s).zones.marsh.capacity).toBeGreaterThan(0);
   });
 
-  it('losing the last hand ends the run loudly', () => {
-    const s = stepTo({ ...begin(), hands: 0, porters: {}, buildings: {} } as State, 1);
-    expect(s.outcome?.cause).toMatch(/last hand/);
-  });
-
   it('the careful strategy reaches the Gate, and the run replays from its log', () => {
     const live = simulate('grow', 1, STRATEGIES.careful!);
     expect(live.gate?.raised).toBe(true);

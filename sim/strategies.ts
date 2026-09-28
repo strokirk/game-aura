@@ -5,6 +5,7 @@ import {
   buildable,
   buildCost,
   canAfford,
+  canAffordResearch,
   cap,
   count,
   endowCost,
@@ -31,6 +32,7 @@ import {
   NOTICE,
   RECIPES,
   RESEARCH,
+  RESEARCH_DEFS,
   type RecipeId,
   type ResearchId,
   ZONES,
@@ -197,7 +199,16 @@ export const STRATEGIES: Record<string, Strategy> = {
     if (pick) out.push({ type: 'build', building: pick });
     // Research in order; Notice levers; the Gate.
     for (const id of visibleResearch(s))
-      if (!(s.research[id] ?? 0) && canAfford(s, researchCost(s, id))) out.push({ type: 'research', id });
+      if (!(s.research[id] ?? 0) && canAffordResearch(s, researchCost(s, id))) out.push({ type: 'research', id });
+    // The Form trees, again and again, while a level costs under a quarter of the Insight on hand.
+    const insightOnHand = s.res.insight + (s.gate?.store.insight ?? 0);
+    for (const id of visibleResearch(s))
+      if (
+        RESEARCH_DEFS[id].needs &&
+        (researchCost(s, id).insight ?? 0) < insightOnHand / 4 &&
+        canAffordResearch(s, researchCost(s, id))
+      )
+        out.push({ type: 'research', id });
     if (has(s, 'endow') && settles > 55 && canAfford(s, endowCost(s))) out.push({ type: 'endow' });
     if (has(s, 'endow') && s.notice > NOTICE.strike.at - 5) out.push({ type: 'bribe' });
     if (has(s, 'gate') && !s.gate) out.push({ type: 'gate', op: 'found' });
