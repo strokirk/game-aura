@@ -83,10 +83,28 @@ export function Stepper(p: {
 
 export const Overlay = (p: ParentProps) => (
   <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
-    <div class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]"
+    >
       {p.children}
     </div>
   </div>
+);
+
+/** Manuscript art from `public/art` (credits in `docs/credits.md`), fading out at the bottom, or all round when `round`.
+ * Decorative, so no alt. */
+export const Art = (p: { name: string; round?: boolean; class?: string }) => (
+  <img
+    src={`art/${p.name}.webp`}
+    alt=""
+    class={`w-full object-cover ${p.round ? '[mask-image:radial-gradient(closest-side,black_75%,transparent)]' : '[mask-image:linear-gradient(black_55%,transparent)]'} ${p.class ?? ''}`}
+  />
+);
+
+export const Portrait = (p: { name: string }) => (
+  <img src={`art/${p.name}.webp`} alt="" class="size-12 shrink-0 rounded-full border border-gold object-cover" />
 );
 
 /** A full-height top-level screen (title, options, end). */

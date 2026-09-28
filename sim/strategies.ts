@@ -1,35 +1,119 @@
 import {
   type Action,
+  apply,
+  bellStatus,
   buildable,
   buildCost,
   canAfford,
+  canAffordResearch,
   cap,
   count,
   endowCost,
   experimentPlan,
-  faerieNeed,
   has,
   housing,
   idleHands,
   isMaxed,
-  offerCost,
+  present,
   rates,
   researchCost,
-  riteStatus,
   type State,
   studyCost,
   visibleResearch,
   workerSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { APPRENTICE, type BuildingId, DEFS, EELS, EXPERIMENT, NOTICE, type ZoneId } from '../src/data/index.ts';
+import { nextRandom, seedRng } from '../src/core/rng.ts';
+import {
+  type BuildingId,
+  DEFS,
+  EXPERIMENT,
+  GOODS,
+  NOTICE,
+  RECIPES,
+  RESEARCH,
+  RESEARCH_DEFS,
+  type RecipeId,
+  type ResearchId,
+  ZONES,
+  type ZoneId,
+} from '../src/data/index.ts';
 
 /** A scripted player: called once per simulated second, returns the actions to try. */
 export type Strategy = (s: State) => Action[];
 
+const keys = <K extends string>(o: Partial<Record<K, unknown>>) => Object.keys(o) as K[];
+const deltas = [1, -1];
+
+/**
+ * Every action the random player can take, by type: each entry lists the candidates in a state.
+ * Keyed by `Action['type']`, so tsc fails until a new action type gets its one line here.
+ */
+const CANDIDATES: { [K in Action['type']]: (s: State) => Extract<Action, { type: K }>[] } = {
+  build: () => keys(DEFS).map((building) => ({ type: 'build', building })),
+  dike: () => [{ type: 'dike' }],
+  workers: (s) =>
+    keys(s.buildings).flatMap((building) => deltas.map((delta) => ({ type: 'workers', building, delta }))),
+  porters: () => keys(ZONES).flatMap((zone) => deltas.map((delta) => ({ type: 'porters', zone, delta }))),
+  gatePorters: () => deltas.map((delta) => ({ type: 'gatePorters', delta })),
+  experiment: (s) =>
+    s.magi.flatMap((m) =>
+      keys<RecipeId>(RECIPES).flatMap((recipe) =>
+        [0, EXPERIMENT.maxExtraVis].flatMap((extra) =>
+          RECIPES[recipe].result === 'device'
+            ? keys(s.buildings).map((target) => ({ type: 'experiment' as const, magus: m.id, recipe, extra, target }))
+            : [{ type: 'experiment' as const, magus: m.id, recipe, extra }],
+        ),
+      ),
+    ),
+  study: (s) => s.magi.map((m) => ({ type: 'study', magus: m.id })),
+  research: () => keys<ResearchId>(RESEARCH).map((id) => ({ type: 'research', id })),
+  endow: () => [{ type: 'endow' }],
+  bribe: () => [{ type: 'bribe' }],
+  alms: () => [{ type: 'alms' }],
+  keepSalt: () => [{ type: 'keepSalt' }],
+  gift: () => [{ type: 'gift' }],
+  gate: () => (['found', 'bell'] as const).map((op) => ({ type: 'gate', op })),
+  pour: () => GOODS.map((good) => ({ type: 'pour', good })),
+  couesnon: () => keys(ZONES).map((zone) => ({ type: 'couesnon', zone })),
+  devFill: () => [], // a cheat, never played
+  choose: (s) => (s.events[0]?.options ?? []).map((_, option) => ({ type: 'choose', option })),
+};
+const KINDS = keys(CANDIDATES);
+
+/** A generator seeded from the run's seed and the moment, so the random player replays exactly without touching `s.rng`. */
+function momentRng(s: State): () => number {
+  const h =
+    Math.imul(s.seed ^ 0x5bd1e995, 0x9e3779b1) ^ Math.imul(Math.round(s.t * 4) + 1, 0x85ebca6b) ^ s.events.length;
+  const r = seedRng(h);
+  return () => nextRandom(r);
+}
+const pickOf = <T>(xs: readonly T[], rnd: () => number): T | undefined => xs[Math.floor(rnd() * xs.length)];
+/** Whether apply() accepts the action. The log is left out: legality never reads it, and cloning it is most of apply()'s cost. */
+const legal = (s: State, a: Action) => !('error' in apply({ ...s, log: [] }, a));
+
 export const STRATEGIES: Record<string, Strategy> = {
   /** Does nothing but dismiss cards. Must lose the trial. */
   idle: () => [],
+
+  /** A fuzzer and a baseline: up to 3 legal actions a second, picked at random; a random option on each card. */
+  random: (s) => {
+    const rnd = momentRng(s);
+    if (s.events.length) {
+      const opts = CANDIDATES.choose(s).filter((a) => legal(s, a));
+      const a = pickOf(opts, rnd);
+      return a ? [a] : [];
+    }
+    const out: Action[] = [];
+    const want = Math.floor(rnd() * 4);
+    // Sample a handful of candidates rather than testing them all.
+    for (let tries = 0; out.length < want && tries < 8; tries++) {
+      const kind = pickOf(KINDS, rnd)!;
+      const a = pickOf<Action>(CANDIDATES[kind](s), rnd);
+      if (a && a.type !== 'choose' && legal(s, a)) out.push(a);
+    }
+    return out;
+  },
 
   /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
   sensible: (s) => {
@@ -62,7 +146,6 @@ export const STRATEGIES: Record<string, Strategy> = {
     const hungry = r.net.bread < 0.3 && free('farm');
     // Hands go to the job furthest below its fair share; food and carrying come first.
     const SHARE: Partial<Record<BuildingId, number>> = {
-      eel_weir: 2,
       salt_pan: 4,
       tide_pool: 2,
       knights_barrow: 2,
@@ -73,7 +156,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     };
     const load = (id: BuildingId) => (s.buildings[id]?.workers ?? 0) / (SHARE[id] ?? 1);
     const jobs = (Object.keys(SHARE) as BuildingId[]).filter((id) => free(id));
-    const gateShort = !!s.gate && s.gate.porters < 3 && (s.devices.quarry ?? 0) >= 8;
+    const gateShort = !!s.gate && s.gate.porters < 3 && (!s.gate.raised || (s.devices.quarry ?? 0) >= 8);
     const needStone = !!s.gate?.raised && free('quarry');
     if (idleHands(s) === 0 && (hungry || short || gateShort || needStone)) {
       const keep = s.gate ? ['tide_pool', 'knights_barrow', 'regio_spring', 'quarry'] : [];
@@ -99,14 +182,8 @@ export const STRATEGIES: Record<string, Strategy> = {
     if (count(s, 'quarry') < 1) want.push('quarry');
     if (s.magi.some((m) => !m.sanctum)) want.push('sanctum');
     if (count(s, 'parchmenter') < 1) want.push('parchmenter');
-    const nextInsight = Math.max(
-      ...visibleResearch(s)
-        .filter((id) => !(s.research[id] ?? 0))
-        .map((id) => researchCost(s, id).insight ?? 0),
-    );
-    const wantLibrary = nextInsight > cap(s, 'insight') && count(s, 'library') < 3;
-    if (wantLibrary) want.push('library');
-    if (count(s, 'eel_weir') < 2) want.push('eel_weir');
+    const nextInsight = Math.max(...visibleResearch(s).map((id) => researchCost(s, id).insight ?? 0));
+    if (nextInsight > cap(s, 'insight') && count(s, 'library') < 3) want.push('library');
     want.push('knights_barrow', 'regio_spring');
     if (count(s, 'salt_pan') < 8) want.push('salt_pan');
     if (count(s, 'quarry') < 3) want.push('quarry');
@@ -116,65 +193,46 @@ export const STRATEGIES: Record<string, Strategy> = {
         buildable(s, id) &&
         !isMaxed(s, id) &&
         room(id) &&
-        (settles < 60 || DEFS[id].site || id === 'sanctum' || id === 'library' || id === 'eel_weir') &&
+        (settles < 60 || DEFS[id].site || id === 'sanctum' || id === 'library') &&
         canAfford(s, buildCost(s, id)),
     );
     if (pick) out.push({ type: 'build', building: pick });
-    // Research in order; the aura while Notice has room; Notice levers; the Gate.
+    // Research in order; Notice levers; the Gate.
     for (const id of visibleResearch(s))
-      if (!(s.research[id] ?? 0) && id !== 'raise_aura' && canAfford(s, researchCost(s, id)))
+      if (!(s.research[id] ?? 0) && canAffordResearch(s, researchCost(s, id))) out.push({ type: 'research', id });
+    // The Form trees, again and again, while a level costs under a quarter of the Insight on hand.
+    const insightOnHand = s.res.insight + (s.gate?.store.insight ?? 0);
+    for (const id of visibleResearch(s))
+      if (
+        RESEARCH_DEFS[id].needs &&
+        (researchCost(s, id).insight ?? 0) < insightOnHand / 4 &&
+        canAffordResearch(s, researchCost(s, id))
+      )
         out.push({ type: 'research', id });
-    const learned = visibleResearch(s).filter((id) => id !== 'raise_aura' && !(s.research[id] ?? 0)).length === 0;
-    if (
-      settles < 55 &&
-      (learned || (s.research.raise_aura ?? 0) < 3) &&
-      canAfford(s, researchCost(s, 'raise_aura')) &&
-      visibleResearch(s).includes('raise_aura')
-    )
-      out.push({ type: 'research', id: 'raise_aura' });
-    if (has(s, 'monks') && s.res.eels >= cap(s, 'eels') - 5 && s.hands >= housing(s)) out.push({ type: 'sellEels' });
-    if (s.res.eels >= EELS.stick * 2 && has(s, 'monks') && s.notice > 60) out.push({ type: 'sellEels' });
-    if (faerieNeed(s) && canAfford(s, offerCost(s)) && has(s, 'faerie')) out.push({ type: 'offer' });
-    // Every magus takes an apprentice; the old work the Longevity Ritual.
-    if (has(s, 'apprentices') && canAfford(s, APPRENTICE.cost))
-      for (const m of s.magi)
-        if (!s.apprentices.some((a) => a.chair === m.id)) out.push({ type: 'apprentice', magus: m.id });
     if (has(s, 'endow') && settles > 55 && canAfford(s, endowCost(s))) out.push({ type: 'endow' });
     if (has(s, 'endow') && s.notice > NOTICE.strike.at - 5) out.push({ type: 'bribe' });
     if (has(s, 'gate') && !s.gate) out.push({ type: 'gate', op: 'found' });
-    const allLearned = visibleResearch(s).every((id) => (s.research[id] ?? 0) > 0);
-    if (s.gate && !s.gate.pour && allLearned) out.push({ type: 'gate', op: 'pour' });
-    // Fill the Gate with Insight first, then send Vis for the Rite's 60 s window.
-    const rite = riteStatus(s);
-    const full = rite.insight >= (rite.next?.insight ?? Number.POSITIVE_INFINITY);
-    if (s.gate?.raised && s.gate.visToGate !== full) out.push({ type: 'gate', op: 'vis' });
-    if (riteStatus(s).ready) out.push({ type: 'gate', op: 'rite' });
+    // Once the Gate is raised, pour into it exactly what the next bell asks for. Ring whenever a bell is paid.
+    const next = bellStatus(s).next;
+    if (s.gate?.raised && next)
+      for (const k of GOODS) if (s.gate.pour.includes(k) !== k in next.price) out.push({ type: 'pour', good: k });
+    if (bellStatus(s).ready) out.push({ type: 'gate', op: 'bell' });
     // The lab: Lab Texts while Vellum lasts, Devices on the quarries once the Gate needs Stone, else Study the Vis.
-    // Keep Vis back for research that needs it, the Aegis first of all.
-    const reserve = Math.max(
-      0,
-      ...visibleResearch(s)
-        .filter((id) => !(s.research[id] ?? 0) && id !== 'raise_aura')
-        .map((id) => researchCost(s, id).vis ?? 0),
-    );
-    const readyForRite = s.gate?.raised && riteStatus(s).insight >= (riteStatus(s).next?.insight ?? Infinity);
     for (const m of s.magi) {
-      if (!m.sanctum || m.exp || readyForRite) continue;
-      if (!m.longevity && m.age >= 45 && has(s, 'recipe:longevity') && s.res.vis >= Math.ceil(m.age / 5))
-        out.push({ type: 'experiment', magus: m.id, recipe: 'longevity', extra: 0 });
-      else if (s.labTexts < 6 && s.res.vellum >= 20 + (wantLibrary ? 20 : 0) && has(s, 'recipe:lab_text'))
+      if (!present(m) || m.exp) continue;
+      if (s.labTexts < 6 && s.res.vellum >= 20 && has(s, 'recipe:lab_text'))
         out.push({ type: 'experiment', magus: m.id, recipe: 'lab_text', extra: 0 });
       else if (
         has(s, 'recipe:device') &&
         s.labTexts >= 3 &&
         (s.devices.quarry ?? 0) < 12 &&
         s.res.stone >= 60 &&
-        s.res.vis >= 15 + reserve
+        s.res.vis >= 15
       )
         out.push({ type: 'experiment', magus: m.id, recipe: 'device', extra: 0, target: 'quarry' });
       else {
-        const extra = Math.max(0, Math.min(EXPERIMENT.maxExtraVis, Math.floor(s.res.vis) - 5 - reserve));
-        if (s.res.vis >= experimentPlan(s, m.id, 'study_vis', 0).cost.vis! + reserve)
+        const extra = Math.max(0, Math.min(EXPERIMENT.maxExtraVis, Math.floor(s.res.vis) - 5));
+        if (s.res.vis >= experimentPlan(s, m.id, 'study_vis', 0).cost.vis!)
           out.push({ type: 'experiment', magus: m.id, recipe: 'study_vis', extra });
       }
       if ((studyCost(m).insight ?? 0) < s.res.insight * 0.1) out.push({ type: 'study', magus: m.id });

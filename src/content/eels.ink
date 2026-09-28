@@ -34,7 +34,7 @@ Three of the eels are longer than his arm. He holds one up so you can see.
 "Good year," he says.
 ~ eel_level = 1
 * [Salt them for the kitchen.]
-    The cook packs them in the old wine cask. The hands eat eel until Easter. # res:bread:+15
+    The cook packs them in the old wine cask. The hands eat eel until Easter. # res:eels:+15
     ~ took_eels = took_eels + 1
 * [Sell the second stick at Dol.]
     Guillaume sells them for you. At market people ask where eels that size come from. # res:silver:+10 # notice:+2
@@ -99,7 +99,7 @@ She asks, quietly, whether the magi are breeding them.
 * {silver >= silver_rate * 40} [Pay diggers to clear the pits. (40 s of Silver)]
     Six men dig every morning. The fires stay lit. The diggers take the eels home. # res:silver:-40s # notice:-5
 * [Leave it. The boilers can dig around them.]
-    The boilers lose one morning in seven to digging. The hands eat eel pie four days a week. The boilers talk about it in Dol. # mod:eel_pits:silver:0.85:300 # res:bread:+25 # notice:+6
+    The boilers lose one morning in seven to digging. The hands eat eel pie four days a week. The boilers talk about it in Dol. # mod:eel_pits:silver:0.85:300 # res:eels:+25 # notice:+6
     ~ took_eels = took_eels + 1
 * {vis >= 10} [Have Aldric follow the eels to their source. (10 Vis, Aldric's lab idle)]
     Aldric wades upstream for two days. Every eel comes from below the Tide Pool. The lip is cracked where the harvesters kneel, and the pool has been bleeding vis into the channel for years. He closes it with lead, clay and a Rego Aquam ward. # res:vis:-10 # block:experiment:aldric:300 # notice:-5
@@ -146,7 +146,7 @@ The channels below the Tide Pool are black with eels. At low water they lie on t
     Forty hired men cut turf all summer. Hamon rides out twice to count them and writes to the bishop. # res:silver:-180s # notice:+6
     ~ pans_banked = true
 * [Buy her whole cart.]
-    The cook serves eel at every meal until Michaelmas. # res:bread:+40 # notice:+5
+    The cook serves eel at every meal until Michaelmas. # res:eels:+40 # notice:+5
     ~ took_eels = took_eels + 1
 - -> DONE
 
@@ -165,7 +165,7 @@ The Tide Pool is two feet lower. Aldric looks at it for a long time.
 ~ eels_state = 4
 ~ eels_end_year = year
 * [Shovel them out and salt them.]
-    It takes all summer. The cellars are full. # res:bread:+60 # mod:tide_pool:vis:0.5:0 # notice:+6
+    It takes all summer. The cellars are full. # res:eels:+60 # mod:tide_pool:vis:0.5:0 # notice:+6
     {lost > 0:
         The sand beds and pits of {lost} salt-works are fouled past saving. # destroy:salt_pan:{lost} # block:build_salt_pan:240
     }
@@ -189,9 +189,9 @@ The Tide Pool is two feet lower. Aldric looks at it for a long time.
 - 4: Perrine still finds eel bones in the salt. She sells it at Dol as Mont-Dol salt, with bones. It costs more.
 }
 * {eels_state < 4} {fisher_trust > 0} [Take the rent.]
-    They stay for a drink. In Dol they say the magi pay fair. # res:bread:+5 # notice:-5
+    They stay for a drink. In Dol they say the magi pay fair. # res:eels:+5 # notice:-5
 * {eels_state < 4} {fisher_trust <= 0} [Take the rent.]
-    They do not stay for a drink. # res:bread:+5
+    They do not stay for a drink. # res:eels:+5
 * {eels_state == 4} [Let her.]
     Nobody asks for the bones back. # res:silver:+30s # notice:+5
 - -> DONE

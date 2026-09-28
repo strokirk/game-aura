@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { compileInk } from '../scripts/ink.ts';
 import { apply, createRun, rates, type State, stepTo } from '../src/core/index.ts';
 import { parseTag } from '../src/core/story.ts';
+import { START_YEAR, YEAR } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -38,6 +39,8 @@ describe('story', () => {
     });
     expect(parseTag('block:experiment:aldric:60')).toEqual({ kind: 'block', what: 'experiment:aldric', secs: 60 });
     expect(parseTag('unlock:eel_weir')).toEqual({ kind: 'unlock', id: 'eel_weir' });
+    expect(parseTag('destroy:salt_pan:4')).toEqual({ kind: 'destroy', building: 'salt_pan', n: 4 });
+    expect(parseTag('destroy:tide_pool')).toEqual({ kind: 'destroy', building: 'tide_pool', n: 1 });
     expect(() => parseTag('summon:dragon')).toThrow();
   });
 
@@ -61,5 +64,31 @@ describe('story', () => {
     expect(apply(s, { type: 'experiment', magus: 'aldric', recipe: 'study_vis', extra: 0 })).toEqual({
       error: 'Aldric is away from the lab',
     });
+  });
+
+  it('plays the eels through the full run to the flood and its epilogue', () => {
+    let s = ok(apply(createRun('grow', 1), { type: 'choose', option: 0 }));
+    s.buildings.salt_pan = { count: 6, workers: 0 };
+    /** Jumps to `y`, expects the card `title`, and takes the choice whose label starts with `pick`. */
+    const beat = (y: number, title: string, pick: string) => {
+      s.t = Math.max(s.t, 60, (y - START_YEAR) * YEAR);
+      s.res.bread = 200;
+      s = stepTo(s, s.t + 1);
+      while (s.events[0] && !s.events[0].knot) s = ok(apply(s, { type: 'choose', option: 0 })); // unlock cards
+      expect(s.events[0]?.title).toBe(title);
+      const i = s.events[0]?.options.findIndex((o) => o.label.startsWith(pick)) ?? -1;
+      s = ok(apply(s, { type: 'choose', option: i }));
+    };
+    beat(1220, 'The eel rent', 'Salt them');
+    beat(1221, 'The weir', 'Let them build');
+    beat(1224, 'The font', 'Tell him');
+    beat(1229, 'Eels in the brine', 'Leave it');
+    beat(1235, 'The Dol road', 'Tell him');
+    beat(1241, 'The spring tide', 'Buy her');
+    beat(1245, 'The flood', 'Burn them');
+    expect(s.story.eels_state).toBe(4);
+    expect(s.buildings.salt_pan?.count).toBe(2);
+    beat(1248, 'The eel rent', 'Let her');
+    expect(s.events).toHaveLength(0);
   });
 });

@@ -5,10 +5,6 @@ import {
   type Action,
   apply,
   createRun,
-  type Legacy,
-  NO_LEGACY,
-  nextLegacy,
-  noticeDecay,
   rates,
   replay,
   type Save,
@@ -47,8 +43,7 @@ export interface Options {
   dev: boolean;
 }
 const OPTIONS_KEY = 'aura-options';
-const SAVE_KEY = 'aura-v3-save';
-const LEGACY_KEY = 'aura-legacy';
+const SAVE_KEY = 'aura-v2-save';
 function readJson<T>(key: string): T | null {
   try {
     return JSON.parse(localStorage.getItem(key) ?? 'null') as T | null;
@@ -106,7 +101,7 @@ function popChanges(prev: State, next: State) {
     const jump = next.res[g] - prev.res[g] - r.net[g] * dt;
     if (Math.abs(jump) >= 1) pop(g, jump);
   }
-  const drift = ((r.noticeGen - noticeDecay(prev) * prev.notice) / 60) * dt;
+  const drift = ((r.noticeGen - 0.1 * prev.notice) / 60) * dt;
   const jump = next.notice - prev.notice - drift;
   if (Math.abs(jump) >= 1) pop('notice', jump);
   if (next.hands !== prev.hands) pop('hands', next.hands - prev.hands);
@@ -126,11 +121,9 @@ function start(s: State) {
   lastSpeed = 1;
   setScreen('game');
 }
-/** What the fallen covenants have left under the hill. It stacks, run after run. */
-export const legacy = (): Legacy => readJson<Legacy>(LEGACY_KEY) ?? NO_LEGACY;
 export function newRun(scenario: ScenarioId, seed = Math.floor(Math.random() * 2 ** 31)) {
   writeJson(SAVE_KEY, null);
-  start(createRun(scenario, seed, legacy()));
+  start(createRun(scenario, seed));
 }
 export function continueRun() {
   const sv = readJson<Save>(SAVE_KEY);
@@ -163,7 +156,6 @@ export function act(a: Action) {
 
 function finish() {
   writeJson(SAVE_KEY, null);
-  if (state) writeJson(LEGACY_KEY, nextLegacy(state));
   setScreen('end');
 }
 

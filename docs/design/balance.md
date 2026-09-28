@@ -17,14 +17,14 @@ The balance simulation is the source of truth for every number in the design. A 
 | --- | --- | --- |
 | Trial | Sensible | Wins in 1:30–4:00 in ≥ 90% of seeds, median ≥ 2:00 |
 | Trial | Idle (does nothing) | Loses |
-| Full run | Careful | Wins in 60–75 min `[PLAYTEST: the careful strategy reaches the first Rite on some seeds and wins none yet]` |
+| Trial, full run | Random (legal actions at random) | A fuzzer: never crashes, replays exactly |
+| Full run | Careful | Wins in 60–75 min `[PLAYTEST: the careful strategy rings 2 of the 7 bells on every scenario and seed tried, and wins none]` |
 | Full run | Reckless, without bribes | Renounced `[PLAYTEST: not simulated yet]` |
 | Full run | Timid | Runs out of time `[PLAYTEST: not simulated yet]` |
 
 ## Constraints to keep true
 
-- The Rites' 0.3 Vis/s is reachable with 2 of the 3 Vis sites plus research.
-- The Rites' 4 Stone/s delivered to the Gate is reachable at full-run scale.
+- Every bell's price is reachable by 1260 through the Form trees `[PLAYTEST: not yet]`.
 - No story thread ends the run on its own; the eels' flood never takes the last salt-works.
 
 ## Playtest register

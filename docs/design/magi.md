@@ -6,6 +6,7 @@ Magi are the covenant's heart and its only named people. Each has a portrait, a 
 
 - **Aldric** starts with a Sanctum.
 - **Sabine and Hervé** arrive when the covenant reaches 10 hands (full run only). Each waits in the Hall, doing nothing, until the player builds their Sanctum.
+- **The Drowned Knight** rises at the fifth bell (`gate.md`): a fourth magus at Lab Total 15 who works from Ys and needs no Sanctum.
 
 ## Baseline research
 
@@ -38,10 +39,12 @@ Experiments are the Insight engine. A magus in a Sanctum starts one; it runs for
 | --- | --- | --- | --- |
 | Study the Vis | 5 Vis | 60 s | 15 × LT Insight (150 at LT 10) |
 | Write a Lab Text | 20 Vellum | 180 s | Permanent: +10% to all experiment yields |
-| Enchant a Device | 10 Vis + 50 Stone | 240 s | Permanent: +25% output for 1 chosen building type |
+| Enchant a Device | 10 Vis + 50 Stone | 240 s × 10 / Lab Total | Permanent: +25% output for 1 chosen building type |
+| Enchant a Great Device (after the first bell) | 20 Vis + 20 Bog-oak | 300 s × 10 / Lab Total | Permanent: +100% output for 1 chosen building type |
 
 **Input:**
 - Pick a magus, pick a recipe, and optionally commit up to 5 extra Vis. Each extra Vis gives −10% time, +15% yield and +2 percentage points of botch chance.
+- **Full Vis** starts the chosen recipe with as much extra Vis as the stock pays for, up to 5. At the top of the Magi tab, **Every idle magus** starts Study the Vis on every idle magus with full Vis. Full Vis is usually the best bet, so it takes one tap.
 - At the halfway check-in (experiments of 120 s or longer), choose:
   - **Push:** yield +30%, botch chance +10 points.
   - **Steady:** no change.
@@ -51,8 +54,25 @@ Experiments are the Insight engine. A magus in a Sanctum starts one; it runs for
 - Assistants in the Sanctum shorten the time: each assistant adds +25% speed.
 - At the end, one roll with the run's seeded random number generator: base botch chance 5%, base discovery chance 5%, otherwise success.
   - **Success:** the full yield.
-  - **Botch:** the costs are lost, Notice +5, and a one-line consequence ("Aldric's eyebrows will grow back").
+  - **Botch:** the costs are lost, Notice +5, and the magus is **Warped** (below). 15% of botches also destroy one building (never a Sanctum or a Vis site).
   - **Discovery:** the full yield, plus a Breakthrough.
+
+## Warping and Twilight
+
+- **System:** every botch adds 1 **Warping** to the magus, for good. Each point adds 1 to the Lab Total, so a Warped magus is stronger. But each botch also rolls for **Twilight**, with a chance of 10% per point of Warping (certain at 10). In Twilight the magus is gone for 180 s: no experiments and no reading.
+- On returning, the magus brings back one random **Twilight trait** for 5–15 minutes:
+
+| Trait | Effect |
+| --- | --- |
+| Tide-Sight | This magus's experiment yields ×1.5 |
+| The Hours Fold | This magus's experiments take ×0.6 the time |
+| Hears the Bells | This magus's yields ×2, botch chance +10 points |
+| Stone-Speaker | Quarries ×1.5 |
+| Salt in the Blood | Salt-works ×1.5 |
+| Drowned Eyes | This magus's yields ×0.7 |
+
+- **Feedback:** the magus card shows "Lab Total 14 (12 + 2 Warping)", the Twilight countdown, and each trait with its time left. Entering and leaving Twilight are event cards.
+- **Why:** full Vis and pushed experiments botch more, and now a botch pays back in power while raising the stakes. A magus deep in Warping is the covenant's best and least reliable asset. Taken from Ars Magica's Warping and Final Twilight, and Darkest Dungeon's roll at 100 stress that ends in an affliction or a virtue.
 
 **Feedback:** each magus card shows a progress ring, the time left and the stakes ("150 Insight · 7% botch"). A finished experiment raises a badge on the Magi tab.
 

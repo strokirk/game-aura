@@ -1,10 +1,9 @@
 import { For, Match, Show, Switch } from 'solid-js';
-import { chairName, nameOf, scenarioOf, year } from '../core/index.ts';
-import { type MagusId, SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
+import { canAfford, magusName, type State, year } from '../core/index.ts';
+import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
-import { I } from './icons.tsx';
-import { Button, Dim, Ico, Label, Overlay, Screen, Stack } from './kit.tsx';
+import { Art, Button, Dim, Label, Overlay, Screen, Stack } from './kit.tsx';
 import { Rich } from './Rich.tsx';
 import {
   act,
@@ -12,7 +11,6 @@ import {
   continueRun,
   game,
   hasSave,
-  legacy,
   newRun,
   options,
   optionsFrom,
@@ -94,7 +92,7 @@ function Title() {
   const scenarios = Object.keys(SCENARIOS) as ScenarioId[];
   return (
     <Screen>
-      <Ico icon={I.title} class="size-20 text-gold" />
+      <Art name="hero" round class="aspect-square max-w-xs" />
       <Big>Aura</Big>
       <Tagline>The Covenant Must Grow</Tagline>
       <Stack>
@@ -177,7 +175,9 @@ function Options() {
         Done
       </Button>
       <Dim class="max-w-sm text-xs">
-        Icons from game-icons.net by Lorc, Delapouite and contributors (CC BY 3.0), and Lucide (ISC).
+        Icons from game-icons.net by Lorc, Delapouite and contributors (CC BY 3.0), and Lucide (ISC). Art from
+        public-domain manuscripts: the Très Riches Heures, the Luttrell Psalter, the Eadwine Psalter, William de Brailes
+        and others.
       </Dim>
     </Screen>
   );
@@ -201,9 +201,28 @@ function Pause() {
   );
 }
 
+// ponytail: keyed by card title, so a renamed card just loses its art; move to EventDef if that bites.
+const EVENT_ART: Record<string, string> = {
+  'Spring 1220': 'hero',
+  'The eel rent': 'mill',
+  'The weir': 'mill',
+  'The Hall is full': 'fields',
+  'Granite and barrows': 'fields',
+  'The porters strike': 'fields',
+  'Two more magi': 'study',
+  'The Gate rises': 'win',
+};
+
 function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   return (
     <Overlay>
+      <Show when={EVENT_ART[p.ev.title]}>
+        {(name) => (
+          <div class="-mx-4 -mt-4 mb-2 overflow-hidden rounded-t-xl">
+            <Art name={name()} class="h-32" />
+          </div>
+        )}
+      </Show>
       <h2 class="mb-2 text-2xl">{p.ev.title}</h2>
       <p class="mb-4 whitespace-pre-line text-[1.1rem] leading-relaxed">
         <Rich text={p.ev.text} />
@@ -211,7 +230,11 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
       <div class="flex flex-col gap-2">
         <For each={p.ev.options}>
           {(o, i) => (
-            <Button primary onClick={() => act({ type: 'choose', option: i() })}>
+            <Button
+              primary
+              disabled={!!o.cost && !canAfford(game.s as State, o.cost)}
+              onClick={() => act({ type: 'choose', option: i() })}
+            >
               <span>
                 <Rich text={o.label} plain />
               </span>
@@ -223,39 +246,9 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   );
 }
 
-/** The end screen's huge word, by how the run ended. */
-function endTitle(cause: string, won: boolean) {
-  if (won) return 'THE TIDE STANDS STILL';
-  if (/renounce/i.test(cause)) return 'RENOUNCED';
-  if (/apprentice|magus dies/i.test(cause)) return 'THE LINE IS BROKEN';
-  return 'THE HILL IS EMPTY';
-}
-const END_LINES: Record<string, string> = {
-  RENOUNCED:
-    'The Tribunal has spoken your name backward. Your sigils are struck from the books. Your hill is only salt again.',
-  'THE LINE IS BROKEN':
-    'The last magus closed their eyes, and no young voice answered. The aura sinks back into the marsh like a stone into black water.',
-  'THE HILL IS EMPTY': 'The last hand has walked down to Dol. Nobody carries the vis now, and the tower goes dark.',
-  'THE TIDE STANDS STILL': 'The bells ring under the water, and the Drowned Gate opens.',
-};
-
-/** The nag: what the next covenant will inherit. */
-function inheritance(): string {
-  const lg = legacy();
-  if (!lg.covenants) return '';
-  const heir = (id: MagusId) => chairName(id, (lg.gens[id] ?? 0) + 1);
-  const parts = [
-    lg.labTexts ? `${lg.labTexts} Lab Texts under the hill` : '',
-    lg.magic ? `a hill that already hums at Magic ${3 + lg.magic}` : '',
-    lg.heirlooms.length ? `${lg.heirlooms.length} enchanted heirloom${lg.heirlooms.length > 1 ? 's' : ''}` : '',
-  ].filter(Boolean);
-  return `${heir('aldric')} will climb the hill${parts.length ? ` and find ${parts.join(', ')}` : ''}.`;
-}
-
 function End() {
   const s = () => game.s!;
   const won = () => s().outcome?.kind === 'win';
-  const title = () => endTitle(s().outcome?.cause ?? '', won());
   const stats = (): [string, string][] => [
     ['Ended', `${year(s())}, after ${mmss(s().t)}`],
     ['Insight gathered', num(s().stats.insightMade)],
@@ -264,22 +257,15 @@ function End() {
     [
       'Magi',
       s()
-        .magi.map((m) => `${nameOf(m)} (Lab Total ${m.lt}, age ${Math.floor(m.age)})`)
-        .join(', ') || 'none',
+        .magi.map((m) => `${magusName(m.id)} (Lab Total ${m.lt})`)
+        .join(', '),
     ],
-    ['Aura', `Magic ${s().aura.magic}, peak ${s().aura.peak}`],
   ];
   return (
     <Screen>
-      <Ico icon={won() ? I.win : I.loss} class={`size-20 ${won() ? 'text-gold' : 'text-bad'}`} />
-      <h1 class="text-center font-bold text-4xl uppercase tracking-[0.2em] text-bad sm:text-6xl">{title()}</h1>
+      <Art name={won() ? 'win' : 'wheel'} round class="aspect-square max-w-xs" />
+      <Big>{won() ? 'Victory' : 'The covenant fails'}</Big>
       <Tagline>{s().outcome?.cause}</Tagline>
-      <p class="max-w-md text-center">{END_LINES[title()]}</p>
-      <Show when={s().outcome?.kind === 'loss' && scenarioOf(s()).legacy}>
-        <p class="max-w-md text-center italic text-gold">
-          But the Gate still waits under the tide, and the Gate remembers. {inheritance()}
-        </p>
-      </Show>
       <Label>The Chronicle</Label>
       <ul class="max-w-md italic">
         <For each={s().chronicle.slice(-5)}>
@@ -302,7 +288,7 @@ function End() {
       </dl>
       <Stack>
         <Button primary onClick={restartRun}>
-          {scenarioOf(s()).legacy ? 'Found a new covenant' : 'Try again'}
+          Try again
         </Button>
         <Button onClick={() => setScreen('title')}>Title</Button>
       </Stack>

@@ -1,32 +1,43 @@
 // The full run's panels: research, the Notice levers and the Drowned Gate.
 import { For, Show } from 'solid-js';
 import {
-  aura,
-  auraBoosts,
+  almsCost,
+  bellStatus,
   bribeCost,
   canAfford,
-  count,
-  divine,
+  canAffordResearch,
+  dark,
   endowCost,
-  friars,
+  giftCost,
   has,
   idleHands,
-  noticeDecay,
-  offerCost,
+  influence,
+  lowTide,
+  nextTribunal,
   type Rates,
   researchCost,
-  riteStatus,
   type State,
-  stains,
   timeToAfford,
   visibleResearch,
+  year,
 } from '../core/index.ts';
-import { AURA, EELS, FAERIE, GATE, NOTICE, RESEARCH_DEFS } from '../data/index.ts';
+import {
+  DECREES,
+  GATE,
+  GOOD_INFO,
+  GOODS,
+  type GoodId,
+  NOTICE,
+  RESEARCH_DEFS,
+  TRIBUNAL,
+  ZONES,
+  type ZoneId,
+} from '../data/index.ts';
 import { cost, eta, num } from './format.ts';
-import { I } from './icons.tsx';
+import { GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
 import { Rich } from './Rich.tsx';
-import { act } from './store.ts';
+import { act, options } from './store.ts';
 
 export function Research(p: { s: State; r: Rates }) {
   return (
@@ -58,7 +69,7 @@ export function Research(p: { s: State; r: Rates }) {
               <Show when={!done()}>
                 <Button
                   class="mt-1.5 w-full"
-                  disabled={!canAfford(p.s, c())}
+                  disabled={!canAffordResearch(p.s, c())}
                   onClick={() => act({ type: 'research', id })}
                 >
                   Learn · {cost(c())} <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>
@@ -87,15 +98,45 @@ export function NoticeCard(p: { s: State; r: Rates }) {
           · tax at {NOTICE.tax.at}, strike at {NOTICE.strike.at}, audit at {NOTICE.audit.at}, Renounced at 100
         </Dim>
       </div>
+      <Show when={nextTribunal(p.s)}>
+        {(y) => (
+          <div class="mt-1 text-sm">
+            <Rich text="Tribunal" /> in <b>{y()}</b> · influence now <b>{influence(p.s)}</b>
+            <Dim> (1 per 20 Notice under 100, 1 per 20 Vis; a gift per 2)</Dim>
+            <For each={p.s.decrees}>
+              {(i) => (
+                <div class="text-warn">
+                  Decree {DECREES[i]?.name}: ×{TRIBUNAL.mult} Notice until {y()}
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </Show>
       <Show when={has(p.s, 'endow')}>
-        <div class="mt-1.5 grid grid-cols-2 gap-2">
+        <div class="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Button disabled={!canAfford(p.s, endowCost(p.s))} onClick={() => act({ type: 'endow' })} class="flex-col">
             <span>
               <Ico icon={I.endow} /> Endow the Parish
             </span>
             <Dim class="text-sm">
-              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good · every second one: Divine +1,
-              aura −1
+              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good
+            </Dim>
+          </Button>
+          <Button disabled={!canAfford(p.s, almsCost(p.s))} onClick={() => act({ type: 'alms' })} class="flex-col">
+            <span>
+              <Ico icon={I.alms} /> Give Alms
+            </span>
+            <Dim class="text-sm">
+              {cost(almsCost(p.s))} · settles {NOTICE.alms.gen * 10} lower, for good
+            </Dim>
+          </Button>
+          <Button disabled={!canAfford(p.s, giftCost(p.s))} onClick={() => act({ type: 'gift' })} class="flex-col">
+            <span>
+              <Ico icon={I.eel} /> Eels for the Monks
+            </span>
+            <Dim class="text-sm">
+              {cost(giftCost(p.s))} · −{NOTICE.gift.notice} now
             </Dim>
           </Button>
           <Button disabled={!canAfford(p.s, bribeCost(p.s))} onClick={() => act({ type: 'bribe' })} class="flex-col">
@@ -103,8 +144,7 @@ export function NoticeCard(p: { s: State; r: Rates }) {
               <Ico icon={I.bribe} /> Bribe the Lord
             </span>
             <Dim class="text-sm">
-              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min · an Infernal stain: all output ×
-              {AURA.stain} for {AURA.stainSecs / 120} years
+              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min
             </Dim>
           </Button>
         </div>
@@ -113,87 +153,10 @@ export function NoticeCard(p: { s: State; r: Rates }) {
   );
 }
 
-const pct = (x: number) => `${x >= 1 ? '+' : '−'}${Math.round(Math.abs(x - 1) * 100)}%`;
-
-/** The covenant's aura: its realms, the boosts it gives, and the offerings and eel sales that feed it. */
-export function AuraCard(p: { s: State; r: Rates }) {
-  const b = () => auraBoosts(p.s);
-  const a = () => aura(p.s);
-  const tiers = (): [number, string, string][] => [
-    [0, 'Lab Insight', pct(b().insight)],
-    [AURA.speedFrom, 'Experiment speed', pct(b().speed)],
-    [AURA.agingFrom, 'Aging', pct(b().aging)],
-    [AURA.discoveryFrom, 'Discovery', `+${Math.round(b().discovery * 100)} points`],
-    [AURA.visFrom, 'Vis sites', pct(b().vis)],
-    [AURA.ltFrom, 'Lab Total', `+${b().lt}`],
-  ];
-  return (
-    <Card warn={a() < AURA.base}>
-      <Label>
-        <Ico icon={I.aura} /> Aura {a()}
-      </Label>
-      <div class="text-sm">
-        <Rich
-          text={`Magic ${p.s.aura.magic} − Divine ${divine(p.s)} (${p.s.endowments} Endowments, ${friars(p.s)} houses of friars${p.s.aura.aegisAt !== null ? ', held off by the Aegis' : ''})`}
-        />
-        <Show when={stains(p.s)}>
-          <Rich text={` · Infernal stains ${stains(p.s)}: all output ×${(AURA.stain ** stains(p.s)).toFixed(2)}`} />
-        </Show>
-        <Show when={p.s.faerie.level}>
-          <Rich text={` · Faerie ${p.s.faerie.level}: Notice fades ${Math.round(noticeDecay(p.s) * 100)}% a minute`} />
-        </Show>
-      </div>
-      <ul class="mt-1 grid grid-cols-2 gap-x-3 text-sm">
-        <For each={tiers()}>
-          {([from, name, v]) => (
-            <li class={a() >= from ? '' : 'text-dim'}>
-              {name}: <b>{a() >= from ? v : `at aura ${from}`}</b>
-            </li>
-          )}
-        </For>
-      </ul>
-      <Show when={has(p.s, 'monks') || (has(p.s, 'faerie') && count(p.s, 'regio_spring') > 0)}>
-        <div class="mt-1.5 grid grid-cols-2 gap-2">
-          <Show when={has(p.s, 'monks')}>
-            <Button class="flex-col" disabled={p.s.res.eels < EELS.stick} onClick={() => act({ type: 'sellEels' })}>
-              <span>
-                <Ico icon={I.eel} /> Sell a stick to the Mont
-              </span>
-              <Dim class="text-sm">
-                {EELS.stick} Eels → {EELS.stickSilver} Silver, Notice −{EELS.stickNotice}
-              </Dim>
-            </Button>
-          </Show>
-          <Show when={has(p.s, 'faerie') && count(p.s, 'regio_spring') > 0}>
-            <Button class="flex-col" disabled={!canAfford(p.s, offerCost(p.s))} onClick={() => act({ type: 'offer' })}>
-              <span>
-                <Ico icon={I.faerie} /> Leave an offering
-              </span>
-              <Dim class="text-sm">
-                {cost(offerCost(p.s))} · mostly lost; sometimes Faerie +1 (max {FAERIE.max}); a gift, if you're in need
-              </Dim>
-            </Button>
-          </Show>
-        </div>
-      </Show>
-    </Card>
-  );
-}
-
-const Gauge = (p: { label: string; value: number; need: number; unit: string }) => (
-  <div class={p.value >= p.need - 1e-9 ? 'text-good' : ''}>
-    {p.label}: <b>{p.value.toFixed(2)}</b>
-    <Dim>
-      /{p.need}
-      {p.unit}
-    </Dim>
-    <Bar pct={(p.value / p.need) * 100} />
-  </div>
-);
-
 export function Gate(p: { s: State; r: Rates }) {
   const g = () => p.s.gate;
-  const st = () => riteStatus(p.s);
+  const st = () => bellStatus(p.s);
+  const need = () => (st().next ? (Object.keys(st().next!.price) as GoodId[]) : []);
   return (
     <>
       <Card>
@@ -201,7 +164,7 @@ export function Gate(p: { s: State; r: Rates }) {
           <Ico icon={I.gate} /> The Drowned Gate
         </Label>
         <Dim class="text-sm">
-          <Rich text="Beneath the marsh lies a drowned regio. Raise its Gate with Stone, pour Insight into it, and perform three Rites while Stone and Vis flow to it and every magus stands ready in their Sanctum." />
+          <Rich text="Beneath the marsh lies Ys, the drowned city, and seven bells hang in its towers. Raise the Gate with Stone, pour Insight and goods into it, and ring the bells one by one. Each bell opens something new, and wakes something too." />
         </Dim>
         <Show
           when={g()}
@@ -232,37 +195,118 @@ export function Gate(p: { s: State; r: Rates }) {
                 onMinus={() => act({ type: 'gatePorters', delta: -1 })}
                 onPlus={() => act({ type: 'gatePorters', delta: 1 })}
               />
-              <Dim class="text-sm">{num(p.r.gate.stone)} Stone/s from the Hall to the Gate</Dim>
-              <div class="mt-2 grid grid-cols-2 gap-2">
-                <Button on={gate().visToGate} onClick={() => act({ type: 'gate', op: 'vis' })}>
-                  Vis to the Gate: {gate().visToGate ? 'on' : 'off'}
-                </Button>
-                <Button on={gate().pour} onClick={() => act({ type: 'gate', op: 'pour' })}>
-                  Pour Insight: {gate().pour ? 'on' : 'off'}
-                </Button>
+              <Dim class="text-sm">{num(p.r.gateStone)} Stone/s from the Hall to the Gate</Dim>
+              <Label>Pour into the Gate</Label>
+              <Dim class="mb-1 block text-sm">
+                A poured good's income goes to the Gate, which has no cap, instead of the Hall.
+              </Dim>
+              <div class="grid grid-cols-3 gap-1.5">
+                <For each={GOODS.filter((k) => p.s.res[k] > 0 || gate().store[k] > 0 || need().includes(k))}>
+                  {(k) => (
+                    <Button
+                      on={gate().pour.includes(k)}
+                      class="px-1.5 text-sm"
+                      onClick={() => act({ type: 'pour', good: k })}
+                    >
+                      <Ico icon={GOOD_ICON[k]} /> {num(gate().store[k])}
+                    </Button>
+                  )}
+                </For>
               </div>
             </>
           )}
         </Show>
       </Card>
-      <Show when={g()?.raised}>
+      <Show when={g()?.raised && st().next}>
         <Card warn={st().ready}>
           <Label>
-            <Ico icon={I.rite} /> Rite {(g()?.rites ?? 0) + 1} of 3<Show when={st().next}>: {st().next?.name}</Show>
+            <Ico icon={I.rite} /> Bell {(g()?.bells ?? 0) + 1} of {GATE.bells.length}: {st().next?.name}
           </Label>
-          <Gauge label="Stone" value={st().stone} need={GATE.stonePerS} unit="/s over the last minute" />
-          <Gauge label="Vis" value={st().vis} need={GATE.visPerS} unit="/s over the last minute" />
-          <div class={st().insight >= (st().next?.insight ?? 0) ? 'text-good' : ''}>
-            Insight in the Gate: <b>{num(st().insight)}</b>
-            <Dim>/{num(st().next?.insight ?? 0)}</Dim>
-            <Bar pct={(st().insight / (st().next?.insight ?? 1)) * 100} />
-          </div>
-          <div class={st().magiReady ? 'text-good' : ''}>
-            <Rich text="Every magus in a Sanctum, and none experimenting" />: {st().magiReady ? 'yes' : 'no'}
-          </div>
-          <Button primary class="mt-2 w-full" disabled={!st().ready} onClick={() => act({ type: 'gate', op: 'rite' })}>
-            Perform the Rite
+          <Dim class="block text-sm">Opens: {st().next?.opens}</Dim>
+          <Dim class="block text-sm">Wakes: {st().next?.wakes}</Dim>
+          <For each={need()}>
+            {(k) => {
+              const want = () => st().next?.price[k] ?? 0;
+              const have = () => g()?.store[k] ?? 0;
+              return (
+                <div class={have() >= want() ? 'text-good' : ''}>
+                  <Ico icon={GOOD_ICON[k]} /> {GOOD_INFO[k].name} in the Gate: <b>{num(have())}</b>
+                  <Dim>/{num(want())}</Dim>{' '}
+                  <Dim class="text-sm">
+                    {eta(
+                      want() > have() && p.r.gate[k] > 0
+                        ? (want() - have()) / p.r.gate[k]
+                        : want() > have()
+                          ? Number.POSITIVE_INFINITY
+                          : 0,
+                    )}
+                  </Dim>
+                  <Bar pct={(have() / want()) * 100} />
+                </div>
+              );
+            }}
+          </For>
+          <Show when={!st().quiet}>
+            <p class="text-bad">The whole bay will watch: Notice must be under {GATE.lastBellNotice}.</p>
+          </Show>
+          <Button primary class="mt-2 w-full" disabled={!st().ready} onClick={() => act({ type: 'gate', op: 'bell' })}>
+            Ring the bell
           </Button>
+          <Show when={options().dev}>
+            <Button class="mt-1.5 w-full text-sm" onClick={() => act({ type: 'devFill' })}>
+              Dev: fill the Gate for this bell
+            </Button>
+          </Show>
+        </Card>
+      </Show>
+      <Show when={(g()?.bells ?? 0) > 0}>
+        <Card>
+          <Label>
+            <Ico icon={I.rite} /> Rung
+          </Label>
+          <For each={GATE.bells.slice(0, g()?.bells ?? 0)}>
+            {(b) => (
+              <div class="mb-1 text-sm">
+                <b>{b.name}.</b>{' '}
+                <Dim>
+                  {b.opens} {b.wakes}
+                </Dim>
+              </div>
+            )}
+          </For>
+          <Show when={(g()?.bells ?? 0) >= 1}>
+            <div class="text-sm">
+              Scissy: <b>{lowTide(p.s) ? 'the tide is out, the forest is workable' : 'the tide is in'}</b>
+            </div>
+          </Show>
+          <Show when={(g()?.bells ?? 0) >= 4}>
+            <div class={`text-sm ${dark(p.s) ? 'text-gold' : ''}`}>
+              <Ico icon={I.dark} />{' '}
+              {dark(p.s) ? 'The hidden hour: Notice stops, experiments run twice as fast' : 'Daylight'}
+            </div>
+          </Show>
+          <Show when={(g()?.bells ?? 0) >= 6}>
+            <Label>
+              <Ico icon={I.river} /> The Couesnon
+            </Label>
+            <Dim class="mb-1 block text-sm">
+              Doubles one zone's output. It can be moved once a year
+              {p.s.couesnon?.year === year(p.s) ? ': it has moved this year.' : '.'}
+            </Dim>
+            <div class="grid grid-cols-3 gap-1.5">
+              <For each={Object.keys(ZONES) as ZoneId[]}>
+                {(z) => (
+                  <Button
+                    on={p.s.couesnon?.zone === z}
+                    class="px-1.5 text-sm"
+                    onClick={() => act({ type: 'couesnon', zone: z })}
+                  >
+                    {ZONES[z].name}
+                  </Button>
+                )}
+              </For>
+            </div>
+          </Show>
         </Card>
       </Show>
     </>
