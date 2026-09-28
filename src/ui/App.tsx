@@ -206,7 +206,7 @@ const EVENT_ART: Record<string, string> = {
   'Spring 1220': 'hero',
   'The eel rent': 'mill',
   'The weir': 'mill',
-  'The hands are hungry': 'fields',
+  'The Hall is full': 'fields',
   'Granite and barrows': 'fields',
   'The porters strike': 'fields',
   'Two more magi': 'study',

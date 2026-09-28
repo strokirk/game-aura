@@ -2,6 +2,7 @@
 import { For, Show } from 'solid-js';
 import {
   almsCost,
+  giftCost,
   bribeCost,
   canAfford,
   endowCost,
@@ -96,6 +97,14 @@ export function NoticeCard(p: { s: State; r: Rates }) {
             </span>
             <Dim class="text-sm">
               {cost(almsCost(p.s))} · settles {NOTICE.alms.gen * 10} lower, for good
+            </Dim>
+          </Button>
+          <Button disabled={!canAfford(p.s, giftCost(p.s))} onClick={() => act({ type: 'gift' })} class="flex-col">
+            <span>
+              <Ico icon={I.eel} /> Eels for the Monks
+            </span>
+            <Dim class="text-sm">
+              {cost(giftCost(p.s))} · −{NOTICE.gift.notice} now
             </Dim>
           </Button>
           <Button disabled={!canAfford(p.s, bribeCost(p.s))} onClick={() => act({ type: 'bribe' })} class="flex-col">

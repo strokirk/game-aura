@@ -34,6 +34,7 @@ import {
   DEFS,
   DIKE,
   EXPERIMENT,
+  FUEL_MULT,
   GOOD_INFO,
   GOODS,
   type GoodId,
@@ -210,7 +211,6 @@ function Covenant(p: { s: State; r: Rates }) {
       (id) => BUILDINGS[id].zone === z && (buildable(p.s, id) || count(p.s, id) > 0),
     );
   const zones = () => (Object.keys(ZONES) as ZoneId[]).filter((z) => inZone(z).length);
-  const breadLeft = () => (p.r.net.bread < 0 ? p.s.res.bread / -p.r.net.bread : Number.POSITIVE_INFINITY);
   return (
     <>
       <Card>
@@ -221,13 +221,20 @@ function Covenant(p: { s: State; r: Rates }) {
           <span>
             <b>{p.s.hands}</b> of {housing(p.s)} housed · <b>{idleHands(p.s)}</b> idle
           </span>
-          <span class={p.r.net.bread < 0 ? 'text-bad' : ''}>
-            Bread {rate(p.r.net.bread)}
-            <Show when={Number.isFinite(breadLeft())}> · lasts {mmss(breadLeft())}</Show>
-          </span>
+          <Show when={p.s.hands < housing(p.s)}>
+            <Dim>a new hand every 20 s while there's room</Dim>
+          </Show>
         </div>
-        <Show when={p.r.hungry}>
-          <p class="text-bad">No bread: everyone works at half speed, and hands are leaving.</p>
+        <Show when={has(p.s, 'farm')}>
+          <Dim class="block text-sm">
+            <Rich
+              text={
+                p.s.res.bread > 0
+                  ? `Bread is feeding the Quarries and Salt-works: they work ×${FUEL_MULT}.`
+                  : `No Bread: the Quarries and Salt-works would work ×${FUEL_MULT} if fed.`
+              }
+            />
+          </Dim>
         </Show>
       </Card>
       <Show when={has(p.s, 'notice')}>

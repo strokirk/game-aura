@@ -12,13 +12,12 @@ import {
   type Effect,
   type EventDef,
   EXPERIMENT,
-  FISH_SHARE,
   GATE,
   GOOD_INFO,
   GOODS,
   type GoodId,
   HALL_HOUSING,
-  HAND_FOOD,
+  FUEL_MULT,
   MAGI,
   type MagusId,
   type Modifier,
@@ -100,6 +99,7 @@ export type Action =
   | { type: 'endow' }
   | { type: 'bribe' }
   | { type: 'alms' }
+  | { type: 'gift' }
   /** Keep Salt in stock to preserve food, selling only what overflows, or sell it all. */
   | { type: 'keepSalt' }
   | { type: 'gate'; op: 'found' | 'pour' | 'vis' | 'rite' }
@@ -121,7 +121,6 @@ export interface State {
   res: Record<GoodId, number>;
   hands: number;
   growT: number;
-  hungerT: number;
   buildings: Partial<Record<BuildingId, { count: number; workers: number }>>;
   porters: Partial<Record<ZoneId, number>>;
   magi: MagusState[];
@@ -131,6 +130,7 @@ export interface State {
   endowments: number;
   bribes: number;
   alms: number;
+  gifts: number;
   keepSalt: boolean;
   dikes: number;
   /** Stone quarried over the run; it opens terraces. */
@@ -181,7 +181,6 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     res,
     hands: sc.start.hands,
     growT: 0,
-    hungerT: 0,
     buildings: structuredClone(sc.start.buildings) as State['buildings'],
     porters: { ...sc.start.porters },
     magi: sc.start.magi.map((m) => ({ id: m.id, lt: m.lt ?? 10, sanctum: m.sanctum, exp: null })),
@@ -190,6 +189,7 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     endowments: sc.start.endowments ?? 0,
     bribes: 0,
     alms: 0,
+    gifts: 0,
     keepSalt: false,
     dikes: 0,
     quarried: 0,
@@ -337,6 +337,9 @@ export function visibleResearch(s: State): ResearchId[] {
 }
 export const endowCost = (s: State): Cost => ({ silver: NOTICE.endow.base * NOTICE.endow.growth ** s.endowments });
 export const bribeCost = (s: State): Cost => ({ silver: NOTICE.bribe.base * NOTICE.bribe.growth ** s.bribes });
+export const giftCost = (s: State): Cost => ({
+  eels: Math.ceil(NOTICE.gift.base * NOTICE.gift.growth ** s.gifts),
+});
 export const almsCost = (s: State): Cost => ({ bread: NOTICE.alms.base * NOTICE.alms.growth ** s.alms });
 
 const assistMult = (s: State) => {
@@ -346,8 +349,7 @@ const assistMult = (s: State) => {
 /** Insight per second a magus makes reading in their Sanctum (none while experimenting). */
 export function readingRate(s: State, m: MagusState, mods = modifiers(s)) {
   if (!m.sanctum) return 0;
-  const hunger = s.res.bread <= 0 ? 0.5 : 1;
-  return BASELINE_INSIGHT * m.lt * assistMult(s) * hunger * baselineMult(mods);
+  return BASELINE_INSIGHT * m.lt * assistMult(s) * baselineMult(mods);
 }
 export const studyCost = (m: MagusState): Cost => ({ insight: Math.ceil(20 * 1.35 ** (m.lt - 10)) });
 
@@ -370,7 +372,6 @@ export interface Rates {
   net: Record<GoodId, number>;
   byBuilding: Partial<Record<BuildingId, Cost>>;
   zones: Record<ZoneId, { made: number; capacity: number; factor: number; strike: boolean }>;
-  hungry: boolean;
   /** Notice generated per minute. */
   noticeGen: number;
   /** Stone and Vis heading to the Gate per second, and Insight poured into it. */
@@ -380,8 +381,6 @@ export interface Rates {
 /** Every per-second rate in the game, computed in one place. The UI shows exactly what tick() applies. */
 export function rates(s: State): Rates {
   const mods = modifiers(s);
-  const hungry = s.res.bread <= 0;
-  const hunger = hungry ? 0.5 : 1;
   const net = zeroGoods();
   const byBuilding: Rates['byBuilding'] = {};
   const zones = Object.fromEntries(
@@ -398,9 +397,11 @@ export function rates(s: State): Rates {
     const fed = keys(uses).every((g) => s.res[g] > 0);
     const w = fed ? Math.min(s.buildings[id]?.workers ?? 0, workerSlots(s, id)) : 0;
     for (const g of keys(uses)) net[g] -= w * (uses[g] ?? 0);
+    const fuelled = !!def.fuel && s.res.bread > 0;
+    if (fuelled) net.bread -= w * (def.fuel ?? 0);
     const out: Cost = {};
     for (const g of keys(pw)) {
-      out[g] = w * (pw[g] ?? 0) * hunger * outputMult(s, mods, id, g);
+      out[g] = w * (pw[g] ?? 0) * (fuelled ? FUEL_MULT : 1) * outputMult(s, mods, id, g);
       if (visToGate && isSite(id)) gate.vis += out[g];
       else zones[def.zone].made += out[g];
     }
@@ -426,10 +427,6 @@ export function rates(s: State): Rates {
     gate.insight = net.insight;
     net.insight = 0;
   }
-  const food = s.hands * HAND_FOOD;
-  const fish = Math.min(food * FISH_SHARE, s.res.eels > 0 ? food : Math.max(0, net.eels));
-  net.eels -= fish;
-  net.bread -= food - fish;
   const reserve = s.keepSalt ? cap(s, 'salt', mods) : 0;
   if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
     net.silver += net.salt * SALT_PRICE;
@@ -438,7 +435,7 @@ export function rates(s: State): Rates {
   if (s.gate) gate.stone = s.gate.porters * ZONES.marsh.carry * carryMult(mods, 'marsh');
   const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
   const gen = Math.max(0, (NOTICE_K * noticeSum - levers) * noticeMult(mods));
-  return { net, byBuilding, zones, hungry, noticeGen: gen, gate };
+  return { net, byBuilding, zones, noticeGen: gen, gate };
 }
 
 // ─── Simulation ─────────────────────────────────────────────────────
@@ -453,42 +450,6 @@ function gainInsight(s: State, n: number) {
   if (n > 0) s.stats.insightMade += n;
   if (s.gate?.pour && n > 0) s.gate.insight += n;
   else addRes(s, 'insight', n);
-}
-
-function loseHand(s: State) {
-  s.hands--;
-  if (idleHands(s) >= 0) return;
-  // Take the hand from the biggest job.
-  let best: { n: number; take: () => void } | undefined;
-  for (const id of keys(s.buildings)) {
-    const b = s.buildings[id];
-    if (b && b.workers > (best?.n ?? 0))
-      best = {
-        n: b.workers,
-        take: () => {
-          b.workers--;
-        },
-      };
-  }
-  for (const z of keys(s.porters)) {
-    const n = s.porters[z] ?? 0;
-    if (n > (best?.n ?? 0))
-      best = {
-        n,
-        take: () => {
-          s.porters[z] = n - 1;
-        },
-      };
-  }
-  const g = s.gate;
-  if (g && g.porters > (best?.n ?? 0))
-    best = {
-      n: g.porters,
-      take: () => {
-        g.porters--;
-      },
-    };
-  best?.take();
 }
 
 function resolveExperiment(s: State, m: MagusState, e: Experiment) {
@@ -713,15 +674,7 @@ function tick(s: State) {
   if (terraces(s).n > cut)
     log(s, 'The quarry has cut a new terrace into Mont-Dol: room for one more building on the Hearth.');
 
-  if (s.res.bread <= 0) {
-    s.hungerT += DT;
-    if (s.hungerT >= 30 && s.hands > 0) {
-      s.hungerT = 0;
-      loseHand(s);
-      log(s, 'A hand walks down the hill to Dol. There is no bread.');
-    }
-  } else s.hungerT = 0;
-  if (s.hands < housing(s) && s.res.bread > 0 && r.net.bread >= 0) {
+  if (s.hands < housing(s)) {
     s.growT += DT;
     if (s.growT >= 20) {
       s.growT = 0;
@@ -943,6 +896,16 @@ function act(s: State, a: Action): string | undefined {
       pay(s, c);
       s.alms++;
       log(s, 'The covenant gives Bread to the poor of Dol every Friday. They pray for the magi, and mean it.');
+      return;
+    }
+    case 'gift': {
+      if (!has(s, 'endow')) return 'Not yet';
+      const c = giftCost(s);
+      if (!canAfford(s, c)) return 'Not enough Eels';
+      pay(s, c);
+      s.gifts++;
+      s.notice = Math.max(0, s.notice - NOTICE.gift.notice);
+      log(s, 'A cart of eels goes across the sands to the monks of Mont-Saint-Michel. The abbot writes a kind letter to the bishop.');
       return;
     }
     case 'keepSalt': {

@@ -41,6 +41,8 @@ export interface BuildingDef {
   /** At most this many. Named sites (the Vis sources) are max 1 and don't use zone slots. */
   max?: number;
   site?: boolean;
+  /** Bread each worker burns per second for FUEL_MULT output: hard work needs calories. */
+  fuel?: number;
   /** Goods each worker consumes per second. The building stands idle while any of them is out of stock. */
   uses?: Cost;
   /** Raises storage caps, per building. */
@@ -64,6 +66,7 @@ export const BUILDINGS = {
     cost: { silver: 20 },
     slots: 2,
     perWorker: { salt: 0.25 },
+    fuel: 0.05,
     blurb: 'Salt-sand boiled to salt. The Hall sells it for Silver, or keeps it to preserve food.',
   },
   tide_pool: visSite('The Tide Pool', 'A pool on the flats that never quite drains. Its water holds vis.'),
@@ -94,6 +97,7 @@ export const BUILDINGS = {
     cost: { silver: 40 },
     slots: 2,
     perWorker: { stone: 0.25 },
+    fuel: 0.05,
     blurb: 'Granite from the flank of Mont-Dol.',
   },
   sanctum: {
@@ -159,13 +163,12 @@ export type BuildingId = keyof typeof BUILDINGS;
 export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
-export const HAND_FOOD = 0.05; // Bread per hand per second
+/** Output of a fuelled building (Salt-works, Quarry) while there is Bread to burn. */
+export const FUEL_MULT = 1.5;
 /** A dike wins land from the sea: Polder slots, paid in Stone and in Bread for the diggers. */
 export const DIKE = { cost: { stone: 100, bread: 100 } as Cost, growth: 1.5, slots: 2 };
 /** Quarrying Mont-Dol cuts terraces: each opens a Hearth slot, after ever more Stone quarried. */
 export const TERRACE = { first: 2000, growth: 1.6, max: 10 };
-/** Fish days: Eels can stand in for this share of what the hands eat, 1 Eel for 1 Bread. */
-export const FISH_SHARE = 1 / 3;
 /** Every this many Salt in stock raises the Bread and Eels caps by 1. */
 export const PRESERVE = 5;
 /** Silver per Salt sold at the Hall. */
@@ -346,6 +349,8 @@ export const NOTICE = {
   strike: { at: 75, secs: 60, payShare: 0.05 },
   audit: { at: 90 },
   endow: { base: 500, growth: 2, gen: 1 },
+  /** A gift of eels to the monks of Mont-Saint-Michel: Bribe's twin in kind, Notice down at once. */
+  gift: { base: 50, growth: 1.5, notice: 15 },
   /** Alms to the poor of Dol: Endow's Bread twin. */
   alms: { base: 200, growth: 2, gen: 1 },
   bribe: { base: 100, growth: 2, notice: 20 },
@@ -502,7 +507,7 @@ export const SCENARIOS = {
     name: 'Trial of the Tide Pool',
     goal: 'Gather 500 Insight before 1222',
     start: {
-      res: { silver: 60, bread: 60, vis: 5 },
+      res: { silver: 60, vis: 5 },
       hands: 4,
       buildings: {
         sanctum: { count: 1, workers: 0 },
@@ -536,7 +541,7 @@ export const SCENARIOS = {
     name: 'The Covenant Must Grow',
     goal: 'Perform the three Rites of the Drowned Gate before 1260',
     start: {
-      res: { silver: 60, bread: 150, vis: 5 },
+      res: { silver: 60, vis: 5 },
       hands: 6,
       buildings: {
         sanctum: { count: 1, workers: 0 },
@@ -551,11 +556,11 @@ export const SCENARIOS = {
     unlocks: [
       { when: { kind: 'insightMade', atLeast: 1 }, reveal: ['research'] },
       {
-        when: { kind: 'below', good: 'bread', share: 0.5 },
+        when: { kind: 'hands', atLeast: 8 },
         reveal: ['farm', 'cottage'],
         card: {
-          title: 'The hands are hungry',
-          text: 'The cook has started counting loaves. Beyond the hedges of the Bocage there is land for Farms, and room for Cottages. Every hand eats Bread, and every hand you house will want more.',
+          title: 'The Hall is full',
+          text: 'Every bench in the Hall has a hand asleep on it. Beyond the hedges of the Bocage there is room for Cottages, and land for Farms. Bread is what hard work runs on: quarrymen and salt-boilers who eat well work half as hard again.',
         },
       },
       {
@@ -623,7 +628,7 @@ export const SCENARIOS = {
         library: { count: 1, workers: 0 },
         storehouse: { count: 1, workers: 0 },
         quarry: { count: 2, workers: 3 },
-        salt_pan: { count: 6, workers: 5 },
+        salt_pan: { count: 6, workers: 4 },
         tide_pool: { count: 1, workers: 2 },
         knights_barrow: { count: 1, workers: 2 },
         regio_spring: { count: 1, workers: 1 },
@@ -631,7 +636,7 @@ export const SCENARIOS = {
         parchmenter: { count: 2, workers: 2 },
         cottage: { count: 6, workers: 0 },
       },
-      porters: { marsh: 3, bocage: 2 },
+      porters: { marsh: 4, bocage: 2 },
       magi: [
         { id: 'aldric', sanctum: true, lt: 14 },
         { id: 'sabine', sanctum: true, lt: 12 },
@@ -687,7 +692,7 @@ export const SCENARIOS = {
         sanctum: { count: 3, workers: 2 },
         library: { count: 3, workers: 0 },
         quarry: { count: 2, workers: 4 },
-        salt_pan: { count: 8, workers: 5 },
+        salt_pan: { count: 8, workers: 4 },
         tide_pool: { count: 1, workers: 2 },
         knights_barrow: { count: 1, workers: 2 },
         regio_spring: { count: 1, workers: 2 },
@@ -695,7 +700,7 @@ export const SCENARIOS = {
         parchmenter: { count: 1, workers: 1 },
         cottage: { count: 8, workers: 0 },
       },
-      porters: { marsh: 1, bocage: 2 },
+      porters: { marsh: 2, bocage: 2 },
       magi: [
         { id: 'aldric', sanctum: true, lt: 18 },
         { id: 'sabine', sanctum: true, lt: 17 },

@@ -7,6 +7,7 @@ import {
   cap,
   createRun,
   dikeCost,
+  giftCost,
   housing,
   idleHands,
   rates,
@@ -18,7 +19,7 @@ import {
   zoneSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { FISH_SHARE, HAND_FOOD, ZONES } from '../src/data/index.ts';
+import { FUEL_MULT, ZONES } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -38,7 +39,7 @@ describe('the full run', () => {
         s = ok(apply(s, { type: 'choose', option: 0 }));
       }
     }
-    expect(titles).toContain('The hands are hungry');
+    expect(titles).toContain('The Hall is full');
     expect(s.unlocked).toContain('farm');
   });
 
@@ -134,14 +135,22 @@ describe('goods with more than one use', () => {
     expect(s.res.salt).toBe(0);
   });
 
-  it('eats Eels on fish days, up to a third of the food', () => {
+  it('Bread fuels Quarries and Salt-works x1.5, burning 0.05 per worker', () => {
     const s = stage();
-    const food = s.hands * HAND_FOOD;
-    const without = rates(s).net.bread;
+    const fed = rates(s);
+    s.res.bread = 0;
+    const unfed = rates(s);
+    expect(fed.byBuilding.quarry?.stone).toBeCloseTo((unfed.byBuilding.quarry?.stone ?? 0) * FUEL_MULT);
+    const burners = (s.buildings.quarry?.workers ?? 0) + (s.buildings.salt_pan?.workers ?? 0);
+    expect(unfed.net.bread - fed.net.bread).toBeCloseTo(burners * 0.05);
+  });
+
+  it('eels for the monks lower Notice at once, at a rising price', () => {
+    let s = stage();
     s.res.eels = 50;
-    const r = rates(s);
-    expect(r.net.eels).toBeCloseTo(-food * FISH_SHARE);
-    expect(r.net.bread).toBeCloseTo(without + food * FISH_SHARE);
+    s = ok(apply(s, { type: 'gift' }));
+    expect(s.notice).toBeCloseTo(45 - 15);
+    expect(giftCost(s)).toEqual({ eels: 75 });
   });
 
   it('alms trade Bread for less Notice, doubling in price', () => {
