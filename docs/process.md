@@ -46,3 +46,4 @@ Rules for reviews:
 - **Each finding comes with a concrete fix**, with numbers where possible, ranked by severity.
 - **The author fixes, then a new independent reviewer checks the result.** The same reviewer doesn't re-grade its own suggestions.
 - **Generated content** (ink threads, traits, research items) is scored by a separate judge agent against a written rubric, then run through the balance tests to check it doesn't break the target ranges.
+- **Every subagent writes a report** to `docs/reports/YYYY-MM-DD-topic.md`: the task it was given, what it ran, its findings with evidence, and what it changed. Reports are a record for later inspection, not design: the current design stays in `design/`.
