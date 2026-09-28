@@ -28,7 +28,6 @@ import {
   visibleResearch,
   workerSlots,
   zoneFull,
-  zoneUsed,
 } from '../src/core/index.ts';
 import { nextRandom, seedRng } from '../src/core/rng.ts';
 import {
@@ -46,7 +45,6 @@ import {
   type RecipeId,
   type ResearchId,
   ZONES,
-  type ZoneId,
 } from '../src/data/index.ts';
 
 const AGING_AT = 45;

@@ -4,11 +4,12 @@ Mechanics proposed for Aura and not yet part of the game. Each document stands a
 
 | Proposal | In one line |
 | --- | --- |
-| [auras-and-realms.md](auras-and-realms.md) | Every zone has an aura of one of the 4 realms; Endowing brings the Dominion up the hill, bribing taints the Bocage, and the Gate makes the Marsh hum |
+| [auras-and-realms.md](auras-and-realms.md) | *Superseded by `tide-remembers.md`.* Every zone has an aura of one of the 4 realms; Endowing brings the Dominion up the hill, bribing taints the Bocage, and the Gate makes the Marsh hum |
 | [regio-descents.md](regio-descents.md) | Send a magus into a regio level for Vis or Gate Insight, and get them back when faerie time decides |
 | [warping-and-twilight.md](warping-and-twilight.md) | Pushing the lab warps the magus; every 10 Warping is a Twilight that returns them wiser or worse, and 50 takes them for good |
 | [spells-rituals-devices.md](spells-rituals-devices.md) | Magi know spells they can cast for Fatigue, perform as rituals for Vis, or bind into Devices |
 | [books-and-teaching.md](books-and-teaching.md) | Magi write summae and teach each other, raising Lab Totals with time and Vellum instead of Insight |
+| [tide-remembers.md](tide-remembers.md) | **Implemented.** No deadline; the aura and its realms, offerings to the fae, eel rent, aging, apprentices and chairs, stacking legacies |
 | [virtues-and-flaws.md](virtues-and-flaws.md) | The player builds the founders, taking Flaws to pay for Virtues; Story Flaws start threads |
 
 ## What the current design gets wrong

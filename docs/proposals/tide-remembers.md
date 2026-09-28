@@ -1,6 +1,17 @@
 # Proposal: the Tide Remembers
 
-*Status: proposal, being implemented. Not part of the game until it moves into `design/`.*
+*Status: implemented. The current rules live in `design/` (`aura.md`, `magi.md`, `economy.md`, `notice.md`, `ui.md`); this page is kept as the proposal and its review.*
+
+**What changed on the way in**, from the independent review (Specificity 3, Purpose 2, Standalone 3, Maths 3, Fit 3) and from merging with the Seven Bells:
+- Divine is 1 per 2 Endowments, so Endowing isn't simply undone by a raise; the *Aegis* stops the friars.
+- Raise the Aura costs 300 × 1.8^n Insight + a flat 10 Vis, so aura 9 is reachable.
+- Faerie adds 0.6 decay points per level and fades every 240 s; a "pleased" roll at 5 takes more instead.
+- A bribe's stain lasts 5 years at ×0.95.
+- The Longevity Ritual costs 5 more Vis per point of Decrepitude.
+- Eels stay the monks' gift (`notice.md`) instead of a sale for Silver; they also pay the rent for new hands.
+- The win is the seventh bell of Ys (`gate.md`), not the three Rites.
+- Kept against the review, on purpose: legacies stack without a cap (number go up), and a journeyman keeps the full +25% until a chair opens.
+
 
 The full run loses its 1260 deadline. In its place: a goal the opening tells, an **aura** the player raises at a cost in Notice, magi who **age and die**, **apprentices** who inherit their master's name, **eels** that buy hands, and a **legacy** that every fallen covenant leaves to the next, stacking without limit.
 

@@ -27,20 +27,34 @@ The screen stack lives in the UI: a top-level state (Title, Options, Game, End) 
 
 ## Saving
 
-- A save is the scenario, the seed and the action log, plus a snapshot for fast loading (`../tech.md`).
+- A save is the scenario, the seed, the legacy and the action log, plus a snapshot for fast loading (`../tech.md`).
 - The game autosaves at every year boundary and when quitting to the title. Continue resumes the saved run. A finished run deletes its save.
 - Closing the app pauses the run.
 
 ## The end screen
 
-- **Stats:** outcome, in-game year, real time played, peak Notice, total Insight produced, experiments run (and botched), traits gained, bribes and Endowments paid.
-- **The Chronicle** is 3 lines built from templates:
-  1. "Founded 1220 by Aldric, Sabine and Hervé."
-  2. The most notable story, by priority: how the eels thread ended ("The eels were stopped in 1224." / "In 1245 the eels drowned the salt-works."), else the first Discovery ("[Magus] found [trait] in [year].").
-  3. The ending: "In [year] the tide stood still." / "In [year] the Order renounced them." / "In 1260 the covenant faded from memory."
-- **Why:** losing is fun only if the loss is remembered. The Chronicle gives a Renounced covenant the same weight as a victorious one.
+- **The title:** one huge word, Dark Souls style: **RENOUNCED**, **THE LINE IS BROKEN**, **THE HILL IS EMPTY** (the last hand left) or, for a win, **NO MORE SEA**. Under it, the cause and two lines of epitaph.
+- **The nag:** a loss in the full run ends with "But the Gate still waits under the tide, and the Gate remembers", and names what the next covenant will inherit ("Aldric III will climb the hill and find 14 Lab Texts under the hill, a hill that already hums at Magic 5"). The button is **Found a new covenant**.
+- **Stats:** the year it ended and the time played, Insight gathered, experiments (botched, discoveries), peak Notice, the magi with their ages, and the aura.
+- **The Chronicle:** its last lines.
+- **Why:** losing is fun only if the loss is remembered, and only if it leads somewhere. Cultist Simulator's "the work continues".
+
+## The legacy
+
+Every full run that ends, lost or won, adds to the **legacy**, and legacies **stack**. The next covenant starts from all of it:
+
+| Legacy | Each run adds |
+| --- | --- |
+| Aura | Starting Magic +⌊(peak Magic − starting Magic) ÷ 2⌋. Inherited Magic adds no Notice |
+| The Buried Library | Every Lab Text written this run. *Dig Out the Old Library* recovers all of them for 100 Insight each |
+| Heirlooms | 1 Device, on the building type with the most Devices made this run; every heirloom starts built |
+| The chairs | The numerals carry on: the next covenant opens with the next Aldric |
+
+- The legacy lives in the browser's storage and in each save, so a run replays exactly. Stage scenarios and the trial neither use nor add to it.
+- The Chronicle's first line names the covenant: "The third covenant of Mont-Dol is founded in spring 1220, on the ruins of the last."
+- **Why:** number go up across runs, as every prestige layer does. The first covenant is the hardest; later ones race, and the challenge becomes the year.
 
 ## Open questions
 
-- `[OPEN QUESTION: Offline progress. Mobile idle players expect it, but it conflicts with a fixed deadline.]`
+- `[OPEN QUESTION: Offline progress. Mobile idle players expect it, and with no deadline it no longer breaks the run; but the magi would age while the player is away.]`
 - `[OPEN QUESTION: A 4× speed for the late game?]`

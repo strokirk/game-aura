@@ -12,6 +12,10 @@ For every concept, decide up front whether it can ever be **0**, **1** or **N**.
 | Win conditions | 1 per scenario | List of condition objects; any met = win | Alternative victories are likely |
 | Loss conditions | 2 per scenario | List of condition objects; any met = loss | Already N |
 | Scenarios | 2 | Registry | More will come |
+| Chairs | 3 | Keyed by founder id; each magus holds one, with a numeral | Successors inherit names |
+| Apprentices | 0–3 | List, each serving a chair | More per master is plausible |
+| Aura realms | 4 | Magic and Faerie as numbers, Divine computed, Infernal as a list of stains | Places may get their own auras |
+| Legacy | 1 per player | An object passed into `createRun` and saved with each run | Several save slots later |
 | Magi | 1–4 | List | Apprentices and deaths later |
 | Magus skill | 1 (Lab Total) | Map skill → value with 1 entry | Could become several Arts |
 | Magi per Sanctum | 1 | List with a capacity of 1 | Shared labs are plausible |

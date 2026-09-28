@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from 'solid-js';
-import { canAfford, magusName, type State, year } from '../core/index.ts';
-import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
+import { canAfford, chairName, nameOf, type State, scenarioOf, year } from '../core/index.ts';
+import { AURA, type MagusId, SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
 import { Art, Button, Dim, Label, Overlay, Screen, Stack } from './kit.tsx';
@@ -11,6 +11,7 @@ import {
   continueRun,
   game,
   hasSave,
+  legacy,
   newRun,
   options,
   optionsFrom,
@@ -246,9 +247,39 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
   );
 }
 
+/** The end screen's one huge word, by how the run ended. */
+function endTitle(cause: string, won: boolean) {
+  if (won) return 'NO MORE SEA';
+  if (/renounce/i.test(cause)) return 'RENOUNCED';
+  if (/apprentice|magus dies/i.test(cause)) return 'THE LINE IS BROKEN';
+  return 'THE HILL IS EMPTY';
+}
+const END_LINES: Record<string, string> = {
+  RENOUNCED:
+    'The Tribunal has spoken your name backward. Your sigils are struck from the books. Your hill is only salt again.',
+  'THE LINE IS BROKEN':
+    'The last magus closed their eyes, and no young voice answered. The aura sinks back into the marsh like a stone into black water.',
+  'THE HILL IS EMPTY': 'The last hand has walked down to Dol. Nobody carries the vis now, and the tower goes dark.',
+  'NO MORE SEA': 'The seventh bell rings under the bay, and the tide goes out and does not come back.',
+};
+
+/** The nag: what the next covenant inherits, from the legacy already saved. */
+function inheritance(): string {
+  const lg = legacy();
+  if (!lg.covenants) return '';
+  const heir = (id: MagusId) => chairName(id, (lg.gens[id] ?? 0) + 1);
+  const parts = [
+    lg.labTexts ? `${lg.labTexts} Lab Texts under the hill` : '',
+    lg.magic ? `a hill that already hums at Magic ${AURA.base + lg.magic}` : '',
+    lg.heirlooms.length ? `${lg.heirlooms.length} enchanted heirloom${lg.heirlooms.length > 1 ? 's' : ''}` : '',
+  ].filter(Boolean);
+  return `${heir('aldric')} will climb the hill${parts.length ? ` and find ${parts.join(', ')}` : ''}.`;
+}
+
 function End() {
   const s = () => game.s!;
   const won = () => s().outcome?.kind === 'win';
+  const title = () => endTitle(s().outcome?.cause ?? '', won());
   const stats = (): [string, string][] => [
     ['Ended', `${year(s())}, after ${mmss(s().t)}`],
     ['Insight gathered', num(s().stats.insightMade)],
@@ -257,15 +288,27 @@ function End() {
     [
       'Magi',
       s()
-        .magi.map((m) => `${magusName(m.id)} (Lab Total ${m.lt})`)
-        .join(', '),
+        .magi.map((m) => `${nameOf(m)} (Lab Total ${m.lt}${m.id === 'knight' ? '' : `, age ${Math.floor(m.age)}`})`)
+        .join(', ') || 'none',
     ],
+    ['Aura', `Magic ${s().aura.magic}, at its height ${s().aura.peak}`],
   ];
   return (
     <Screen>
       <Art name={won() ? 'win' : 'wheel'} round class="aspect-square max-w-xs" />
-      <Big>{won() ? 'Victory' : 'The covenant fails'}</Big>
+      <h1
+        class={`text-center font-bold text-4xl uppercase tracking-[0.2em] sm:text-6xl ${won() ? 'text-gold' : 'text-bad'}`}
+      >
+        {title()}
+      </h1>
       <Tagline>{s().outcome?.cause}</Tagline>
+      <p class="max-w-md text-center">{END_LINES[title()]}</p>
+      <Show when={scenarioOf(s()).legacy}>
+        <p class="max-w-md text-center italic text-gold">
+          {won() ? 'And the hill remembers.' : 'But the Gate still waits under the tide, and the Gate remembers.'}{' '}
+          {inheritance()}
+        </p>
+      </Show>
       <Label>The Chronicle</Label>
       <ul class="max-w-md italic">
         <For each={s().chronicle.slice(-5)}>
@@ -288,7 +331,7 @@ function End() {
       </dl>
       <Stack>
         <Button primary onClick={restartRun}>
-          Try again
+          {scenarioOf(s()).legacy ? 'Found a new covenant' : 'Try again'}
         </Button>
         <Button onClick={() => setScreen('title')}>Title</Button>
       </Stack>

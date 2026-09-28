@@ -4,15 +4,15 @@ Notice is the attention the covenant draws, and the Order of Hermes is the one t
 
 Notice is the game's pollution: growth makes it, and too much of it ends the run.
 
-**Input:** indirect (what you build and where), plus direct levers: **Endow the Parish**, **Give Alms**, **Eels for the Monks**, **Bribe the Lord** (all from year 1226), and the *Aegis* and *Marsh Mist* research.
+**Input:** indirect (what you build and where, and how far you raise the aura), plus direct levers: **Endow the Parish**, **Give Alms**, **Eels for the Monks**, **Bribe the Lord** (all from year 1226), offerings to the fae, and the *Aegis* and *Marsh Mist* research.
 
 **System:**
 
-- **Generation per minute** = 0.35 × Σ(buildings in each zone × that zone's factor) + the bells' wakes (`gate.md`) − 1 per Endowment − 1 per Alms, then ×0.6 with Marsh Mist, never below 0.
+- **Generation per minute** = 0.35 × Σ(buildings in each zone × that zone's factor) + the bells' wakes (`gate.md`) + 1 per *Raise the Aura* (`aura.md`) − 1 per Endowment − 1 per Alms, then ×0.6 with Marsh Mist, never below 0.
   - Zone factors: Hearth 0.5 (0 after the Aegis), Bocage 1.5, Marsh 0.5.
   - Hands add no Notice; buildings do.
 - **One-off rises:** a botched experiment adds 5 at once; ink choices add or remove Notice through tags (`stories.md`).
-- **Decay per minute** = 10% of current Notice.
+- **Decay per minute** = 10% of current Notice, plus 0.6 points per level of Faerie (`aura.md`).
 - Generation and decay together make Notice settle at an **equilibrium of 10 × generation per minute**, which it approaches with a time constant of about 10 minutes. A covenant generating 8 per minute settles at 80.
 - **Thresholds** fire when Notice rises past them and re-arm once it drops 5 below.
 
@@ -23,15 +23,15 @@ Notice is the game's pollution: growth makes it, and too much of it ends the run
 | 90 | The Quaesitor's audit: Study is unavailable while Notice is 90+ | Event card, once per crossing | Endow, bribe, or stop building |
 | 100 | **Renounced**: the run is lost (full run) | End screen | — |
 
-- **Endow the Parish:** pay 500 × 2^n Silver (n = Endowments so far: 500, 1,000, 2,000…) to reduce generation by 1 per minute, permanently. It lowers the equilibrium by 10.
+- **Endow the Parish:** pay 500 × 2^n Silver (n = Endowments so far: 500, 1,000, 2,000…) to reduce generation by 1 per minute, permanently. It lowers the equilibrium by 10. Every second Endowment brings the Dominion: Divine +1, the aura −1 (`aura.md`).
 - **Give Alms:** pay 200 × 2^n Bread (n = Alms so far) to reduce generation by 1 per minute, permanently: Endow's Bread twin. The poor of Dol pray for a covenant that feeds them.
 - **Eels for the Monks:** send 50 × 1.5^n Eels across the sands to the abbey of Mont-Saint-Michel (monasteries took their rents in eels) to lower current Notice by 15 at once. Bribe's twin, paid in kind.
 - **The Tribunal** (`tribunal.md`): every 7 years from 1227 it decrees 2 activities suspect, tripling their Notice until the next meeting. Low Notice and a store of Vis give the covenant influence there, and influence brings gifts.
 - **The hidden hour:** after the fourth bell, Notice generation stops for 60 s of every 5 minutes.
-- **Bribe the Lord:** pay 100 × 2^n Silver (n = bribes so far) to lower current Notice by 20 at once. The equilibrium doesn't move, so Notice creeps back over about 10 minutes.
+- **Bribe the Lord:** pay 100 × 2^n Silver (n = bribes so far) to lower current Notice by 20 at once. The equilibrium doesn't move, so Notice creeps back over about 10 minutes. Each bribe leaves an Infernal stain for 5 years: all output ×0.95 (`aura.md`).
 
 **Feedback:** a compact gauge in the header shows current Notice, threshold ticks and a hollow marker at the equilibrium it's heading for. Tapping it expands Endow, Bribe and the top 3 contributing building types. Every Build button shows "+X Notice at rest", its change to the equilibrium. The Bribe button shows "back in ~X min".
 
-**Why it's the core tension:** every building raises the equilibrium, so the player spends from a Notice budget as well as a Silver one, and the deadline forbids simply stopping. Every lever costs something: Endowments double in price and need Silver storage to afford, bribes wear off, and the Aegis and Mist cost Insight the Gate also needs. Farms and Parchmenters can only live in the loud Bocage.
+**Why it's the core tension:** every building raises the equilibrium, so the player spends from a Notice budget as well as a Silver one, and stopping isn't safe either: the magi age and the friars come (`aura.md`). Every lever costs something: Endowments double in price and need Silver storage to afford, bribes wear off, and the Aegis and Mist cost Insight the Gate also needs. Farms and Parchmenters can only live in the loud Bocage.
 
 **Rationale:** proportional decay is Factorio's pollution absorption: Notice becomes a waterline that tracks the covenant's size instead of a meter that only fills. Showing the equilibrium on every button is the incremental habit of showing the next number, applied to the cost. Endow versus Bribe is the classic permanent-versus-temporary spend.
