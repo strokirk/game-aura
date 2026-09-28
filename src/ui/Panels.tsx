@@ -21,6 +21,7 @@ import {
   nextTribunal,
   noticeDecay,
   noticeLimit,
+  noticeRest,
   offerCost,
   type Rates,
   researchCost,
@@ -107,7 +108,7 @@ function nextThreshold(s: State) {
 }
 
 export function NoticeCard(p: { s: State; r: Rates }) {
-  const settles = () => p.r.noticeGen * 10;
+  const settles = () => noticeRest(p.s, p.r);
   return (
     <Card warn={settles() >= NOTICE.strike.at}>
       <Label>

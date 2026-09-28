@@ -14,6 +14,7 @@ import {
   experimentPlan,
   faerieNeed,
   giftCost,
+  guideStep,
   has,
   housing,
   idleHands,
@@ -38,6 +39,7 @@ import {
   EEL_RENT,
   EXPERIMENT,
   GOODS,
+  type GuideStep,
   NOTICE,
   RECIPES,
   RESEARCH,
@@ -169,7 +171,49 @@ function reorganize(s: State, rnd: () => number): Action[] {
   return [...off, ...placeHands(x, (xs) => pickOf(xs, rnd))];
 }
 
+/** What a player does to carry out a guide step: one click. The last step, with no condition, is "keep studying". */
+function guideAction(s: State, done: GuideStep['done']): Action | undefined {
+  switch (done?.kind) {
+    case 'workers':
+      return { type: 'workers', building: done.building, delta: 1 };
+    case 'porters':
+      return { type: 'porters', zone: done.zone, delta: 1 };
+    case 'built':
+      return { type: 'build', building: done.building };
+    case 'researched':
+      return visibleResearch(s).map((id): Action => ({ type: 'research', id }))[0];
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * A player who does exactly what the trial's guide line says and nothing more, one click every `delay` seconds:
+ * the guide's own balance check. Studies with no extra Vis, never builds the Barrow, takes the first option on cards.
+ */
+export function guided(delay: number): Strategy {
+  let last = Number.NEGATIVE_INFINITY;
+  return (s) => {
+    if (s.t < last) last = Number.NEGATIVE_INFINITY; // a new run
+    if (s.events.length || s.t - last < delay) return [];
+    const step = guideStep(s);
+    const m = s.magi[0];
+    const studying = !step?.done || step.done.kind === 'experiments' || step.done.kind === 'researched';
+    const study: Action | undefined =
+      m && present(m) && !m.exp && canAfford(s, experimentPlan(s, m.id, 'study_vis', 0).cost)
+        ? { type: 'experiment', magus: m.id, recipe: 'study_vis', extra: 0 }
+        : undefined;
+    const a = guideAction(s, step?.done) ?? (studying ? study : undefined);
+    const pick = a && legal(s, a) ? a : studying && study && legal(s, study) ? study : undefined;
+    if (!pick) return [];
+    last = s.t;
+    return [pick];
+  };
+}
+
 export const STRATEGIES: Record<string, Strategy> = {
+  /** Follows the trial's guide to the letter, a click every 8 s. */
+  guided: guided(8),
   /** Does nothing but dismiss cards. Must lose the trial. */
   idle: () => [],
 

@@ -8,7 +8,7 @@ The balance simulation is the source of truth for every number in the design. A 
 - `pnpm sim --strategy sensible --seeds 50` reports the win rate and times over 50 seeds.
 - A **strategy** is a function `(state) => Action[]`, called every simulated second. Strategies live in `sim/strategies.ts`.
 - With no deadline, a sim stops at 150 minutes of play if the strategy hasn't finished.
-- **Strategies:** `sensible` plays the trial the way its guide says: 2 hands on the Salt-works, porters wherever the Marsh loses goods, the Tide Pool and then the Barrow as soon as they're affordable, Salt Rakes, spare hands to the Vis sites and the Sanctum, and Study the Vis with all spare Vis. `careful` first builds what brings more hands (Cottages, Eel Weirs for the rent), keeps every hand at work (porters wherever goods are lost, then the job with the lowest share of its slots filled), round-robins each magus's lab work, takes apprentices and works the Longevity Ritual. `random` plays legal actions at random, then puts every idle hand to work at random, and now and then reorganizes all its hands.
+- **Strategies:** `guided` does exactly what the trial's guide line says, one click every few seconds (8 s in the tests), studies with no extra Vis and never builds the Barrow: the check that the guide alone wins. `sensible` plays the trial efficiently: 2 hands on the Salt-works, porters wherever the Marsh loses goods, assistants from the first second, the Tide Pool and then the Barrow as soon as they're affordable, Salt Rakes, and Study the Vis with all spare Vis. `careful` first builds what brings more hands (Cottages, Eel Weirs for the rent), keeps every hand at work (porters wherever goods are lost, then the job with the lowest share of its slots filled), round-robins each magus's lab work, takes apprentices and works the Longevity Ritual. `random` plays legal actions at random, then puts every idle hand to work at random, and now and then reorganizes all its hands.
 - **Performance budget:** a full 80-minute run simulates in under 1 s. `[PLAYTEST: careful takes about 2.5 s; its hand planning re-applies actions to a copy.]`
 
 ## Balance tests
@@ -17,7 +17,9 @@ The balance simulation is the source of truth for every number in the design. A 
 
 | Scenario | Strategy | Target |
 | --- | --- | --- |
-| Trial | Sensible (follows the guide) | Wins in 2:30–5:00 in ≥ 90% of seeds, median ≥ 3:00 (now 50/50, median 3:33, max 4:53) |
+| Trial | Guided (the guide to the letter, a click every 8 s) | Wins by 6:30 in ≥ 90% of seeds |
+| Trial | Sensible (efficient) | Wins in 2:30–5:00 in ≥ 90% of seeds, median ≥ 3:00 |
+| Trial | Random | Wins about 3 runs in 4: the trial is forgiving by design, and only neglect loses it |
 | Trial | Idle (does nothing) | Loses |
 | Trial, full run | Random (legal actions at random) | A fuzzer: never crashes, replays exactly |
 | Full run | Careful | Wins in 60–75 min `[PLAYTEST: careful rings 2 of the 7 bells by about minute 75 on seeds 1–2 and stalls there; seed 3 is Renounced at minute 54]` |

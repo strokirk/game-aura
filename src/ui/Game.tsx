@@ -26,6 +26,7 @@ import {
   maxExtraVis,
   nameOf,
   noticeLimit,
+  noticeRest,
   present,
   type Rates,
   rates,
@@ -57,6 +58,7 @@ import {
   GOOD_INFO,
   GOODS,
   type GoodId,
+  HAND_EVERY,
   NOTICE,
   PRESERVE,
   RECIPES,
@@ -224,7 +226,7 @@ function Header(p: { s: State; r: Rates }) {
       <div class="grid grid-cols-5 gap-x-2 gap-y-1 sm:grid-cols-10">
         <Chip
           k="hands"
-          about={`Hands: ${p.s.hands} of ${housing(p.s)} housed, ${idleHands(p.s)} idle. They work buildings or carry goods; idle hands do nothing. A new hand comes every 20 s while there is room.`}
+          about={`Hands: ${p.s.hands} of ${housing(p.s)} housed, ${idleHands(p.s)} idle. They work buildings or carry goods; idle hands do nothing. A new hand comes every ${HAND_EVERY} s while there is room.`}
         >
           <Ico icon={I.hands} class="mr-1 text-gold" />
           <b class={idleHands(p.s) > 0 ? 'text-warn' : ''}>{idleHands(p.s)}</b>
@@ -248,11 +250,11 @@ function Header(p: { s: State; r: Rates }) {
         <Show when={has(p.s, 'notice')}>
           <Chip
             k="notice"
-            about={`Notice: ${Math.floor(p.s.notice)} now, settling at ${Math.round(p.r.noticeGen * 10)}. The attention the covenant draws; every building adds to it. At ${noticeLimit(p.s)} the covenant is lost.`}
+            about={`Notice: ${Math.floor(p.s.notice)} now, settling at ${Math.round(noticeRest(p.s, p.r))}. The attention the covenant draws; every building adds to it. At ${noticeLimit(p.s)} the covenant is lost.`}
           >
             <Ico icon={I.notice} class="mr-1 text-gold" />
             <b class={p.s.notice >= NOTICE.strike.at ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
-            <div class="text-xs text-dim">settles {Math.round(p.r.noticeGen * 10)}</div>
+            <div class="text-xs text-dim">settles {Math.round(noticeRest(p.s, p.r))}</div>
           </Chip>
         </Show>
         <Show when={has(p.s, 'aura')}>
@@ -296,7 +298,7 @@ function Covenant(p: { s: State; r: Rates }) {
             <b>{p.s.hands}</b> of {housing(p.s)} housed · <b>{idleHands(p.s)}</b> idle
           </span>
           <Show when={p.s.hands < housing(p.s)}>
-            <Dim>a new hand every 20 s while there's room</Dim>
+            <Dim>a new hand every {HAND_EVERY} s while there's room</Dim>
           </Show>
         </div>
         <Show when={has(p.s, 'farm')}>

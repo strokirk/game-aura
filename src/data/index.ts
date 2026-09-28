@@ -188,6 +188,8 @@ export type BuildingId = keyof typeof BUILDINGS;
 export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
+/** While there's housing, a new hand arrives this often (seconds). */
+export const HAND_EVERY = 20;
 /** Output of a fuelled building (Salt-works, Quarry) while there is Bread to burn. */
 export const FUEL_MULT = 1.5;
 /** A dike wins land from the sea: Polder slots, paid in Stone and in Bread for the diggers. */
@@ -946,7 +948,7 @@ const EELS: readonly StoryBeat[] = [
 export const SCENARIOS = {
   trial: {
     name: 'Trial of the Tide Pool',
-    goal: 'Gather 500 Insight before the Tribunal of 1223',
+    goal: 'Gather 500 Insight before the Tribunal of 1224',
     start: {
       res: { silver: 20 },
       hands: 4,
@@ -966,6 +968,13 @@ export const SCENARIOS = {
     ],
     research: ['salt_rakes'],
     guide: [
+      {
+        // Shown only if a botch has blown up the Salt-works.
+        text: 'Build a Salt-works.',
+        done: { kind: 'built', building: 'salt_pan', atLeast: 1 },
+        tab: 'covenant',
+        building: 'salt_pan',
+      },
       {
         text: 'Put 2 hands to work in the Salt-works.',
         done: { kind: 'workers', building: 'salt_pan', atLeast: 2 },
@@ -1013,7 +1022,7 @@ export const SCENARIOS = {
         tab: 'research',
       },
       {
-        text: "Keep Aldric studying. The Drowned Knight's Barrow is a second Vis site, and extra Vis makes a study yield more.",
+        text: 'Keep Aldric studying. Extra Vis in a study yields more Insight, when there is Vis to spare.',
       },
     ],
     win: [
@@ -1032,15 +1041,15 @@ export const SCENARIOS = {
         line: 'The Tribunal will not charter a covenant all of Dol is talking about.',
       },
       {
-        when: { kind: 'time', atLeast: 3 * YEAR },
-        cause: 'The year 1223 begins, and the book is still thin.',
+        when: { kind: 'time', atLeast: 4 * YEAR },
+        cause: 'The year 1224 begins, and the book is still thin.',
         title: 'THE BOOK IS THIN',
         line: 'The Tribunal turns the few pages, and turns Aldric away. The tower on Mont-Dol stays a tower.',
       },
     ],
     intro: {
       title: 'Spring 1220',
-      text: 'Aldric has a tower on Mont-Dol, four idle hands and a salt-works on the flats. Out on the flats is a pool the tide never empties, and the pool holds vis.\n\nThe Tribunal meets in 1223 to decide whether to charter the covenant. Bring it five hundred pages of Insight: sell salt for Silver, buy the pool, and burn its vis in the lab.',
+      text: 'Aldric has a tower on Mont-Dol, four idle hands and a salt-works on the flats. Out on the flats is a pool the tide never empties, and the pool holds vis.\n\nThe Tribunal meets in 1224 to decide whether to charter the covenant. Bring it five hundred pages of Insight: sell salt for Silver, buy the pool, and burn its vis in the lab.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: EELS,

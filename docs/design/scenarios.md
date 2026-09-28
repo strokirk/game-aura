@@ -4,7 +4,7 @@ A **scenario** is data: a start state, an unlock set, and lists of win and loss 
 
 | Scenario | Start | Win | Loss | Length |
 | --- | --- | --- | --- | --- |
-| **Trial of the Tide Pool** | 4 idle hands, Aldric with a Sanctum, 1 unworked Salt-works, 20 Silver, no porters, no Vis site. Aldric only | 500 Insight gathered before 1223 | Notice 50; 1223 begins | 3–5 min at 1× |
+| **Trial of the Tide Pool** | 4 idle hands, Aldric with a Sanctum, 1 unworked Salt-works, 20 Silver, no porters, no Vis site. Aldric only | 500 Insight gathered before 1224 | Notice 50; 1224 begins | 3–6 min at 1× |
 | **The Covenant Must Grow** | 6 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool, 1 Eel Weir, 2 Marsh porters, 60 Silver, 20 Eels, no Bread, plus the legacy. Sabine and Hervé arrive later | The seventh bell (`gate.md`) | Notice 100; the line is broken | 60–80 min |
 
 ## The trial
@@ -17,6 +17,7 @@ The trial is the tutorial, the default scenario in development (`?scenario=trial
 
 | Step | Says | Done when | Points at |
 | --- | --- | --- | --- |
+| 0 | Build a Salt-works. (Shown only if the covenant has none.) | A Salt-works built | The Salt-works |
 | 1 | Put 2 hands to work in the Salt-works. | 2 workers in the Salt-works | The Salt-works |
 | 2 | Make a hand a porter. Salt sells for Silver only once it is carried to the Hall. | 1 Marsh porter | The Marsh porters |
 | 3 | Save 40 Silver and build the Tide Pool. It gathers Vis. | The Tide Pool built | The Tide Pool |
@@ -25,11 +26,11 @@ The trial is the tutorial, the default scenario in development (`?scenario=trial
 | 6 | Put 2 idle hands in the Sanctum as assistants. Each makes Aldric work 25% faster. | 2 assistants in the Sanctum | The Sanctum |
 | 7 | At 5 Vis, open the Magi tab and have Aldric Study the Vis. | 1 experiment begun | The Magi tab |
 | 8 | When the study is done, learn Salt Rakes in the Research tab: more Salt, more Silver. | 1 research bought | The Research tab |
-| 9 | Keep Aldric studying. The Drowned Knight's Barrow is a second Vis site, and extra Vis makes a study yield more. | Never: it stays | — |
+| 9 | Keep Aldric studying. Extra Vis in a study yields more Insight, when there is Vis to spare. | Never: it stays | — |
 
-**Feedback:** the guide is one gold line under the goal in the header, prefixed "Next:", on every tab. The tab it names pulses, and the building or porter card it names has a gold border. The goal line shows the progress: "Goal: Gather 500 Insight before the Tribunal of 1223 · 180/500".
+**Feedback:** the guide is one gold line under the goal in the header, prefixed "Next:", on every tab. The tab it names pulses, and the building or porter card it names has a gold border. The goal line shows the progress: "Goal: Gather 500 Insight before the Tribunal of 1224 · 180/500".
 
-**What the trial reveals:** only what the loop needs. At the start: the Hall, Aldric's Sanctum, the Salt-works, the Tide Pool and the Barrow (to build), hands, Silver. Vis and Insight appear in the header when they first move. The Research tab appears when Aldric begins his first Study the Vis (he reads from the first second, so the first Insight comes too early to mean anything) and lists **one item, Salt Rakes**. Notice appears when it passes 1, as in the full run. The trial never shows the aura, the Tribunal, Bread or the Bocage.
+**What the trial reveals:** only what the loop needs. At the start: the Hall, Aldric's Sanctum, the Salt-works, the Tide Pool and the Barrow (to build: the Barrow is there for a player who looks past the guide, since the guide's 8 hands fill every job), hands, Silver. Vis and Insight appear in the header when they first move. The Research tab appears when Aldric begins his first Study the Vis (he reads from the first second, so the first Insight comes too early to mean anything) and lists **one item, Salt Rakes**. Notice appears when it passes 1, as in the full run. The trial never shows the aura, the Tribunal, Bread or the Bocage.
 
 **Parameters:**
 
@@ -39,13 +40,13 @@ The trial is the tutorial, the default scenario in development (`?scenario=trial
 | Start goods | 20 Silver, 0 Vis |
 | Tide Pool, Barrow | 40 Silver each, 0.08 Vis/s per worker, 2 workers |
 | Win | 500 Insight **gathered** (spending it on research doesn't count against it) |
-| Loss | Notice 50; the start of 1223 (360 s) |
+| Loss | Notice 50; the start of 1224 (480 s) |
 | Research on offer | Salt Rakes only (50 Insight) |
 
-**Why:** a tutorial that can be won by pressing one button teaches one button. Starting with idle hands and no Vis site makes the player build the whole chain once, in order, and each step's reward is the next step's input, the way *A Dark Room* hands over one verb at a time. The win counts Insight gathered, not held, so the one research never feels like a trap. The Tribunal sits in 1223, three years out: buying the Vis site takes the first minute, and the extra year leaves room for one botch or a bad bargain with the eels.
+**Why:** a tutorial that can be won by pressing one button teaches one button. Starting with idle hands and no Vis site makes the player build the whole chain once, in order, and each step's reward is the next step's input, the way *A Dark Room* hands over one verb at a time. The win counts Insight gathered, not held, so the one research never feels like a trap. The Tribunal sits in 1224, four years out: a player who does only what the guide says, a click every 15 s, wins by about 6:15, and a botch or a bad bargain with the eels still leaves time. The deadline is there so that neglect loses; a tutorial shouldn't be lost to reading slowly.
 
-- A player who follows the guide and keeps Aldric studying wins in about 3½ minutes at 1×, with a year to spare for a botch or the weir (`balance.md`).
-- The eels thread's first 2 beats play here too; taking the weir drops the Tide Pool's Vis to 80% for 10 minutes and costs about half a minute.
+- A player who follows the guide to the letter wins in about 4–5½ minutes at 1×; an efficient one in about 3½ (`balance.md`).
+- The eels thread's first 2 beats play here too. Taking the weir drops the Tide Pool's Vis to 80% for 10 minutes; going to look first idles Aldric's lab for 60 s but spares the Vis, and is the better choice here.
 
 ## Staged unlocks (full run)
 

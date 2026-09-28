@@ -28,6 +28,7 @@ import {
   type GoodId,
   type GuideStep,
   HALL_HOUSING,
+  HAND_EVERY,
   MAGI,
   type MagusId,
   type Modifier,
@@ -416,10 +417,13 @@ export function zoneNotice(s: State, z: ZoneId, mods = modifiers(s)) {
   const set = mods.find((x) => x.kind === 'zoneNotice' && x.zone === z);
   return set?.kind === 'zoneNotice' ? set.factor : ZONES[z].noticeFactor;
 }
-/** How much one more of a building raises the Notice equilibrium: the "+X Notice at rest" on its Build button. */
+/** Where Notice settles: growth and forgetting balance. */
+export const noticeRest = (s: State, r = rates(s)) => r.noticeGen / noticeDecay(s);
+/** How much one more of a building raises where Notice settles: the "+X Notice at rest" on its Build button. */
 export function buildNotice(s: State, id: BuildingId) {
-  const mods = modifiers(s);
-  return 10 * NOTICE_K * zoneNotice(s, B[id].zone, mods) * decreeMult(s, id) * noticeMult(mods);
+  const more: State = { ...s, buildings: { ...s.buildings, [id]: { count: count(s, id) + 1, workers: 0 } } };
+  if (s.buildings[id]) more.buildings[id]!.workers = s.buildings[id]!.workers;
+  return noticeRest(more) - noticeRest(s);
 }
 const botchMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'botch' ? [x.mult] : [])));
 const baselineMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'baseline' ? [x.mult] : [])));
@@ -731,7 +735,10 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
       `${name}'s experiment goes wrong. The tower smokes for a day and Dol talks about it. ${name} is Warped (${m.warp}).`,
     );
     if (nextRandom(s.rng) < WARP.destroy) {
-      const pool = keys(s.buildings).filter((id) => id !== 'sanctum' && !isSite(id));
+      // Never a Sanctum, a Vis site, or the last Salt-works: the covenant's income.
+      const pool = keys(s.buildings).filter(
+        (id) => id !== 'sanctum' && !isSite(id) && !(id === 'salt_pan' && count(s, id) <= 1),
+      );
       const id = pool[Math.floor(nextRandom(s.rng) * pool.length)];
       if (id) {
         applyEffects(s, [{ kind: 'destroy', building: id, n: 1 }]);
@@ -1256,7 +1263,7 @@ function tick(s: State) {
   const rent = has(s, 'eelRent') ? EEL_RENT : 0;
   if (s.hands < housing(s) && s.res.eels >= rent) {
     s.growT += DT;
-    if (s.growT >= 20) {
+    if (s.growT >= HAND_EVERY) {
       s.growT = 0;
       s.hands++;
       s.res.eels -= rent;

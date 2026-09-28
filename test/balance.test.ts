@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { simulate } from '../sim/run.ts';
-import { STRATEGIES } from '../sim/strategies.ts';
+import { guided, STRATEGIES } from '../sim/strategies.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i + 1);
 
 describe('balance: trial', () => {
-  it('a player who follows the guide wins in 2:30–5:00 in at least 90% of seeds, median at least 3:00', () => {
+  it('a player who follows the guide to the letter, a click every 8 s, wins by 6:30 in at least 90% of seeds', () => {
+    const wins = SEEDS.map((seed) => simulate('trial', seed, guided(8)).outcome).filter((o) => o?.kind === 'win');
+    expect(wins.length).toBeGreaterThanOrEqual(45);
+    expect(Math.max(...wins.map((o) => o!.t))).toBeLessThanOrEqual(390);
+  });
+
+  it('an efficient player wins in 2:30–5:00 in at least 90% of seeds, median at least 3:00', () => {
     const times = SEEDS.map((seed) => simulate('trial', seed, STRATEGIES.sensible!).outcome)
       .filter((o) => o?.kind === 'win')
       .map((o) => o!.t)

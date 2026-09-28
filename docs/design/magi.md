@@ -55,7 +55,7 @@ Experiments are the Insight engine. A magus in a Sanctum starts one; it runs for
 - Assistants in the Sanctum shorten the time: each assistant adds +25% speed.
 - At the end, one roll with the run's seeded random number generator: base botch chance 5%, base discovery chance 5%, otherwise success.
   - **Success:** the full yield.
-  - **Botch:** the costs are lost, Notice +5, and the magus is **Warped** (below). 15% of botches also destroy one building (never a Sanctum or a Vis site).
+  - **Botch:** the costs are lost, Notice +5, and the magus is **Warped** (below). 15% of botches also destroy one building (never a Sanctum, a Vis site or the last Salt-works, so a botch never takes away the covenant's income).
   - **Discovery:** the full yield, plus a Breakthrough.
 
 ## Age and death

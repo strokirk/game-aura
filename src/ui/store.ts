@@ -120,13 +120,15 @@ function announce(prev: State, next: State) {
     const now = next.magi.find((x) => x.id === m.id);
     if (!e || !now || now.exp?.start === e.start) continue;
     const what = RECIPES[e.recipe];
-    const gained = next.stats.insightMade - prev.stats.insightMade;
-    const botched = next.stats.botches > prev.stats.botches;
-    say(
-      botched
-        ? `${nameOf(m)}'s ${what.name} went wrong. Start another in the Magi tab.`
-        : `${nameOf(m)}'s ${what.name} is done${what.result === 'insight' ? `: +${Math.round(gained)} Insight` : ''}. Start another in the Magi tab.`,
-    );
+    const doubled = next.stats.discoveries > prev.stats.discoveries;
+    // Before its timer ends, an experiment only ends by being put aside at a check-in.
+    const result =
+      next.t < e.end
+        ? 'was put aside'
+        : next.stats.botches > prev.stats.botches
+          ? 'went wrong'
+          : `is done${what.result === 'insight' ? `: +${Math.round(e.insight * (doubled ? 2 : 1))} Insight` : ''}`;
+    say(`${nameOf(m)}'s ${what.name} ${result}. Start another in the Magi tab.`);
   }
 }
 
