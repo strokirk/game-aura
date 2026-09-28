@@ -22,7 +22,7 @@ Research is a list of one-time Insight purchases, spaced so something lands ever
 
 ## The Form trees
 
-After the *Aegis*, five repeatable items open: one per Form, the light version of the Arts. Each costs Insight plus the Form's own good, ×2.5 per purchase, so every good has a sink that never fills.
+After the *Aegis*, five repeatable items open: one per Form, the light version of the Arts. Each costs Insight ×2.5 per purchase, drawn from the Gate as well as the Hall, plus the Form's own good ×1.25 per purchase, so every good has a sink that never fills and never outruns a Storehouse.
 
 | Tree | First cost | Each purchase |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ After the *Aegis*, five repeatable items open: one per Form, the light version o
 | Aquam | 2,000 Insight + 100 Salt | Salt-works and Eel Weirs ×1.5 |
 | Herbam | 2,000 Insight + 100 Bread | Farms, Salt Meadows and Parchmenters ×1.5 |
 | Vim | 2,000 Insight + 20 Vis | Experiment yields ×2; Vis sites ×1.25 |
-| Mentem | 2,000 Insight + 30 Vellum | Reading ×2; Notice ×0.85 |
+| Mentem | 2,000 Insight (×2 per purchase) + 30 Vellum | Reading ×2; Notice ×0.8 |
 
 - Research draws Insight from the Hall first and then from the Gate's store, which has no cap, so the trees can outgrow the Libraries.
 - **Why:** the bells (`gate.md`) cost up to 450,000 Insight. The trees are how numbers go up that far: compounding multipliers in the Antimatter Dimensions way. Buying a tree spends Insight the next bell also wants. `[PLAYTEST: tune with the sim.]`

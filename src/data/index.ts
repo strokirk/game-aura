@@ -50,6 +50,10 @@ export interface BuildingDef {
   uses?: Cost;
   /** Goods whose storage cap each one of these multiplies by STORE_MULT. */
   stores?: readonly GoodId[];
+  /** Takes no plot in its zone (storage is dug into the hill). */
+  noPlot?: boolean;
+  /** Notice factor in place of its zone's (Cottages are quiet anywhere). */
+  notice?: number;
   /** Cost growth per building owned, if not COST_GROWTH. */
   growth?: number;
   blurb: string;
@@ -57,7 +61,7 @@ export interface BuildingDef {
 /** Each Storehouse or Library multiplies the caps it covers by this: storage outgrows its ×1.15 price. */
 export const STORE_MULT = 1.25;
 /** Buying more land in a zone: +`slots` plots, the price ×`growth` per purchase in that zone. */
-export const EXPAND = { cost: { silver: 100, stone: 40 } as Cost, growth: 1.3, slots: 2 };
+export const EXPAND = { cost: { silver: 60, stone: 20 } as Cost, growth: 1.2, slots: 3 };
 const visSite = (name: string, blurb: string): BuildingDef => ({
   name,
   zone: 'marsh',
@@ -145,6 +149,7 @@ export const BUILDINGS = {
     cost: { silver: 50, stone: 20 },
     slots: 0,
     stores: ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'bog_oak'],
+    noPlot: true,
     blurb: 'A dry stone barn with a strongroom. Every mundane good: storage ×1.25 for each one.',
   },
   library: {
@@ -153,6 +158,7 @@ export const BUILDINGS = {
     cost: { silver: 40, vellum: 20 },
     slots: 0,
     stores: ['insight', 'vis'],
+    noPlot: true,
     blurb:
       'Shelves, a lectern, a chain for every book and a lead-lined chest. Insight and Vis storage ×1.25 for each one.',
   },
@@ -179,6 +185,7 @@ export const BUILDINGS = {
     cost: { silver: 30 },
     slots: 0,
     housing: 3,
+    notice: 0.25,
     growth: 1.06,
     blurb: 'Room for three more hands.',
   },
@@ -191,9 +198,9 @@ export const HALL_HOUSING = 8;
 /** Output of a fuelled building (Salt-works, Quarry) while there is Bread to burn. */
 export const FUEL_MULT = 1.5;
 /** A dike wins land from the sea: Polder slots, paid in Stone and in Bread for the diggers. */
-export const DIKE = { cost: { stone: 100, bread: 100 } as Cost, growth: 1.5, slots: 2 };
+export const DIKE = { cost: { stone: 80, bread: 80 } as Cost, growth: 1.2, slots: 3 };
 /** Quarrying Mont-Dol cuts terraces: each opens a Hearth slot, after ever more Stone quarried. */
-export const TERRACE = { first: 2000, growth: 1.6, max: 10 };
+export const TERRACE = { first: 500, growth: 1.3, max: 20 };
 /** Every this many Salt in stock raises the Bread and Eels caps by 1. */
 export const PRESERVE = 5;
 /** Silver per Salt sold at the Hall. */
@@ -363,13 +370,15 @@ export interface ResearchDef {
   /** Repeatable research grows its cost by `growth` (default 2) each time. */
   repeatable?: boolean;
   growth?: number;
+  /** Growth of costs other than Insight, if not `growth`. */
+  goodsGrowth?: number;
   /** Paid every time, without growing. */
   flat?: Cost;
   /** Shown only once this feature is revealed (see UnlockDef), and always while it is. */
   needs?: string;
   blurb: string;
 }
-/** A Form tree: repeatable, costs ×2.5 each time, revealed by the Aegis. */
+/** A Form tree: repeatable, its Insight ×2.5 and its good ×1.25 each time, revealed by the Aegis. */
 function tree(art: string, good: Cost, effects: Modifier[], blurb: string): ResearchDef {
   return {
     name: `The ${art} tree`,
@@ -377,6 +386,7 @@ function tree(art: string, good: Cost, effects: Modifier[], blurb: string): Rese
     effects,
     repeatable: true,
     growth: 2.5,
+    goodsGrowth: 1.25,
     needs: 'trees',
     blurb,
   };
@@ -514,15 +524,18 @@ export const RESEARCH = {
     ],
     'Experiment yields ×2, Vis sites ×1.25. The Form of magic itself.',
   ),
-  mentem: tree(
-    'Mentem',
-    { vellum: 30 },
-    [
-      { kind: 'baseline', mult: 2 },
-      { kind: 'noticeGen', mult: 0.85 },
-    ],
-    'Reading ×2, Notice ×0.85. The Form of minds: yours, and Dol’s.',
-  ),
+  mentem: {
+    ...tree(
+      'Mentem',
+      { vellum: 30 },
+      [
+        { kind: 'baseline', mult: 2 },
+        { kind: 'noticeGen', mult: 0.8 },
+      ],
+      'Reading ×2, Notice ×0.8. The Form of minds: yours, and Dol’s.',
+    ),
+    growth: 2,
+  },
 } as const satisfies Record<string, ResearchDef>;
 export type ResearchId = keyof typeof RESEARCH | 'dig_library';
 /** Shown only when fallen covenants buried Lab Texts. Its Insight is per buried text. */
@@ -658,52 +671,52 @@ export const GATE = {
   bells: [
     {
       name: 'The Bell of Scissy',
-      price: { insight: 5_000, stone: 300 },
+      price: { insight: 15_000, stone: 900 },
       opens: 'Scissy, the drowned forest: 6 plots for Bog-oak Camps, worked at low tide. Great Devices of bog-oak.',
       wakes: 'The drowned dead: Notice +1/min while Scissy is worked.',
     },
     {
       name: 'The Bell of Blood',
-      price: { insight: 15_000, salt: 1_000 },
+      price: { insight: 45_000, salt: 3_000 },
       opens: 'The bay runs red with vis: Salt-works make Vis too, and Eel Weirs ×2.',
       wakes: 'The fish die and the fishers rage: Notice +2/min, for good.',
     },
     {
       name: 'The Bell of Wormwood',
-      price: { insight: 30_000, vis: 150 },
+      price: { insight: 90_000, vis: 450 },
       opens: 'Wormwood, a fallen star: a Vis site three times the Tide Pool.',
       wakes: 'The wells turn bitter and the hands drink ale: fuelled work burns ×1.5 Bread.',
     },
     {
       name: 'The Bell of Darkness',
-      price: { insight: 70_000, vellum: 500 },
+      price: { insight: 210_000, vellum: 1_500 },
       opens: 'The hidden hour: 60 s of every 5 minutes, Notice stops and experiments run twice as fast.',
       wakes: 'Crops fail in the dark: Farms ×0.5.',
     },
     {
       name: 'The Bell of the Pit',
-      price: { insight: 150_000, bog_oak: 300 },
+      price: { insight: 450_000, bog_oak: 900 },
       opens: 'The Drowned Knight rises and serves: a fourth magus, Lab Total 15, who needs no Sanctum.',
       wakes: 'Things climb out after him: every year, ward them with Vis or lose buildings.',
     },
     {
       name: 'The Bell of the Four Winds',
-      price: { insight: 300_000, stone: 2_000 },
+      price: { insight: 900_000, stone: 6_000 },
       opens: 'The Couesnon turns: point the river at a zone to double its output. It can be moved once a year.',
       wakes: 'Storms: every year a dike breaches unless it is mended with Stone and Bread.',
     },
     {
       name: 'No More Sea',
       price: {
-        insight: 450_000,
-        silver: 300,
-        salt: 300,
-        stone: 300,
-        bread: 300,
-        eels: 300,
-        vellum: 300,
-        vis: 200,
-        bog_oak: 300,
+        insight: 1_350_000,
+        silver: 900,
+        salt: 900,
+        stone: 900,
+        bread: 900,
+        eels: 900,
+        vellum: 900,
+        vis: 600,
+        bog_oak: 900,
       },
       opens: 'The tide goes out and does not come back. The run is won.',
       wakes: 'The whole bay watches: ring it only with Notice under 50.',

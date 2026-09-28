@@ -32,6 +32,7 @@ import {
   studyCost,
   terraces,
   timeToAfford,
+  usesPlot,
   workerSlots,
   year,
   zoneFull,
@@ -389,7 +390,7 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
       </Show>
       <div class="mt-1.5 flex gap-2">
         <Show
-          when={!maxed() && buildable(p.s, p.id) && (def().site || !zoneFull(p.s, def().zone))}
+          when={!maxed() && buildable(p.s, p.id) && (!usesPlot(p.id) || !zoneFull(p.s, def().zone))}
           fallback={
             <Show when={!maxed() && buildable(p.s, p.id)}>
               <Dim class="flex-1 self-center text-sm">

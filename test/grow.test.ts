@@ -25,7 +25,7 @@ import {
   zoneSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { DECREES, FUEL_MULT, SCENARIOS, ZONES } from '../src/data/index.ts';
+import { DECREES, DIKE, FUEL_MULT, SCENARIOS, TERRACE, ZONES } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -88,7 +88,7 @@ describe('the full run', () => {
     expect(s.magi.every((m) => m.sanctum)).toBe(true);
   });
 
-  it('a full Bocage reveals dikes; each dike wins 2 Polder plots at a rising price', () => {
+  it('a full Bocage reveals dikes; each dike wins Polder plots at a rising price', () => {
     let s = begin();
     s.buildings.farm = { count: ZONES.bocage.slots, workers: 0 };
     s = stepTo(s, s.t + 1);
@@ -98,24 +98,30 @@ describe('the full run', () => {
     s.res.stone = 200;
     s.res.bread = 200;
     s = ok(apply(s, { type: 'dike' }));
-    expect(zoneSlots(s, 'polder')).toBe(2);
-    expect(dikeCost(s)).toEqual({ stone: 150, bread: 150 });
+    expect(zoneSlots(s, 'polder')).toBe(DIKE.slots);
+    expect(dikeCost(s)).toEqual({ stone: Math.ceil(80 * DIKE.growth), bread: Math.ceil(80 * DIKE.growth) });
     s.res.silver = 100;
     s = ok(apply(s, { type: 'build', building: 'salt_meadow' }));
     expect(zoneUsed(s, 'polder')).toBe(1);
   });
 
-  it('quarrying cuts terraces that open Hearth plots, each after 1.6x more Stone, up to 10', () => {
+  it('quarrying cuts terraces that open Hearth plots, each after more Stone, up to the most', () => {
     const s = ok(apply(createRun('gate', 1), { type: 'choose', option: 0 }));
+    // Fill the Hearth with Quarries: Storehouses and Libraries take no plot.
+    s.buildings.quarry = {
+      count: (s.buildings.quarry?.count ?? 0) + ZONES.hearth.slots - zoneUsed(s, 'hearth'),
+      workers: 4,
+    };
     expect(zoneUsed(s, 'hearth')).toBe(ZONES.hearth.slots);
     expect(apply(s, { type: 'build', building: 'quarry' })).toEqual({ error: 'The Hearth is full' });
-    s.quarried = 2000 + 3200 - 1;
-    expect(terraces(s)).toEqual({ n: 1, next: 1 });
-    s.quarried = 1e9;
-    expect(terraces(s).n).toBe(10);
-    expect(zoneSlots(s, 'hearth')).toBe(ZONES.hearth.slots + 10);
+    s.quarried = TERRACE.first * (1 + TERRACE.growth) - 1;
+    expect(terraces(s).n).toBe(1);
+    expect(terraces(s).next).toBeCloseTo(1);
+    s.quarried = 1e12;
+    expect(terraces(s).n).toBe(TERRACE.max);
+    expect(zoneSlots(s, 'hearth')).toBe(ZONES.hearth.slots + TERRACE.max);
     // The Gate stage starts above the tax line; let the collector call first.
-    const t = stepTo({ ...s, quarried: 1999, noticeFired: ['tax', 'strike'] }, s.t + 5);
+    const t = stepTo({ ...s, quarried: TERRACE.first - 1, noticeFired: ['tax', 'strike'] }, s.t + 5);
     expect(terraces(t).n).toBe(1);
   });
 });
