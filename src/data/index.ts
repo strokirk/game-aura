@@ -512,6 +512,32 @@ export const NOTICE = {
   bribe: { base: 100, growth: 2, notice: 20 },
 };
 
+/** The Normandy Tribunal (`tribunal.md`). */
+export const TRIBUNAL = {
+  first: 1227,
+  every: 7,
+  /** Influence: 1 per this much Notice below 100, and 1 per this much Vis in the Hall. */
+  perNotice: 20,
+  perVis: 20,
+  decrees: 2,
+  mult: 3,
+  perGift: 2,
+};
+export interface DecreeDef {
+  name: string;
+  /** The building whose Notice it multiplies; none means botches. */
+  building?: BuildingId;
+}
+export const DECREES: readonly DecreeDef[] = [
+  { name: 'On the salt trade', building: 'salt_pan' },
+  { name: 'On quarrying the Mount', building: 'quarry' },
+  { name: 'On pilgrims', building: 'hostel' },
+  { name: 'On dealings with fishermen', building: 'eel_weir' },
+  { name: 'On the enclosure of the Bocage', building: 'farm' },
+  { name: 'On the reclaiming of land', building: 'salt_meadow' },
+  { name: 'On reckless experiment' },
+];
+
 export interface GateStart {
   stone: number;
   raised: boolean;
@@ -709,6 +735,8 @@ export interface ScenarioDef {
   loss: readonly { when: Condition; cause: string }[];
   intro?: EventDef;
   story?: readonly StoryBeat[];
+  /** The Normandy Tribunal meets in this scenario (`tribunal.md`). */
+  tribunal?: boolean;
 }
 
 export const YEAR = 120;
@@ -871,6 +899,7 @@ export const SCENARIOS = {
       options: [{ label: 'Begin', effects: [] }],
     },
     story: [...EELS, ...YS],
+    tribunal: true,
   },
   middle: {
     name: 'Stage: the Middle Years',
@@ -936,6 +965,7 @@ export const SCENARIOS = {
       options: [{ label: 'Begin', effects: [] }],
     },
     story: YS,
+    tribunal: true,
   },
   gate: {
     name: 'Stage: the Gate',
@@ -1017,6 +1047,7 @@ export const SCENARIOS = {
       options: [{ label: 'Begin', effects: [] }],
     },
     story: YS,
+    tribunal: true,
   },
 } as const satisfies Record<string, ScenarioDef>;
 export type ScenarioId = keyof typeof SCENARIOS;

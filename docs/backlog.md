@@ -141,7 +141,7 @@ The Aegis of the Hearth is recast every midwinter for Vis, or the Hearth's Notic
 
 ### The Tribunal
 
-The Tribunal meets every 7 years, about 5 times in a run. It judges the covenant's Notice and holds votes. Most Tribunals are routine; some are critical. A covenant can send a magus to represent it, who handles routine Tribunals automatically so a run isn't constantly interrupted. To be developed. Fuller write-up of rival covenants and motions: Claude Docs, *Aura MVP — Game Design Spec* §15.
+A prototype is built (`design/tribunal.md`): influence from Notice and Vis, 2 random decrees that triple an activity's Notice, and gifts. Still open: sending a magus to represent the covenant, rival covenants and votes on motions, and spending influence to strike a decree. Fuller write-up of rival covenants and motions: Claude Docs, *Aura MVP — Game Design Spec* §15.
 
 ### Redcaps
 

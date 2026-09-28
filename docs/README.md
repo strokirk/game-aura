@@ -18,7 +18,8 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 | [design/magi.md](design/magi.md) | Magi, Study, Breakthroughs, experiments | The lab, Insight, experiment balance |
 | [design/research.md](design/research.md) | The research list | New research, multipliers, pacing |
 | [design/notice.md](design/notice.md) | Notice, thresholds, Endow and Bribe | The core tension, losing by Notice |
-| [design/gate.md](design/gate.md) | The Drowned Gate and its 3 Rites | The endgame, winning |
+| [design/gate.md](design/gate.md) | The Drowned Gate and the Seven Bells of Ys | The endgame, winning |
+| [design/tribunal.md](design/tribunal.md) | The Normandy Tribunal: influence, decrees and gifts (prototype) | Notice, Vis, the Tribunal |
 | [design/traits.md](design/traits.md) | The trait model and trait lists | Traits, Breakthroughs |
 | [design/stories.md](design/stories.md) | Story threads and the ink contract | Ink content, event cards, effect tags |
 | [design/scenarios.md](design/scenarios.md) | The trial and full scenarios, staged unlocks | Onboarding, the trial, unlock order |

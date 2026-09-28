@@ -12,8 +12,10 @@ import {
   giftCost,
   housing,
   idleHands,
+  influence,
   labTotal,
   maxExtraVis,
+  nextTribunal,
   rates,
   replay,
   type State,
@@ -23,7 +25,7 @@ import {
   zoneSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { FUEL_MULT, ZONES } from '../src/data/index.ts';
+import { DECREES, FUEL_MULT, SCENARIOS, ZONES } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -221,5 +223,46 @@ describe('warping and Twilight', () => {
     expect(maxExtraVis(s, 'aldric', 'study_vis')).toBe(3);
     s.res.vis = 4;
     expect(maxExtraVis(s, 'aldric', 'study_vis')).toBe(-1);
+  });
+});
+
+describe('the Tribunal', () => {
+  /** The full run on the eve of the 1227 Tribunal, with the eel beats already played. */
+  function eve(notice: number, vis: number) {
+    const s = ok(apply(createRun('grow', 5), { type: 'choose', option: 0 }));
+    s.t = 7 * 120 - 1;
+    s.yearDone = 1226;
+    s.fired.push('eels_1_first_catch', 'eels_2_the_weir', 'eels_3_the_font');
+    s.noticeFired = ['tax', 'strike', 'audit'];
+    s.unlocksDone = (SCENARIOS.grow.unlocks ?? []).map((_, i) => i);
+    s.notice = notice;
+    s.res.vis = vis;
+    return s;
+  }
+
+  it('meets in 1227: quiet and vis-rich means influence and gifts, and two decrees', () => {
+    const s0 = eve(30, 30);
+    expect(nextTribunal(s0)).toBe(1227);
+    expect(influence(s0)).toBe(3 + 1);
+    const s = stepTo(s0, s0.t + 1.5);
+    expect(s.events.map((e) => e.title)).toContain('The Tribunal of 1227');
+    expect(s.decrees).toHaveLength(2);
+    expect(s.labTexts + Object.values(s.devices).reduce((a, n) => a + (n ?? 0), 0)).toBe(2);
+    expect(nextTribunal(s)).toBe(1234);
+  });
+
+  it('a loud, vis-poor covenant gets no gifts', () => {
+    const s = stepTo(eve(90, 0), 7 * 120 + 0.5);
+    expect(s.events.map((e) => e.title)).toContain('The Tribunal of 1227');
+    expect(s.labTexts).toBe(0);
+  });
+
+  it('a decree triples the Notice of its activity', () => {
+    const s = eve(0, 0);
+    const salt = DECREES.findIndex((d) => d.building === 'salt_pan');
+    const before = rates(s).noticeGen;
+    s.decrees = [salt];
+    const one = 0.35 * (s.buildings.salt_pan?.count ?? 0) * 0.5; // Marsh factor 0.5
+    expect(rates(s).noticeGen).toBeCloseTo(before + 2 * one);
   });
 });
