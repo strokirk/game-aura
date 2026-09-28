@@ -39,8 +39,9 @@ Stage scenarios start partway through the full run with the covenant already bui
 | Stage | Starts | The situation |
 | --- | --- | --- |
 | **The Middle Years** | Spring 1236 | 3 magi (Lab Totals 14, 12, 12), 26 hands, 6 salt-works, all 3 Vis sites, 2 Quarries, 2 Parchmenters, a Library and a Storehouse. 7 research items and 2 Lab Texts known. Notice 45 and settling at 66, above the tax line. The Aegis and the Gate are still ahead |
-| **The Gate** | Spring 1250; Aldric II and Hervé II hold two of the chairs | Everything researched and the Form trees open; 6 Lab Texts; 8 Devices on the Quarries. The Gate is raised, holds 4,000 of the 10,000 Insight the first bell needs, and Insight pours into it. With the dev menu's *Fill the Gate*, every bell can be tried here |
+| **The Gate** | Spring 1250; Aldric II and Hervé II hold two of the chairs | Everything researched and the Form trees open; 6 Lab Texts; 8 Devices on the Quarries. The Gate is raised, holds 4,000 of the 5,000 Insight the first bell needs, and Insight pours into it. With the dev menu's *Fill the Gate*, every bell can be tried here |
 
 - **Why:** the full run is 80 minutes, too long to reach the late game every time a rule changes. Stage scenarios let a playtester (or the sim) start at the stage being tested, the way strategy games ship scenario starts.
 - Every production line runs from the first second: food is positive, porters keep up, and every building fits its zone. A test checks this.
-- `[PLAYTEST: the careful strategy wins neither stage. On the Gate it sends Vis to the Gate for good and starves its own labs; a human who fills the Gate's Insight first and then opens a 60 s window of Stone and Vis should do better. Confirm by play.]`
+- Both stages can build Eel Weirs: the seventh bell asks for Eels.
+- The careful sim wins both stages in 10 of 10 seeds: the Gate in a median 42 minutes of play (34–59), the Middle Years in 74 (63–113). `[PLAYTEST: the Middle Years plays slower than the full run from its start; its Notice 45, settling at 66, holds the building back.]`

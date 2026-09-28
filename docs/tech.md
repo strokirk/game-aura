@@ -42,6 +42,7 @@ test/         unit + balance tests
 - `createRun(scenarioId, seed): State`
 - `step(state, dt): State`: advances in fixed 0.25 s ticks internally
 - `apply(state, action): State | Rejection`: actions are a typed union (`build`, `assign`, `startExperiment`, `choose`, `research`, `endow`, …)
+- `advance(state, dt)` and `applyInPlace(state, action)`: the same without the copy, for code that owns its state (the sim). Every rule check in an action comes before its first change, so a refused action changes nothing
 - Selectors for everything the UI shows: rates, caps, time to afford, bottlenecks
 
 **Determinism:**

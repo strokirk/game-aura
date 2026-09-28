@@ -15,7 +15,6 @@ import {
   friars,
   giftCost,
   has,
-  idleHands,
   influence,
   lowTide,
   nextTribunal,
@@ -45,7 +44,7 @@ import {
 } from '../data/index.ts';
 import { cost, eta, num } from './format.ts';
 import { GOOD_ICON, I } from './icons.tsx';
-import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
+import { Bar, Button, Card, Dim, Ico, Label } from './kit.tsx';
 import { Rich } from './Rich.tsx';
 import { act, options } from './store.ts';
 
@@ -261,17 +260,9 @@ export function Gate(p: { s: State; r: Rates }) {
                   <Bar pct={(gate().stone / GATE.raise) * 100} />
                 </div>
               </Show>
-              <Stepper
-                label="Porters carrying Stone out"
-                value={gate().porters}
-                canAdd={idleHands(p.s) > 0}
-                onMinus={() => act({ type: 'gatePorters', delta: -1 })}
-                onPlus={() => act({ type: 'gatePorters', delta: 1 })}
-              />
-              <Dim class="text-sm">{num(p.r.gateStone)} Stone/s from the Hall to the Gate</Dim>
               <Label>Pour into the Gate</Label>
               <Dim class="mb-1 block text-sm">
-                A poured good's income goes to the Gate, which has no cap, instead of the Hall.
+                A poured good goes to the Gate, which has no cap: its income, and whatever the Hall holds of it.
               </Dim>
               <div class="grid grid-cols-3 gap-1.5">
                 <For each={GOODS.filter((k) => p.s.res[k] > 0 || gate().store[k] > 0 || need().includes(k))}>

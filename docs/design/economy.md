@@ -116,7 +116,7 @@ flowchart LR
   Tribunal -.->|decrees: x3 Notice| Buildings
 
   Silver --> Gate
-  Stone -->|Gate porters| Gate
+  Stone -->|poured| Gate
   Insight -->|poured| Gate
   Salt -->|poured| Gate
   Vis -->|poured| Gate

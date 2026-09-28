@@ -126,7 +126,6 @@ export interface GateState {
   store: Record<GoodId, number>;
   /** Goods whose income pours into the Gate instead of the Hall. */
   pour: GoodId[];
-  porters: number;
   bells: number;
 }
 export type Action =
@@ -155,7 +154,6 @@ export type Action =
   | { type: 'couesnon'; zone: ZoneId }
   /** Dev menu: fill the Gate with the next bell's price. */
   | { type: 'devFill' }
-  | { type: 'gatePorters'; delta: number }
   | { type: 'choose'; option: number };
 export interface LogEntry {
   t: number;
@@ -341,7 +339,7 @@ export function createRun(scenario: ScenarioId, seed: number, legacy: Legacy = N
 function newGate(g: GateStart): GateState {
   const store = zeroGoods();
   for (const k of keys(g.store)) store[k] = g.store[k] ?? 0;
-  return { stone: g.stone, raised: g.raised, store, pour: [...g.pour], porters: g.porters, bells: g.bells };
+  return { stone: g.stone, raised: g.raised, store, pour: [...g.pour], bells: g.bells };
 }
 export const bells = (s: State) => s.gate?.bells ?? 0;
 /** Scissy is workable at low tide. */
@@ -465,8 +463,7 @@ export const workerSlots = (s: State, id: BuildingId) =>
   count(s, id) * (B[id].slots + (id === 'sanctum' ? modifiers(s).assistants : 0));
 export const assigned = (s: State) =>
   keys(s.buildings).reduce((a, id) => a + (s.buildings[id]?.workers ?? 0), 0) +
-  keys(s.porters).reduce((a, z) => a + (s.porters[z] ?? 0), 0) +
-  (s.gate?.porters ?? 0);
+  keys(s.porters).reduce((a, z) => a + (s.porters[z] ?? 0), 0);
 export const idleHands = (s: State) => s.hands - assigned(s);
 export const housing = (s: State) =>
   HALL_HOUSING + keys(s.buildings).reduce((a, id) => a + count(s, id) * (B[id].housing ?? 0), 0);
@@ -655,8 +652,6 @@ export interface Rates {
   noticeGen: number;
   /** Goods poured into the Gate per second. */
   gate: Record<GoodId, number>;
-  /** Stone the Gate porters carry out from the Hall per second. */
-  gateStone: number;
 }
 
 /** Every per-second rate in the game, computed in one place. The UI shows exactly what tick() applies. */
@@ -705,24 +700,24 @@ export function rates(s: State): Rates {
     }
   }
   for (const m of s.magi) if (present(m) && !m.exp) net.insight += readingRate(s, m, fx);
-  // Poured goods go to the Gate, uncapped, instead of the Hall (and poured Salt isn't sold).
+  // Salt is sold for Silver unless it's kept or poured; then poured goods go to the Gate, uncapped, instead of the Hall.
+  const pour = s.gate?.pour ?? [];
+  const reserve = s.keepSalt ? cap(s, 'salt', fx) : 0;
+  if (net.salt > 0 && !pour.includes('salt') && s.res.salt >= reserve - 1e-9) {
+    net.silver += net.salt * SALT_PRICE;
+    net.salt = 0;
+  }
   const gate = zeroGoods();
-  for (const g of s.gate?.pour ?? [])
+  for (const g of pour)
     if (net[g] > 0) {
       gate[g] = net[g];
       net[g] = 0;
     }
-  const reserve = s.keepSalt ? cap(s, 'salt', fx) : 0;
-  if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
-    net.silver += net.salt * SALT_PRICE;
-    net.salt = 0;
-  }
-  const gateStone = s.gate ? s.gate.porters * ZONES.marsh.carry * fx.carry.marsh : 0;
   if (rung >= 2) wakes += GATE.bloodNotice;
   const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
   const raised = AURA.raiseNotice * (s.research.raise_aura ?? 0);
   const gen = dark(s) ? 0 : Math.max(0, (NOTICE_K * noticeSum + wakes + raised - levers) * fx.notice);
-  return { net, byBuilding, zones, noticeGen: gen, gate, gateStone };
+  return { net, byBuilding, zones, noticeGen: gen, gate };
 }
 
 // ─── Simulation ─────────────────────────────────────────────────────
@@ -959,25 +954,23 @@ function checkIns(s: State) {
 function tickGate(s: State, r: Rates) {
   const g = s.gate;
   if (!g) return;
-  const stone = Math.min(r.gateStone * DT, s.res.stone);
-  s.res.stone -= stone;
-  if (g.raised) g.store.stone += stone;
-  else {
-    g.stone += stone;
-    if (g.stone >= GATE.raise) {
-      g.raised = true;
-      card(
-        s,
-        'The Gate rises',
-        'The last stone goes in at low tide. By morning there is an arch standing in the marsh, and the sea runs through it the wrong way. Under the mud, something is ringing. Pour Insight and goods into it: seven bells hang in drowned Ys.',
-      );
-    }
-  }
+  // A poured good's income goes to the Gate, and so does whatever of it the Hall holds. Stone raises the Gate first.
   for (const k of GOODS) {
-    // Poured Stone raises the Gate first.
-    if (k === 'stone' && !g.raised) g.stone += r.gate[k] * DT;
-    else g.store[k] += r.gate[k] * DT;
+    const n = r.gate[k] * DT + (g.pour.includes(k) ? s.res[k] : 0);
+    if (g.pour.includes(k)) s.res[k] = 0;
+    if (k === 'stone' && !g.raised) g.stone += n;
+    else g.store[k] += n;
     if (k === 'insight') s.stats.insightMade += r.gate[k] * DT;
+  }
+  if (!g.raised && g.stone >= GATE.raise) {
+    g.raised = true;
+    g.store.stone += g.stone - GATE.raise;
+    g.stone = GATE.raise;
+    card(
+      s,
+      'The Gate rises',
+      'The last stone goes in at low tide. By morning there is an arch standing in the marsh, and the sea runs through it the wrong way. Under the mud, something is ringing. Pour Insight and goods into it: seven bells hang in drowned Ys.',
+    );
   }
 }
 
@@ -1158,7 +1151,6 @@ function unassignOne(s: State) {
   const pw = z ? (s.porters[z] ?? 0) : 0;
   if (id && bw >= pw && bw > 0) s.buildings[id]!.workers--;
   else if (z && pw > 0) s.porters[z] = pw - 1;
-  else if (s.gate && s.gate.porters > 0) s.gate.porters--;
 }
 
 /** The next covenant's legacy: what it inherited, plus what this run adds. */
@@ -1416,14 +1408,6 @@ function act(s: State, a: Action): string | undefined {
       s.porters[a.zone] = p + a.delta;
       return;
     }
-    case 'gatePorters': {
-      const g = s.gate;
-      if (!g || !Number.isInteger(a.delta)) return 'There is no Gate yet';
-      if (a.delta > idleHands(s)) return 'No idle hands';
-      if (g.porters + a.delta < 0) return 'No one to take off';
-      g.porters += a.delta;
-      return;
-    }
     case 'experiment': {
       const m = s.magi.find((x) => x.id === a.magus);
       if (!m?.sanctum) return 'That magus has no Sanctum';
@@ -1580,7 +1564,7 @@ function act(s: State, a: Action): string | undefined {
         if (s.gate) return 'The Gate is already founded';
         if (!canAfford(s, GATE.found)) return 'Not enough';
         pay(s, GATE.found);
-        s.gate = newGate({ stone: 0, raised: false, store: {}, pour: [], porters: 0, bells: 0 });
+        s.gate = newGate({ stone: 0, raised: false, store: {}, pour: [], bells: 0 });
         log(s, 'The covenant stakes out the Drowned Gate on the flats.');
         return;
       }

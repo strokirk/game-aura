@@ -543,12 +543,12 @@ export const NOTICE = {
   tax: { at: 50, share: 0.1 },
   strike: { at: 75, secs: 60, payShare: 0.05 },
   audit: { at: 90 },
-  endow: { base: 500, growth: 2, gen: 1 },
+  endow: { base: 500, growth: 1.5, gen: 1 },
   /** A gift of eels to the monks of Mont-Saint-Michel: Bribe's twin in kind, Notice down at once. */
   gift: { base: 50, growth: 1.5, notice: 15 },
   /** Alms to the poor of Dol: Endow's Bread twin. */
-  alms: { base: 200, growth: 2, gen: 1 },
-  bribe: { base: 100, growth: 2, notice: 20 },
+  alms: { base: 100, growth: 1.5, gen: 1 },
+  bribe: { base: 100, growth: 1.5, notice: 20 },
 };
 
 /** The aura (`aura.md`). Effective aura = Magic − Divine. */
@@ -639,7 +639,6 @@ export interface GateStart {
   store: Cost;
   /** Goods whose income pours into the Gate instead of the Hall. */
   pour: GoodId[];
-  porters: number;
   bells: number;
 }
 
@@ -655,56 +654,56 @@ export interface BellDef {
 /** The Drowned Gate and the Seven Bells of Ys (`gate.md`). */
 export const GATE = {
   found: { silver: 200, stone: 100 } as Cost,
-  raise: 1500,
+  raise: 600,
   bells: [
     {
       name: 'The Bell of Scissy',
-      price: { insight: 10_000, stone: 500 },
+      price: { insight: 5_000, stone: 300 },
       opens: 'Scissy, the drowned forest: 6 plots for Bog-oak Camps, worked at low tide. Great Devices of bog-oak.',
       wakes: 'The drowned dead: Notice +1/min while Scissy is worked.',
     },
     {
       name: 'The Bell of Blood',
-      price: { insight: 35_000, salt: 2_000 },
+      price: { insight: 15_000, salt: 1_000 },
       opens: 'The bay runs red with vis: Salt-works make Vis too, and Eel Weirs ×2.',
       wakes: 'The fish die and the fishers rage: Notice +2/min, for good.',
     },
     {
       name: 'The Bell of Wormwood',
-      price: { insight: 120_000, vis: 400 },
+      price: { insight: 30_000, vis: 150 },
       opens: 'Wormwood, a fallen star: a Vis site three times the Tide Pool.',
       wakes: 'The wells turn bitter and the hands drink ale: fuelled work burns ×1.5 Bread.',
     },
     {
       name: 'The Bell of Darkness',
-      price: { insight: 400_000, vellum: 3_000 },
+      price: { insight: 70_000, vellum: 500 },
       opens: 'The hidden hour: 60 s of every 5 minutes, Notice stops and experiments run twice as fast.',
       wakes: 'Crops fail in the dark: Farms ×0.5.',
     },
     {
       name: 'The Bell of the Pit',
-      price: { insight: 1_500_000, bog_oak: 1_000 },
+      price: { insight: 150_000, bog_oak: 300 },
       opens: 'The Drowned Knight rises and serves: a fourth magus, Lab Total 15, who needs no Sanctum.',
       wakes: 'Things climb out after him: every year, ward them with Vis or lose buildings.',
     },
     {
       name: 'The Bell of the Four Winds',
-      price: { insight: 5_000_000, stone: 20_000 },
+      price: { insight: 300_000, stone: 2_000 },
       opens: 'The Couesnon turns: point the river at a zone to double its output. It can be moved once a year.',
       wakes: 'Storms: every year a dike breaches unless it is mended with Stone and Bread.',
     },
     {
       name: 'No More Sea',
       price: {
-        insight: 20_000_000,
-        silver: 10_000,
-        salt: 10_000,
-        stone: 10_000,
-        bread: 10_000,
-        eels: 10_000,
-        vellum: 10_000,
-        vis: 10_000,
-        bog_oak: 10_000,
+        insight: 450_000,
+        silver: 300,
+        salt: 300,
+        stone: 300,
+        bread: 300,
+        eels: 300,
+        vellum: 300,
+        vis: 200,
+        bog_oak: 300,
       },
       opens: 'The tide goes out and does not come back. The run is won.',
       wakes: 'The whole bay watches: ring it only with Notice under 50.',
@@ -1041,7 +1040,7 @@ export const SCENARIOS = {
       research: { salt_rakes: 1, plough: 1, mule_trains: 1, accounts: 1, strongbox: 1, reed_pen: 1, notebooks: 1 },
       labTexts: 2,
     },
-    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
+    allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
     unlocked: [
       'research',
       'notice',
@@ -1123,9 +1122,9 @@ export const SCENARIOS = {
       },
       labTexts: 6,
       devices: { quarry: 8 },
-      gate: { stone: 1500, raised: true, store: { insight: 4000 }, pour: ['insight'], porters: 0, bells: 0 },
+      gate: { stone: 1500, raised: true, store: { insight: 4000 }, pour: ['insight'], bells: 0 },
     },
-    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
+    allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
     unlocked: [
       'research',
       'notice',

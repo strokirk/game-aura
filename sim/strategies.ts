@@ -3,6 +3,7 @@ import {
   apply,
   applyInPlace,
   bellStatus,
+  bribeCost,
   buildable,
   buildCost,
   canAfford,
@@ -11,17 +12,18 @@ import {
   cap,
   clone,
   count,
+  dark,
+  decreeMult,
   endowCost,
   expandCost,
   experimentPlan,
-  faerieNeed,
   giftCost,
   has,
   housing,
   idleHands,
   isMaxed,
-  offerCost,
   present,
+  type Rates,
   rates,
   recipeOpen,
   researchCost,
@@ -30,16 +32,20 @@ import {
   visibleResearch,
   workerSlots,
   zoneFull,
+  zoneNotice,
 } from '../src/core/index.ts';
 import { nextRandom, seedRng } from '../src/core/rng.ts';
 import {
   APPRENTICE,
   AURA,
   type BuildingId,
+  type Cost,
   DEFS,
   EEL_RENT,
   EXPERIMENT,
+  GATE,
   GOODS,
+  type GoodId,
   NOTICE,
   RECIPES,
   RESEARCH,
@@ -50,7 +56,6 @@ import {
 } from '../src/data/index.ts';
 
 const AGING_AT = 45;
-void APPRENTICE;
 void AURA;
 
 /** A scripted player: called once per simulated second, returns the actions to try. */
@@ -72,7 +77,6 @@ const CANDIDATES: { [K in Action['type']]: (s: State) => Extract<Action, { type:
   workers: (s) =>
     keys(s.buildings).flatMap((building) => deltas.map((delta) => ({ type: 'workers', building, delta }))),
   porters: () => keys(ZONES).flatMap((zone) => deltas.map((delta) => ({ type: 'porters', zone, delta }))),
-  gatePorters: () => deltas.map((delta) => ({ type: 'gatePorters', delta })),
   experiment: (s) =>
     s.magi.flatMap((m) =>
       keys<RecipeId>(RECIPES).flatMap((recipe) =>
@@ -133,6 +137,10 @@ function openJobs(s: State): Action[] {
   return jobs;
 }
 
+/** A zone whose goods are being lost for want of porters. */
+const unported = (_s: State, r: Rates) =>
+  keys(ZONES).find((z) => ZONES[z].carry > 0 && r.zones[z].made > r.zones[z].capacity + 1e-6);
+
 /**
  * Every idle hand to work, applied to x (a copy the caller owns). Porters first wherever goods are being lost; then the job with the lowest share of
  * its slots filled, so hands split evenly across everything the covenant has built.
@@ -140,8 +148,7 @@ function openJobs(s: State): Action[] {
 function placeHands(x0: State, pick: (xs: Action[], x: State) => Action | undefined = evenly): Action[] {
   return plan(x0, (x) => {
     if (idleHands(x) <= 0) return undefined;
-    const r = rates(x);
-    const short = keys(ZONES).find((z) => ZONES[z].carry > 0 && r.zones[z].made > r.zones[z].capacity + 1e-6);
+    const short = unported(x, rates(x));
     if (short) return { type: 'porters', zone: short, delta: 1 };
     return pick(openJobs(x), x);
   });
@@ -152,6 +159,29 @@ const evenly = (xs: Action[], s: State) =>
     .filter((a): a is Extract<Action, { type: 'workers' }> => a.type === 'workers')
     .filter((a) => a.building !== 'hostel' || s.res.bread > 0)
     .sort((a, b) => fill(s, a.building) - fill(s, b.building))[0];
+
+/** Which building makes more of a good. Vis comes from the named sites, Insight from the magi. */
+const PRODUCER: Partial<Record<GoodId, BuildingId>> = {
+  silver: 'salt_pan',
+  salt: 'salt_pan',
+  stone: 'quarry',
+  bread: 'farm',
+  eels: 'eel_weir',
+  vellum: 'parchmenter',
+  bog_oak: 'bog_camp',
+};
+/** The goods the Gate still lacks for its next goal, slowest to fill first; those that fill within 2 minutes are left out. */
+function goalShort(s: State, r: Rates): GoodId[] {
+  const g = s.gate;
+  if (!g) return [];
+  const next = bellStatus(s).next;
+  const lack: Cost = g.raised ? {} : { stone: GATE.raise - g.stone };
+  if (g.raised && next) for (const k of keys(next.price)) lack[k] = (next.price[k] ?? 0) - g.store[k];
+  const secs = (k: GoodId) => (lack[k] ?? 0) / Math.max(1e-6, r.gate[k] + Math.max(0, r.net[k]));
+  return keys(lack)
+    .filter((k) => secs(k) > 120)
+    .sort((a, b) => secs(b) - secs(a));
+}
 
 /** The random player's "reorganize hands": everyone off their jobs, then every hand placed again at random. */
 function reorganize(s: State, rnd: () => number): Action[] {
@@ -219,15 +249,21 @@ export const STRATEGIES: Record<string, Strategy> = {
    * work in turn, and Notice kept under the strike line. Then the Gate and the bells.
    */
   careful: (s) => {
+    // A halfway check-in: hold steady. Pushing on trades botches, which cost Notice, for yield.
+    if (s.events[0]?.title.endsWith(', halfway')) return [{ type: 'choose', option: 1 }];
     const out: Action[] = [];
     const r = rates(s);
-    const settles = r.noticeGen * 10;
+    // Where Notice settles: generation over decay (0.1 a minute). In the hidden hour generation reads 0, so look past it.
+    const settles = (dark(s) ? rates({ ...s, t: s.t + GATE.darkness.dark }) : r).noticeGen * 10;
+    const bell = bellStatus(s);
+    // What the Gate still lacks for its next goal, slowest to fill first.
+    const lacking = goalShort(s, r);
     const has2 = (id: BuildingId) => buildable(s, id) && !isMaxed(s, id);
     const affordable = (id: BuildingId) =>
       has2(id) && (DEFS[id].site || !zoneFull(s, DEFS[id].zone)) && canAfford(s, buildCost(s, id));
     // 1. More hands: housing, and eels for the rent.
     const want: BuildingId[] = [];
-    if (s.hands >= housing(s) - 1) want.push('cottage');
+    if (s.hands >= housing(s) - 1 && idleHands(s) <= 0) want.push('cottage');
     if (has(s, 'eelRent') && r.net.eels < 0.3 && s.res.eels < EEL_RENT * 3) want.push('eel_weir');
     // 2. Jobs for idle hands, and what the covenant is short of.
     if (s.magi.some((m) => !m.sanctum && m.id !== 'knight')) want.push('sanctum');
@@ -241,6 +277,7 @@ export const STRATEGIES: Record<string, Strategy> = {
       ...keys(DEFS)
         .filter((id) => has2(id))
         .map((id) => buildCost(s, id)),
+      endowCost(s),
     ];
     const over = (g: 'insight' | 'vis' | 'silver' | 'stone' | 'vellum') => {
       const c = cap(s, g);
@@ -248,12 +285,15 @@ export const STRATEGIES: Record<string, Strategy> = {
     };
     if (over('insight') || over('vis')) want.push('library');
     if (over('silver') || over('stone') || over('vellum')) want.push('storehouse');
-    want.push('knights_barrow', 'regio_spring');
+    want.push('knights_barrow', 'regio_spring', 'wormwood');
+    for (const g of lacking) if (PRODUCER[g]) want.push(PRODUCER[g]);
     if (idleHands(s) > 0 && openJobs(s).length === 0)
       want.push('salt_pan', 'quarry', 'farm', 'eel_weir', 'parchmenter', 'salt_meadow', 'hostel');
     else if (settles < 55) want.push('salt_pan', 'quarry', 'parchmenter');
+    // Build while Notice settles below 60, and always what draws no Notice, the Vis sites and the Sanctums.
+    const quiet = (id: BuildingId) => zoneNotice(s, DEFS[id].zone) * decreeMult(s, id) === 0;
     const pick = want.find(
-      (id) => affordable(id) && (settles < 60 || DEFS[id].site || ['sanctum', 'library', 'cottage'].includes(id)),
+      (id) => affordable(id) && (settles < 60 || quiet(id) || DEFS[id].site || ['sanctum', 'library'].includes(id)),
     );
     if (pick) out.push({ type: 'build', building: pick });
     // A full zone that's wanted: buy land.
@@ -273,50 +313,62 @@ export const STRATEGIES: Record<string, Strategy> = {
       (s.research.raise_aura ?? 0) < 4
     )
       out.push({ type: 'research', id: 'raise_aura' });
-    const insightOnHand = s.res.insight + (s.gate?.store.insight ?? 0);
+    // A Form tree when it costs under a tenth of the next bell's Insight, so the trees keep pace with the bells.
+    const bellInsight = bell.next?.price.insight ?? 0;
     for (const id of visibleResearch(s))
       if (
         RESEARCH_DEFS[id].needs === 'trees' &&
-        (researchCost(s, id).insight ?? 0) < insightOnHand / 4 &&
+        (researchCost(s, id).insight ?? 0) < bellInsight / 10 &&
         canAffordResearch(s, researchCost(s, id))
       )
         out.push({ type: 'research', id });
     if (has(s, 'endow') && settles > 55 && canAfford(s, endowCost(s))) out.push({ type: 'endow' });
-    if (has(s, 'endow') && s.notice > NOTICE.strike.at - 10 && canAfford(s, giftCost(s))) out.push({ type: 'gift' });
-    if (has(s, 'endow') && s.notice > NOTICE.strike.at - 5) out.push({ type: 'bribe' });
-    if (faerieNeed(s) && has(s, 'faerie') && canAfford(s, offerCost(s))) out.push({ type: 'offer' });
+    // Eels, then bribes, against the strike; and below 50 for the last bell once it's paid for.
+    const ceiling = bell.paid && !bell.quiet ? GATE.lastBellNotice - 5 : NOTICE.strike.at - 10;
+    if (has(s, 'endow') && s.notice > ceiling && canAfford(s, giftCost(s))) out.push({ type: 'gift' });
+    if (has(s, 'endow') && s.notice > ceiling + 5 && canAfford(s, bribeCost(s))) out.push({ type: 'bribe' });
     if (has(s, 'gate') && !s.gate) out.push({ type: 'gate', op: 'found' });
-    if (s.gate && !s.gate.raised && s.gate.porters < 3 && idleHands(s) > 0) out.push({ type: 'gatePorters', delta: 1 });
-    const next = bellStatus(s).next;
-    if (s.gate?.raised && next)
-      for (const k of GOODS) if (s.gate.pour.includes(k) !== k in next.price) out.push({ type: 'pour', good: k });
-    if (bellStatus(s).ready) out.push({ type: 'gate', op: 'bell' });
+    // Pour Stone while raising the Gate, then whatever the next bell still lacks.
+    if (s.gate)
+      for (const k of GOODS) {
+        const lacks = s.gate.raised ? s.gate.store[k] < (bell.next?.price[k] ?? 0) : k === 'stone';
+        if (s.gate.pour.includes(k) !== lacks) out.push({ type: 'pour', good: k });
+      }
+    if (bell.ready) out.push({ type: 'gate', op: 'bell' });
     // Heirs: every magus past 35 takes an apprentice.
     if (has(s, 'apprentices'))
       for (const m of s.magi)
-        if (m.id !== 'knight' && m.age >= 35 && !s.apprentices.some((a) => a.chair === m.id))
+        if (
+          m.id !== 'knight' &&
+          m.age >= 35 &&
+          !s.apprentices.some((a) => a.chair === m.id) &&
+          canAfford(s, APPRENTICE.cost)
+        )
           out.push({ type: 'apprentice', magus: m.id });
-    // The lab, in turn: the Longevity Ritual for the old, then Study the Vis, Lab Texts and Devices round-robin.
+    // The lab: the Longevity Ritual for the old, then Study the Vis while there is Vis, else a Lab Text, else a Device
+    // for whatever makes the Gate's slowest good.
     const reserve = Math.max(
       0,
       ...visibleResearch(s)
         .filter((id) => !(s.research[id] ?? 0) && id !== 'raise_aura' && !RESEARCH_DEFS[id].needs)
         .map((id) => researchCost(s, id).vis ?? 0),
     );
-    const target = (['quarry', 'salt_pan', 'farm'] as BuildingId[]).find((b) => count(s, b) > 0);
-    s.magi.forEach((m, i) => {
-      if (!present(m) || m.exp) return;
+    const target = [...lacking.map((g) => PRODUCER[g]), 'quarry' as const].find(
+      (b): b is BuildingId => !!b && count(s, b) > 0,
+    );
+    for (const m of s.magi) {
+      if (!present(m) || m.exp) continue;
       const turn: Action[] = [];
       if (!m.longevity && m.age >= AGING_AT && has(s, 'recipe:longevity'))
         turn.push({ type: 'experiment', magus: m.id, recipe: 'longevity', extra: 0 });
-      const extra = Math.max(0, Math.min(EXPERIMENT.maxExtraVis, Math.floor(s.res.vis) - 5 - reserve));
-      const lab: Action[] = [
+      // Extra Vis speeds and enriches the work but botches more, and botches cost Notice: none above 60.
+      const room = s.notice < 60 ? EXPERIMENT.maxExtraVis : 0;
+      const extra = Math.max(0, Math.min(room, Math.floor(s.res.vis) - 5 - reserve));
+      turn.push(
         { type: 'experiment', magus: m.id, recipe: 'study_vis', extra },
         { type: 'experiment', magus: m.id, recipe: 'lab_text', extra: 0 },
-        ...(target ? [{ type: 'experiment' as const, magus: m.id, recipe: 'device' as const, extra: 0, target }] : []),
-      ];
-      const k = s.stats.experiments + i;
-      for (let j = 0; j < lab.length; j++) turn.push(lab[(k + j) % lab.length]!);
+      );
+      if (target) turn.push({ type: 'experiment', magus: m.id, recipe: 'device', extra: 0, target });
       const ok = turn.find(
         (a) =>
           a.type === 'experiment' &&
@@ -327,8 +379,20 @@ export const STRATEGIES: Record<string, Strategy> = {
       );
       if (ok) out.push(ok);
       if ((studyCost(m).insight ?? 0) < s.res.insight * 0.1) out.push({ type: 'study', magus: m.id });
-    });
+    }
+    // With nobody idle, move a hand to where goods are lost for want of porters, or to the Gate's slowest good: off
+    // the busiest job that makes none of what the Gate lacks.
+    const to = lacking.map((g) => PRODUCER[g]).find((b) => b && (s.buildings[b]?.workers ?? 0) < workerSlots(s, b));
+    if ((to || unported(s, r)) && idleHands(s) <= 0) {
+      const from = keys(s.buildings)
+        .filter((b) => b !== 'sanctum' && !DEFS[b].site && !lacking.some((g) => PRODUCER[g] === b))
+        .sort((a, b) => (s.buildings[b]?.workers ?? 0) - (s.buildings[a]?.workers ?? 0))[0];
+      if (from && (s.buildings[from]?.workers ?? 0) > 1) out.push({ type: 'workers', building: from, delta: -1 });
+    }
     // Last: every idle hand to work, split evenly.
-    return idleHands(s) > 0 ? [...out, ...placeHands(after(s, out))] : out;
+    if (idleHands(s) <= 0 && !out.some((a) => a.type === 'workers')) return out;
+    const first = (xs: Action[], y: State) =>
+      xs.find((a) => a.type === 'workers' && a.building === to) ?? evenly(xs, y);
+    return [...out, ...placeHands(after(s, out), first)];
   },
 };

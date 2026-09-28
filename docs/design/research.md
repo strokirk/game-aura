@@ -33,7 +33,7 @@ After the *Aegis*, five repeatable items open: one per Form, the light version o
 | Mentem | 2,000 Insight + 30 Vellum | Reading ×2; Notice ×0.85 |
 
 - Research draws Insight from the Hall first and then from the Gate's store, which has no cap, so the trees can outgrow the Libraries.
-- **Why:** the bells (`gate.md`) cost up to 20,000,000 Insight. The trees are how numbers go up that far: compounding multipliers in the Antimatter Dimensions way. Buying a tree spends Insight the next bell also wants. `[PLAYTEST: tune with the sim.]`
+- **Why:** the bells (`gate.md`) cost up to 450,000 Insight. The trees are how numbers go up that far: compounding multipliers in the Antimatter Dimensions way. Buying a tree spends Insight the next bell also wants. `[PLAYTEST: tune with the sim.]`
 
 - Research that raises a cap multiplies it; it never adds a flat amount, so storage keeps pace with the economy.
 - **Dig Out the Old Library** heads the list when fallen covenants buried Lab Texts: 100 Insight per text, and every one comes back (`ui.md`).
