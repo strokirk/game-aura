@@ -12,12 +12,12 @@ import {
   type Effect,
   type EventDef,
   EXPERIMENT,
+  FUEL_MULT,
   GATE,
   GOOD_INFO,
   GOODS,
   type GoodId,
   HALL_HOUSING,
-  FUEL_MULT,
   MAGI,
   type MagusId,
   type Modifier,
@@ -905,7 +905,10 @@ function act(s: State, a: Action): string | undefined {
       pay(s, c);
       s.gifts++;
       s.notice = Math.max(0, s.notice - NOTICE.gift.notice);
-      log(s, 'A cart of eels goes across the sands to the monks of Mont-Saint-Michel. The abbot writes a kind letter to the bishop.');
+      log(
+        s,
+        'A cart of eels goes across the sands to the monks of Mont-Saint-Michel. The abbot writes a kind letter to the bishop.',
+      );
       return;
     }
     case 'keepSalt': {

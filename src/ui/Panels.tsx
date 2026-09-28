@@ -2,10 +2,10 @@
 import { For, Show } from 'solid-js';
 import {
   almsCost,
-  giftCost,
   bribeCost,
   canAfford,
   endowCost,
+  giftCost,
   has,
   idleHands,
   type Rates,
