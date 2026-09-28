@@ -66,9 +66,11 @@ describe('the full run', () => {
     expect(rates(s).zones.marsh.capacity).toBeGreaterThan(0);
   });
 
-  it('the careful strategy reaches the Gate, and the run replays from its log', () => {
+  it('the careful strategy wins, and the run replays from its log', () => {
+    // Careful tries many actions the core refuses; the sim applies them in place, so this also checks that a
+    // refused action changes nothing.
     const live = simulate('grow', 1, STRATEGIES.careful!);
-    expect(live.gate?.raised).toBe(true);
+    expect(live.outcome?.kind).toBe('win');
     const { acc: _a, ...a } = live;
     const { acc: _b, ...b } = replay(toSave(live));
     expect(b).toEqual(a);
@@ -154,14 +156,14 @@ describe('goods with more than one use', () => {
     expect(giftCost(s)).toEqual({ eels: 75 });
   });
 
-  it('alms trade Bread for less Notice, doubling in price', () => {
+  it('alms trade Bread for less Notice, at x1.5 the price each time', () => {
     let s = stage();
-    s.res.bread = 200;
+    s.res.bread = 100;
     const gen = rates(s).noticeGen;
     s = ok(apply(s, { type: 'alms' }));
     expect(s.res.bread).toBe(0);
     expect(rates(s).noticeGen).toBeLessThan(gen);
-    expect(almsCost(s)).toEqual({ bread: 400 });
+    expect(almsCost(s)).toEqual({ bread: 150 });
   });
 
   it('the hostel turns Bread into Silver, and stands idle without Bread', () => {

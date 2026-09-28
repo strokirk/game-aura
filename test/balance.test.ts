@@ -20,3 +20,20 @@ describe('balance: trial', () => {
     for (const seed of SEEDS.slice(0, 10)) expect(simulate('trial', seed, STRATEGIES.idle!).outcome?.kind).toBe('loss');
   });
 });
+
+describe('balance: the full run', () => {
+  it('a careful player wins in at least 90% of 20 seeds, median 60–75 min, none after 100 min; each run under 1 s', () => {
+    const start = performance.now();
+    const runs = SEEDS.slice(0, 20).map((seed) => simulate('grow', seed, STRATEGIES.careful!).outcome);
+    const perRun = (performance.now() - start) / 20;
+    const times = runs
+      .filter((o) => o?.kind === 'win')
+      .map((o) => o!.t / 60)
+      .sort((a, b) => a - b);
+    expect(times.length).toBeGreaterThanOrEqual(18);
+    expect(times[times.length >> 1]).toBeGreaterThanOrEqual(60);
+    expect(times[times.length >> 1]).toBeLessThanOrEqual(75);
+    expect(times.at(-1)).toBeLessThanOrEqual(100);
+    expect(perRun).toBeLessThan(1000);
+  }, 60_000);
+});

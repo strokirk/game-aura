@@ -47,7 +47,7 @@ export interface Options {
   dev: boolean;
 }
 const OPTIONS_KEY = 'aura-options';
-const SAVE_KEY = 'aura-v3-save';
+const SAVE_KEY = 'aura-v4-save';
 const LEGACY_KEY = 'aura-legacy';
 function readJson<T>(key: string): T | null {
   try {

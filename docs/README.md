@@ -44,3 +44,4 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 | [backlog.md](backlog.md) | Planned and seriously considered features. Not part of the game yet |
 | [icebox.md](icebox.md) | Parked ideas and set-aside ideas, with reasons. Not part of the game |
 | [archive/](archive/) | Earlier specs, kept as history. Not the current design |
+| [reports/](reports/) | Subagents' write-ups of reviews and changes: what they ran, found and changed. A record, not the current design |
