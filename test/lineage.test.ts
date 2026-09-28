@@ -18,7 +18,7 @@ import {
   visibleResearch,
   zoneSlots,
 } from '../src/core/index.ts';
-import { APPRENTICE, AURA, EEL_RENT, SCENARIOS, STORE_MULT, YEAR } from '../src/data/index.ts';
+import { APPRENTICE, AURA, EEL_RENT, EXPAND, SCENARIOS, STORE_MULT, YEAR } from '../src/data/index.ts';
 
 const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
@@ -57,7 +57,7 @@ describe('the Tide Remembers', () => {
     expect(cap(s, 'insight')).toBe(1000);
     const rich = { ...s0, res: { ...s0.res, silver: 500, stone: 200 } } as State;
     const x = ok(apply(rich, { type: 'expand', zone: 'hearth' }));
-    expect(zoneSlots(x, 'hearth')).toBe(zoneSlots(rich, 'hearth') + 2);
+    expect(zoneSlots(x, 'hearth')).toBe(zoneSlots(rich, 'hearth') + EXPAND.slots);
   });
 
   it('raising the aura boosts the labs and costs Notice; Endowing and the friars bring the Dominion', () => {

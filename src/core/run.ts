@@ -469,8 +469,10 @@ export const idleHands = (s: State) => s.hands - assigned(s);
 export const housing = (s: State) =>
   HALL_HOUSING + keys(s.buildings).reduce((a, id) => a + count(s, id) * (B[id].housing ?? 0), 0);
 export const zoneUsed = (s: State, z: ZoneId) =>
-  keys(s.buildings).reduce((a, id) => a + (B[id].zone === z && !isSite(id) ? count(s, id) : 0), 0);
+  keys(s.buildings).reduce((a, id) => a + (B[id].zone === z && usesPlot(id) ? count(s, id) : 0), 0);
 const isSite = (id: BuildingId) => !!B[id].site;
+/** Vis sites and storage take no plot. */
+export const usesPlot = (id: BuildingId) => !B[id].site && !B[id].noPlot;
 const maxOf = (s: State, id: BuildingId) =>
   id === 'sanctum' ? s.magi.filter((m) => m.id !== 'knight').length : (B[id].max ?? Number.POSITIVE_INFINITY);
 export const isMaxed = (s: State, id: BuildingId) => count(s, id) >= maxOf(s, id);
@@ -541,7 +543,8 @@ export function researchCost(s: State, id: ResearchId): Cost {
   const def = RESEARCH_DEFS[id];
   const n = def.repeatable ? (s.research[id] ?? 0) : 0;
   const c: Cost = {};
-  for (const g of keys(def.cost)) c[g] = Math.ceil((def.cost[g] ?? 0) * (def.growth ?? 2) ** n);
+  for (const g of keys(def.cost))
+    c[g] = Math.ceil((def.cost[g] ?? 0) * ((g === 'insight' ? def.growth : (def.goodsGrowth ?? def.growth)) ?? 2) ** n);
   for (const g of keys(def.flat ?? {})) c[g] = (c[g] ?? 0) + (def.flat?.[g] ?? 0);
   if (id === 'dig_library') c.insight = (c.insight ?? 0) * s.legacy.labTexts;
   return c;
@@ -669,7 +672,7 @@ export function rates(s: State): Rates {
   let wakes = 0;
   for (const id of keys(s.buildings)) {
     const def = B[id];
-    noticeSum += count(s, id) * zoneNotice(s, def.zone, fx) * decreeMult(s, id);
+    noticeSum += count(s, id) * (def.notice ?? zoneNotice(s, def.zone, fx)) * decreeMult(s, id);
     // The Bell of Blood: brine carries vis.
     const pw: Cost = id === 'salt_pan' && rung >= 2 ? { ...def.perWorker, vis: GATE.bloodVis } : (def.perWorker ?? {});
     const uses = def.uses;
@@ -1366,7 +1369,7 @@ function act(s: State, a: Action): string | undefined {
       if (isBlocked(s, `build_${a.building}`)) return `No one will build a ${def.name} yet`;
       if (isMaxed(s, a.building))
         return a.building === 'sanctum' ? 'Every magus has a Sanctum' : `There is only one ${def.name}`;
-      if (!isSite(a.building) && zoneFull(s, def.zone)) return `The ${ZONES[def.zone].name} is full`;
+      if (usesPlot(a.building) && zoneFull(s, def.zone)) return `The ${ZONES[def.zone].name} is full`;
       const c = buildCost(s, a.building);
       if (!canAfford(s, c)) return 'Not enough';
       pay(s, c);

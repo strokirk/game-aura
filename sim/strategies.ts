@@ -14,6 +14,7 @@ import {
   count,
   dark,
   decreeMult,
+  dikeCost,
   endowCost,
   expandCost,
   experimentPlan,
@@ -29,6 +30,7 @@ import {
   researchCost,
   type State,
   studyCost,
+  usesPlot,
   visibleResearch,
   workerSlots,
   zoneFull,
@@ -53,6 +55,7 @@ import {
   type RecipeId,
   type ResearchId,
   ZONES,
+  type ZoneId,
 } from '../src/data/index.ts';
 
 const AGING_AT = 45;
@@ -260,7 +263,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     const lacking = goalShort(s, r);
     const has2 = (id: BuildingId) => buildable(s, id) && !isMaxed(s, id);
     const affordable = (id: BuildingId) =>
-      has2(id) && (DEFS[id].site || !zoneFull(s, DEFS[id].zone)) && canAfford(s, buildCost(s, id));
+      has2(id) && (!usesPlot(id) || !zoneFull(s, DEFS[id].zone)) && canAfford(s, buildCost(s, id));
     // 1. More hands: housing, and eels for the rent.
     const want: BuildingId[] = [];
     if (s.hands >= housing(s) - 1 && idleHands(s) <= 0) want.push('cottage');
@@ -278,6 +281,10 @@ export const STRATEGIES: Record<string, Strategy> = {
         .filter((id) => has2(id))
         .map((id) => buildCost(s, id)),
       endowCost(s),
+      ...keys(ZONES)
+        .filter((z) => canExpand(s, z))
+        .map((z) => expandCost(s, z)),
+      ...(has(s, 'dike') ? [dikeCost(s)] : []),
     ];
     const over = (g: 'insight' | 'vis' | 'silver' | 'stone' | 'vellum') => {
       const c = cap(s, g);
@@ -292,15 +299,23 @@ export const STRATEGIES: Record<string, Strategy> = {
     else if (settles < 55) want.push('salt_pan', 'quarry', 'parchmenter');
     // Build while Notice settles below 60, and always what draws no Notice, the Vis sites and the Sanctums.
     const quiet = (id: BuildingId) => zoneNotice(s, DEFS[id].zone) * decreeMult(s, id) === 0;
-    const pick = want.find(
-      (id) => affordable(id) && (settles < 60 || quiet(id) || DEFS[id].site || ['sanctum', 'library'].includes(id)),
-    );
+    const pick = want.find((id) => affordable(id) && (settles < 60 || quiet(id) || !usesPlot(id) || id === 'sanctum'));
     if (pick) out.push({ type: 'build', building: pick });
     // A full zone that's wanted: buy land.
-    const blocked = want.find((id) => has2(id) && !DEFS[id].site && zoneFull(s, DEFS[id].zone));
+    const blocked = want.find((id) => has2(id) && usesPlot(id) && zoneFull(s, DEFS[id].zone));
     if (blocked) {
       const z = DEFS[blocked].zone;
       if (canExpand(s, z) && canAfford(s, expandCost(s, z))) out.push({ type: 'expand', zone: z });
+    }
+    // Land from the sea once the old land is full, and Silver at its cap spent on the cheapest land.
+    if (has(s, 'dike') && zoneFull(s, 'bocage') && zoneFull(s, 'marsh') && canAfford(s, dikeCost(s)))
+      out.push({ type: 'dike' });
+    if (has(s, 'dike') && !zoneFull(s, 'polder') && settles < 60) want.push('salt_meadow');
+    if (s.res.silver >= cap(s, 'silver') * 0.95) {
+      const z = (['bocage', 'marsh', 'hearth'] as ZoneId[])
+        .filter((x) => canExpand(s, x) && canAfford(s, expandCost(s, x)))
+        .sort((a, b) => (expandCost(s, a).silver ?? 0) - (expandCost(s, b).silver ?? 0))[0];
+      if (z) out.push({ type: 'expand', zone: z });
     }
     // Research in order; the aura while Notice has room; the Form trees; Notice levers; the Gate.
     for (const id of visibleResearch(s))
