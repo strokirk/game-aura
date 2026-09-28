@@ -15,6 +15,9 @@ import {
   magusName,
   type Rates,
   rates,
+  labTotal,
+  maxExtraVis,
+  present,
   readingRate,
   recipeOpen,
   type State,
@@ -39,7 +42,10 @@ import {
   GOODS,
   type GoodId,
   PRESERVE,
+  TWILIGHT_TRAITS,
+  WARP,
   RECIPES,
+  type RecipeDef,
   type RecipeId,
   START_YEAR,
   YEAR,
@@ -77,6 +83,7 @@ export function Game() {
             <Covenant s={s()} r={r()} />
           </Match>
           <Match when={tab() === 'magi'}>
+            <StudyAll s={s()} />
             <For each={s().magi}>{(m) => <Magus s={s()} m={m} />}</For>
           </Match>
           <Match when={tab() === 'research'}>
@@ -392,9 +399,10 @@ function Magus(p: { s: State; m: MagusState }) {
       : def().result === 'labText'
         ? `a Lab Text (you have ${p.s.labTexts})`
         : target()
-          ? `+25% ${DEFS[target() as BuildingId].name}`
+          ? `+${25 * ((def() as RecipeDef).power ?? 1)}% ${DEFS[target() as BuildingId].name}`
           : 'choose a building';
   const sc = () => studyCost(p.m);
+  const fullVis = () => maxExtraVis(p.s, p.m.id, recipe());
   return (
     <Card>
       <div class="flex items-center justify-between">
@@ -403,9 +411,31 @@ function Magus(p: { s: State; m: MagusState }) {
           <Label>{magusName(p.m.id)}</Label>
         </div>
         <span>
-          <Rich text="Lab Total" /> <b>{p.m.lt}</b>
+          <Rich text="Lab Total" /> <b>{labTotal(p.m)}</b>
+          <Show when={p.m.warp}>
+            <Dim class="text-sm"> ({p.m.lt} + {p.m.warp} Warping)</Dim>
+          </Show>
         </span>
       </div>
+      <Show when={p.m.twilight}>
+        {(t) => (
+          <p class="text-warn">
+            In Twilight: back in {mmss(Math.max(0, t() - p.s.t))}. Nothing to do but wait.
+          </p>
+        )}
+      </Show>
+      <For each={p.m.traits.filter((x) => x.until > p.s.t)}>
+        {(x) => (
+          <Dim class="block text-sm">
+            <b class="text-gold">{TWILIGHT_TRAITS[x.i]?.name}</b> · {TWILIGHT_TRAITS[x.i]?.text} {mmss(x.until - p.s.t)} left
+          </Dim>
+        )}
+      </For>
+      <Show when={p.m.warp}>
+        <Dim class="block text-sm">
+          Each botch Warps a magus: +1 Lab Total, and a {Math.round(WARP.twilight * 100)}% per point chance of Twilight.
+        </Dim>
+      </Show>
       <Dim class="mb-1 block text-sm">
         Reading: +{readingRate(p.s, p.m).toFixed(2)} Insight/s · Study the Vis: {RECIPES.study_vis.insightPerLT} Insight
         per point
@@ -434,7 +464,7 @@ function Magus(p: { s: State; m: MagusState }) {
           </div>
         )}
       </Show>
-      <Show when={p.m.sanctum && !p.m.exp}>
+      <Show when={present(p.m) && !p.m.exp}>
         <div class="my-2 border-t border-line pt-2">
           <Show when={open().length > 1}>
             <div class="mb-1.5 flex flex-wrap gap-1.5">
@@ -479,16 +509,27 @@ function Magus(p: { s: State; m: MagusState }) {
             <span class="text-gold">{Math.round(plan().discovery * 100)}%</span>{' '}
             <Rich text="discovery: double the result" />
           </div>
-          <Button
-            primary
-            class="mt-1.5 w-full"
-            disabled={!canAfford(p.s, plan().cost) || (def().result === 'device' && !target())}
-            onClick={() =>
-              act({ type: 'experiment', magus: p.m.id, recipe: recipe(), extra: extra(), target: target() })
-            }
-          >
-            Begin · {cost(plan().cost)} <span class="text-sm">{eta(timeToAfford(p.s, plan().cost))}</span>
-          </Button>
+          <div class="mt-1.5 flex gap-2">
+            <Button
+              primary
+              class="flex-1"
+              disabled={!canAfford(p.s, plan().cost) || (def().result === 'device' && !target())}
+              onClick={() =>
+                act({ type: 'experiment', magus: p.m.id, recipe: recipe(), extra: extra(), target: target() })
+              }
+            >
+              Begin · {cost(plan().cost)} <span class="text-sm">{eta(timeToAfford(p.s, plan().cost))}</span>
+            </Button>
+            <Button
+              class="px-3"
+              disabled={fullVis() < 0 || (def().result === 'device' && !target())}
+              onClick={() =>
+                act({ type: 'experiment', magus: p.m.id, recipe: recipe(), extra: fullVis(), target: target() })
+              }
+            >
+              <Ico icon={GOOD_ICON.vis} /> Full Vis
+            </Button>
+          </div>
         </div>
       </Show>
       <Button
@@ -507,6 +548,24 @@ function Magus(p: { s: State; m: MagusState }) {
         </span>
       </Button>
     </Card>
+  );
+}
+
+/** One tap: every idle magus starts Study the Vis with as much extra Vis as the stock allows. */
+function StudyAll(p: { s: State }) {
+  const idle = () => p.s.magi.filter((m) => present(m) && !m.exp);
+  const go = () => {
+    for (const m of idle()) {
+      const extra = maxExtraVis(game.s as State, m.id, 'study_vis');
+      if (extra >= 0) act({ type: 'experiment', magus: m.id, recipe: 'study_vis', extra });
+    }
+  };
+  return (
+    <Show when={idle().length > 1}>
+      <Button primary class="mb-2.5 w-full" onClick={go}>
+        <Ico icon={GOOD_ICON.vis} /> Every idle magus: Study the Vis with full Vis ({idle().length})
+      </Button>
+    </Show>
   );
 }
 

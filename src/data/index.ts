@@ -1,6 +1,6 @@
 // All game data. Typed, checked by tsc; no runtime parsing.
 
-export const GOODS = ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'vis', 'insight'] as const;
+export const GOODS = ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'vis', 'bog_oak', 'insight'] as const;
 export type GoodId = (typeof GOODS)[number];
 export type Cost = Partial<Record<GoodId, number>>;
 
@@ -12,6 +12,7 @@ export const GOOD_INFO: Record<GoodId, { name: string; cap: number }> = {
   eels: { name: 'Eels', cap: 200 },
   vellum: { name: 'Vellum', cap: 50 },
   vis: { name: 'Vis', cap: 30 },
+  bog_oak: { name: 'Bog-oak', cap: 200 },
   insight: { name: 'Insight', cap: 1000 },
 };
 
@@ -28,6 +29,8 @@ export const ZONES = {
   marsh: { name: 'Marsh', noticeFactor: 0.5, carry: 0.5, slots: 10 },
   /** Land won from the sea: every dike adds slots (DIKE). */
   polder: { name: 'Polder', noticeFactor: 1, carry: 1, slots: 0 },
+  /** The drowned forest, risen at the first bell (BELL_EFFECTS). Worked only at low tide. */
+  scissy: { name: 'Scissy', noticeFactor: 0.5, carry: 1, slots: 0 },
 } as const satisfies Record<string, ZoneDef>;
 export type ZoneId = keyof typeof ZONES;
 
@@ -75,6 +78,18 @@ export const BUILDINGS = {
     'A mound the tide covers twice a day. Vis gathers in the stones.',
   ),
   regio_spring: visSite('The Regio Spring', 'A spring that runs warm in winter.'),
+  wormwood: {
+    ...visSite('Wormwood', 'A fallen star in the marsh, still ringing. The water round it is bitter, and full of vis.'),
+    perWorker: { vis: 0.24 },
+  },
+  bog_camp: {
+    name: 'Bog-oak Camp',
+    zone: 'scissy',
+    cost: { silver: 60, stone: 30 },
+    slots: 3,
+    perWorker: { bog_oak: 0.1 },
+    blurb: 'Saws and sledges among the drowned stumps of Scissy. Black oak that never rots. Only while the tide is out.',
+  },
   farm: {
     name: 'Farm',
     zone: 'bocage',
@@ -182,6 +197,8 @@ export const MAGI = [
   { id: 'aldric', name: 'Aldric' },
   { id: 'sabine', name: 'Sabine' },
   { id: 'herve', name: 'Hervé' },
+  /** Risen at the fifth bell. Works from Ys: needs no Sanctum. */
+  { id: 'knight', name: 'The Drowned Knight' },
 ] as const;
 export type MagusId = (typeof MAGI)[number]['id'];
 
@@ -192,6 +209,8 @@ export interface RecipeDef {
   /** What a success gives: Insight (per point of Lab Total), a Lab Text, or a Device for a chosen building. */
   result: 'insight' | 'labText' | 'device';
   insightPerLT?: number;
+  /** Devices a success adds (default 1). */
+  power?: number;
   blurb: string;
 }
 export const RECIPES = {
@@ -218,8 +237,56 @@ export const RECIPES = {
     result: 'device',
     blurb: 'Bind a Rego Terram effect into a tool. +25% output for one kind of building, for good.',
   },
+  great_device: {
+    name: 'Enchant a Great Device',
+    cost: { vis: 20, bog_oak: 20 },
+    time: 300,
+    result: 'device',
+    power: 4,
+    blurb: 'Bind a Rego Terram effect into a frame of bog-oak that will outlast the hill. +100% output for one kind of building, for good.',
+  },
 } as const satisfies Record<string, RecipeDef>;
 export type RecipeId = keyof typeof RECIPES;
+
+/** Warping: every botch leaves a mark on the magus (`magi.md`, *Warping and Twilight*). */
+export const WARP = {
+  /** Each point of Warping adds this much to the Lab Total. */
+  lt: 1,
+  /** Chance of Twilight on a botch, per point of Warping. */
+  twilight: 0.1,
+  /** Seconds a magus spends in Twilight. */
+  twilightSecs: 180,
+  /** A Twilight trait lasts between these many seconds. */
+  traitSecs: [300, 900] as const,
+  /** Chance a botch also destroys one building. */
+  destroy: 0.15,
+};
+
+/** What a magus brings back from Twilight, for a while. */
+export interface TwilightTrait {
+  name: string;
+  text: string;
+  /** This magus's experiment yield, time and botch chance. */
+  yield?: number;
+  time?: number;
+  botch?: number;
+  /** Output of one building type, covenant-wide. */
+  building?: BuildingId;
+  mult?: number;
+}
+export const TWILIGHT_TRAITS: readonly TwilightTrait[] = [
+  { name: 'Tide-Sight', text: 'sees where the vis runs, like water under sand. Experiment yields ×1.5.', yield: 1.5 },
+  { name: 'The Hours Fold', text: 'works as if the day had more hours in it. Experiments take ×0.6 the time.', time: 0.6 },
+  {
+    name: 'Hears the Bells',
+    text: 'hears bells under the bay and cannot stop listening. Yields ×2, botch chance +10 points.',
+    yield: 2,
+    botch: 0.1,
+  },
+  { name: 'Stone-Speaker', text: 'talks to the granite, and it answers. Quarries ×1.5.', building: 'quarry', mult: 1.5 },
+  { name: 'Salt in the Blood', text: 'can taste the brine from the tower. Salt-works ×1.5.', building: 'salt_pan', mult: 1.5 },
+  { name: 'Drowned Eyes', text: 'came back with eyes like a drowned man’s, and the lab work suffers. Yields ×0.7.', yield: 0.7 },
+];
 
 export const EXPERIMENT = {
   maxExtraVis: 5,
@@ -247,15 +314,24 @@ export type Modifier =
   | { kind: 'zoneNotice'; zone: ZoneId; factor: number }
   | { kind: 'baseline'; mult: number }
   | { kind: 'noticeGen'; mult: number }
+  /** Experiment yields. */
+  | { kind: 'yield'; mult: number }
   | { kind: 'reveal'; id: string };
 
 export interface ResearchDef {
   name: string;
   cost: Cost;
   effects: readonly Modifier[];
-  /** Repeatable research doubles its cost each time. */
+  /** Repeatable research grows its cost by `growth` (default 2) each time. */
   repeatable?: boolean;
+  growth?: number;
+  /** Shown only once this feature is revealed (see UnlockDef), and always while it is. */
+  needs?: string;
   blurb: string;
+}
+/** A Form tree: repeatable, costs ×2.5 each time, revealed by the Aegis. */
+function tree(art: string, good: Cost, effects: Modifier[], blurb: string): ResearchDef {
+  return { name: `The ${art} tree`, cost: { insight: 2000, ...good }, effects, repeatable: true, growth: 2.5, needs: 'trees', blurb };
 }
 /** In the order the Research tab reveals them. */
 export const RESEARCH = {
@@ -327,8 +403,9 @@ export const RESEARCH = {
       { kind: 'zoneNotice', zone: 'hearth', factor: 0 },
       { kind: 'baseline', mult: 1.25 },
       { kind: 'reveal', id: 'gate' },
+      { kind: 'reveal', id: 'trees' },
     ],
-    blurb: 'The Hearth draws no Notice; baseline Insight ×1.25; the Drowned Gate can be found.',
+    blurb: 'The Hearth draws no Notice; baseline Insight ×1.25; the Drowned Gate can be found, and the Form trees open.',
   },
   marsh_mist: {
     name: 'Marsh Mist',
@@ -336,6 +413,31 @@ export const RESEARCH = {
     effects: [{ kind: 'noticeGen', mult: 0.6 }],
     blurb: 'All Notice ×0.6. The flats are hard to see from Dol most mornings.',
   },
+  // The Form trees: revealed by the Aegis, repeatable forever, each paid in Insight and its own good.
+  terram: tree('Terram', { stone: 100 }, [
+    { kind: 'output', building: 'quarry', mult: 1.5 },
+    { kind: 'output', building: 'bog_camp', mult: 1.5 },
+  ], 'Quarries and Bog-oak Camps ×1.5. The Form of earth and stone.'),
+  aquam: tree('Aquam', { salt: 100 }, [
+    { kind: 'output', building: 'salt_pan', mult: 1.5 },
+    { kind: 'output', building: 'eel_weir', mult: 1.5 },
+  ], 'Salt-works and Eel Weirs ×1.5. The Form of water, brine and tide.'),
+  herbam: tree('Herbam', { bread: 100 }, [
+    { kind: 'output', building: 'farm', mult: 1.5 },
+    { kind: 'output', building: 'salt_meadow', mult: 1.5 },
+    { kind: 'output', building: 'parchmenter', mult: 1.5 },
+  ], 'Farms, Salt Meadows and Parchmenters ×1.5. The Form of plants and all that grows.'),
+  vim: tree('Vim', { vis: 20 }, [
+    { kind: 'yield', mult: 2 },
+    { kind: 'output', building: 'tide_pool', mult: 1.25 },
+    { kind: 'output', building: 'knights_barrow', mult: 1.25 },
+    { kind: 'output', building: 'regio_spring', mult: 1.25 },
+    { kind: 'output', building: 'wormwood', mult: 1.25 },
+  ], 'Experiment yields ×2, Vis sites ×1.25. The Form of magic itself.'),
+  mentem: tree('Mentem', { vellum: 30 }, [
+    { kind: 'baseline', mult: 2 },
+    { kind: 'noticeGen', mult: 0.85 },
+  ], 'Reading ×2, Notice ×0.85. The Form of minds: yours, and Dol’s.'),
 } as const satisfies Record<string, ResearchDef>;
 export type ResearchId = keyof typeof RESEARCH;
 export const RESEARCH_DEFS: Record<ResearchId, ResearchDef> = RESEARCH;
@@ -359,25 +461,102 @@ export const NOTICE = {
 export interface GateStart {
   stone: number;
   raised: boolean;
-  insight: number;
-  pour: boolean;
-  visToGate: boolean;
+  /** Goods poured into the Gate. It has no caps. */
+  store: Cost;
+  /** Goods whose income pours into the Gate instead of the Hall. */
+  pour: GoodId[];
   porters: number;
-  rites: number;
+  bells: number;
 }
 
-/** The Drowned Gate (`gate.md`). */
+export interface BellDef {
+  name: string;
+  /** Paid from the Gate's store. */
+  price: Cost;
+  /** One line: what ringing it opens, and what it wakes. */
+  opens: string;
+  wakes: string;
+}
+
+/** The Drowned Gate and the Seven Bells of Ys (`gate.md`). */
 export const GATE = {
   found: { silver: 200, stone: 100 } as Cost,
   raise: 1500,
-  stonePerS: 4,
-  visPerS: 0.3,
-  window: 60,
-  rites: [
-    { name: 'The Bells Beneath the Tide', insight: 20000 },
-    { name: 'The Knight Unburied', insight: 25000 },
-    { name: 'The Tide Stands Still', insight: 30000 },
-  ],
+  bells: [
+    {
+      name: 'The Bell of Scissy',
+      price: { insight: 10_000, stone: 500 },
+      opens: 'Scissy, the drowned forest: 6 plots for Bog-oak Camps, worked at low tide. Great Devices of bog-oak.',
+      wakes: 'The drowned dead: Notice +1/min while Scissy is worked.',
+    },
+    {
+      name: 'The Bell of Blood',
+      price: { insight: 35_000, salt: 2_000 },
+      opens: 'The bay runs red with vis: Salt-works make Vis too, and Eel Weirs ×2.',
+      wakes: 'The fish die and the fishers rage: Notice +2/min, for good.',
+    },
+    {
+      name: 'The Bell of Wormwood',
+      price: { insight: 120_000, vis: 400 },
+      opens: 'Wormwood, a fallen star: a Vis site three times the Tide Pool.',
+      wakes: 'The wells turn bitter and the hands drink ale: fuelled work burns ×1.5 Bread.',
+    },
+    {
+      name: 'The Bell of Darkness',
+      price: { insight: 400_000, vellum: 3_000 },
+      opens: 'The hidden hour: 60 s of every 5 minutes, Notice stops and experiments run twice as fast.',
+      wakes: 'Crops fail in the dark: Farms ×0.5.',
+    },
+    {
+      name: 'The Bell of the Pit',
+      price: { insight: 1_500_000, bog_oak: 1_000 },
+      opens: 'The Drowned Knight rises and serves: a fourth magus, Lab Total 15, who needs no Sanctum.',
+      wakes: 'Things climb out after him: every year, ward them with Vis or lose buildings.',
+    },
+    {
+      name: 'The Bell of the Four Winds',
+      price: { insight: 5_000_000, stone: 20_000 },
+      opens: 'The Couesnon turns: point the river at a zone to double its output. It can be moved once a year.',
+      wakes: 'Storms: every year a dike breaches unless it is mended with Stone and Bread.',
+    },
+    {
+      name: 'No More Sea',
+      price: {
+        insight: 20_000_000,
+        silver: 10_000,
+        salt: 10_000,
+        stone: 10_000,
+        bread: 10_000,
+        eels: 10_000,
+        vellum: 10_000,
+        vis: 10_000,
+        bog_oak: 10_000,
+      },
+      opens: 'The tide goes out and does not come back. The run is won.',
+      wakes: 'The whole bay watches: ring it only with Notice under 50.',
+    },
+  ] as readonly BellDef[],
+  /** The seventh bell rings only below this Notice. */
+  lastBellNotice: 50,
+  /** Scissy's tide: the forest is workable for the first `out` seconds of every `period`. */
+  tide: { period: 60, out: 30 },
+  /** The hidden hour: dark for the first `dark` seconds of every `period`. */
+  darkness: { period: 300, dark: 60 },
+  scissySlots: 6,
+  /** The Bell of Blood: Vis per Salt-works worker, and the Eel Weir multiplier. */
+  bloodVis: 0.02,
+  bloodEels: 2,
+  /** Notice per minute woken by Scissy (while worked) and by Blood (for good). */
+  scissyNotice: 1,
+  bloodNotice: 2,
+  wormwoodFuel: 1.5,
+  darkFarms: 0.5,
+  knightLT: 15,
+  /** The Pit's yearly raid: ward it with this much Vis, or lose this many buildings. */
+  raid: { ward: { vis: 30 } as Cost, lose: 2 },
+  /** The Four Winds' yearly storm: mend a dike for this, or lose it. */
+  storm: { mend: { stone: 200, bread: 200 } as Cost },
+  couesnon: 2,
 };
 
 /** What choices, research and traits do. Ink tags parse into these (`docs/design/stories.md`). */
@@ -394,18 +573,24 @@ export type Effect =
   /** The halfway check-in's answer for a running experiment. */
   | { kind: 'checkIn'; magus: MagusId; choice: 'push' | 'steady' | 'abort' }
   /** Ends a strike at once. */
-  | { kind: 'endStrike' };
+  | { kind: 'endStrike' }
+  /** Dikes won or lost. */
+  | { kind: 'dikes'; n: number };
 
 export interface EventDef {
   title: string;
   text: string;
-  options: readonly { label: string; effects: readonly Effect[] }[];
+  /** A choice with a `cost` can't be taken until it's affordable. */
+  options: readonly { label: string; effects: readonly Effect[]; cost?: Cost }[];
   /** An ink knot waiting for its choice; its effects come from the tags after the choice. */
   knot?: string;
+  thread?: Thread;
 }
 
 /** An ink knot the engine plays once, as an event card, when its condition is first met. */
 export interface StoryBeat {
+  /** The ink story the knot lives in (default: the eels). */
+  thread?: Thread;
   knot: string;
   title: string;
   when: Condition;
@@ -421,7 +606,9 @@ export type Condition =
   | { kind: 'noHands' }
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
-  | { kind: 'rites'; atLeast: number }
+  | { kind: 'bells'; atLeast: number }
+  /** A story beat has played. */
+  | { kind: 'fired'; knot: string }
   | { kind: 'zoneFull'; zone: ZoneId }
   /** An ink variable the engine reads back (`stories.md`). */
   | { kind: 'story'; v: StoryVar; atLeast?: number; atMost?: number }
@@ -429,6 +616,7 @@ export type Condition =
   | { kind: 'yearsAfter'; v: StoryVar; years: number }
   | { kind: 'all'; of: readonly Condition[] };
 
+export type Thread = 'eels' | 'ys';
 /** The whitelist of ink variables the engine reads back. */
 export type StoryVar = 'eel_level' | 'eels_state' | 'eels_end_year';
 
@@ -471,6 +659,8 @@ export interface ScenarioDef {
 }
 
 export const YEAR = 120;
+/** Won once the seventh bell has rung and its story has been told. */
+const YS_WON: Condition = { kind: 'all', of: [{ kind: 'bells', atLeast: 7 }, { kind: 'fired', knot: 'ys_7' }] };
 export const START_YEAR = 1220;
 
 const inYear = (y: number): Condition => ({ kind: 'time', atLeast: (y - START_YEAR) * YEAR });
@@ -481,6 +671,13 @@ const open = (knot: string, title: string, y: number): StoryBeat => ({
   when: { kind: 'all', of: [inYear(y), { kind: 'story', v: 'eels_state', atMost: 0 }] },
 });
 /** The eels thread (`docs/ink/eels-notes.md`). The wyrm (`eels_9_the_wyrm`) waits on Sanctum traits. */
+/** The Seven Bells (`src/content/ys.ink`): each bell's story plays once it has rung. */
+const YS: readonly StoryBeat[] = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+  thread: 'ys',
+  knot: `ys_${n}`,
+  title: ['The drowned forest', 'The red bay', 'Wormwood', 'The hidden hour', 'The Pit', 'The four winds', 'No more sea'][n - 1]!,
+  when: { kind: 'bells', atLeast: n },
+}));
 const EELS: readonly StoryBeat[] = [
   { knot: 'eels_1_first_catch', title: 'The eel rent', when: { kind: 'time', atLeast: 60 } },
   { knot: 'eels_2_the_weir', title: 'The weir', when: inYear(1221) },
@@ -539,7 +736,7 @@ export const SCENARIOS = {
   },
   grow: {
     name: 'The Covenant Must Grow',
-    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    goal: 'Ring the Seven Bells of Ys before 1260',
     start: {
       res: { silver: 60, vis: 5 },
       hands: 6,
@@ -598,10 +795,7 @@ export const SCENARIOS = {
       },
     ],
     win: [
-      {
-        when: { kind: 'rites', atLeast: 3 },
-        cause: 'The tide stands still, and the Drowned Gate opens.',
-      },
+      { when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' },
     ],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
@@ -613,11 +807,11 @@ export const SCENARIOS = {
       text: 'Aldric has a tower on Mont-Dol, six hands, a salt-works and the Tide Pool. Under the marsh lies a drowned regio, and a Gate into it. Open it before 1260. Every building will be noticed in Dol, and the Order watches what Dol notices.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: EELS,
+    story: [...EELS, ...YS],
   },
   middle: {
     name: 'Stage: the Middle Years',
-    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    goal: 'Ring the Seven Bells of Ys before 1260',
     stage: true,
     start: {
       t: 16 * YEAR,
@@ -668,7 +862,7 @@ export const SCENARIOS = {
       'magus:sabine',
       'magus:herve',
     ],
-    win: [{ when: { kind: 'rites', atLeast: 3 }, cause: 'The tide stands still, and the Drowned Gate opens.' }],
+    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
       { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
@@ -679,10 +873,11 @@ export const SCENARIOS = {
       text: 'Sixteen years on. Three magi, twenty-six hands, six salt-works and three sources of vis. Dol has noticed: Notice is climbing toward the lord’s tax and settling well above it. The Aegis of the Hearth is still to be learned, and the Drowned Gate still to be found.',
       options: [{ label: 'Begin', effects: [] }],
     },
+    story: YS,
   },
   gate: {
     name: 'Stage: the Gate',
-    goal: 'Perform the three Rites of the Drowned Gate before 1260',
+    goal: 'Ring the Seven Bells of Ys before 1260',
     stage: true,
     start: {
       t: 30 * YEAR,
@@ -724,7 +919,7 @@ export const SCENARIOS = {
       },
       labTexts: 6,
       devices: { quarry: 8 },
-      gate: { stone: 1500, raised: true, insight: 12000, pour: true, visToGate: false, porters: 3, rites: 0 },
+      gate: { stone: 1500, raised: true, store: { insight: 4000 }, pour: ['insight'], porters: 0, bells: 0 },
     },
     allowed: ['salt_pan', 'tide_pool', 'sanctum'],
     unlocked: [
@@ -748,7 +943,7 @@ export const SCENARIOS = {
       'magus:herve',
       'gate',
     ],
-    win: [{ when: { kind: 'rites', atLeast: 3 }, cause: 'The tide stands still, and the Drowned Gate opens.' }],
+    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
       { when: { kind: 'noHands' }, cause: 'The last hand walks down to Dol. The magi cannot live on Insight.' },
@@ -756,9 +951,10 @@ export const SCENARIOS = {
     ],
     intro: {
       title: 'Spring 1250',
-      text: 'Ten years left. The Gate stands in the marsh with twelve thousand pages of Insight poured into it, and the Order watches every cartload of Stone that goes out to it. The first Rite needs Stone and Vis flowing at once, every magus ready, and more Insight than the Gate holds yet.',
+      text: 'Ten years left. The Gate stands in the marsh with four thousand pages of Insight poured into it, and under the mud something is listening. Seven bells hang in drowned Ys. Pour Insight and goods into the Gate, and ring them one by one.',
       options: [{ label: 'Begin', effects: [] }],
     },
+    story: YS,
   },
 } as const satisfies Record<string, ScenarioDef>;
 export type ScenarioId = keyof typeof SCENARIOS;

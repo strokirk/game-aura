@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { simulate } from '../sim/run.ts';
 import { STRATEGIES } from '../sim/strategies.ts';
 import {
+  activeTraits,
   almsCost,
   apply,
   cap,
   createRun,
   dikeCost,
+  experimentPlan,
   giftCost,
   housing,
   idleHands,
+  labTotal,
+  maxExtraVis,
   rates,
   replay,
   type State,
@@ -173,5 +177,54 @@ describe('goods with more than one use', () => {
     expect(r.byBuilding.hostel?.silver).toBeGreaterThan(0);
     s.res.bread = 0;
     expect(rates(s).byBuilding.hostel?.silver ?? 0).toBe(0);
+  });
+});
+
+describe('warping and Twilight', () => {
+  const stage = () => ok(apply(createRun('middle', 3), { type: 'choose', option: 0 }));
+  /** Starts Study the Vis on Aldric, rigged to botch, and runs it out. */
+  function botch(s0: State) {
+    let s = ok(apply(s0, { type: 'experiment', magus: 'aldric', recipe: 'study_vis', extra: 0 }));
+    s.magi[0]!.exp!.botch = 1;
+    s = stepTo(s, s.magi[0]!.exp!.end + 0.5);
+    return s;
+  }
+
+  it('a botch Warps the magus, raising the Lab Total', () => {
+    const s = botch(stage());
+    const m = s.magi[0]!;
+    expect(m.warp).toBe(1);
+    expect(labTotal(m)).toBe(m.lt + 1);
+  });
+
+  it('Twilight takes the magus away, then returns them with a timed trait', () => {
+    const s0 = stage();
+    s0.magi[0]!.warp = 9; // the 10th point makes Twilight certain
+    let s = botch(s0);
+    while (s.events.length) s = ok(apply(s, { type: 'choose', option: 0 }));
+    const m = s.magi[0]!;
+    expect(m.twilight).not.toBeNull();
+    expect(apply(s, { type: 'experiment', magus: 'aldric', recipe: 'study_vis', extra: 0 })).toEqual({
+      error: 'Aldric is in Twilight',
+    });
+    s = stepTo(s, (m.twilight ?? 0) + 1);
+    expect(s.events[0]?.title).toMatch(/^Aldric returns: /);
+    expect(s.magi[0]!.twilight).toBeNull();
+    expect(activeTraits(s, s.magi[0]!)).toHaveLength(1);
+  });
+
+  it('a higher Lab Total enchants devices faster', () => {
+    const s = stage();
+    const slow = experimentPlan(s, 'aldric', 'device', 0).time;
+    s.magi[0]!.warp = 10;
+    expect(experimentPlan(s, 'aldric', 'device', 0).time).toBeLessThan(slow);
+  });
+
+  it('full Vis is the most extra Vis the stock pays for', () => {
+    const s = stage();
+    s.res.vis = 8;
+    expect(maxExtraVis(s, 'aldric', 'study_vis')).toBe(3);
+    s.res.vis = 4;
+    expect(maxExtraVis(s, 'aldric', 'study_vis')).toBe(-1);
   });
 });

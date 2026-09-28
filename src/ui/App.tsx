@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch } from 'solid-js';
-import { magusName, year } from '../core/index.ts';
+import { canAfford, magusName, type State, year } from '../core/index.ts';
 import { SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
@@ -230,7 +230,7 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
       <div class="flex flex-col gap-2">
         <For each={p.ev.options}>
           {(o, i) => (
-            <Button primary onClick={() => act({ type: 'choose', option: i() })}>
+            <Button primary disabled={!!o.cost && !canAfford(game.s as State, o.cost)} onClick={() => act({ type: 'choose', option: i() })}>
               <span>
                 <Rich text={o.label} plain />
               </span>

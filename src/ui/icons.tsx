@@ -8,7 +8,12 @@ import GiBread from '~icons/game-icons/bread';
 import GiChurch from '~icons/game-icons/church';
 import GiCoinsPile from '~icons/game-icons/coins-pile';
 import GiCrystal from '~icons/game-icons/crystal-growth';
+import GiBlackKnightHelm from '~icons/game-icons/black-knight-helm';
+import GiDeadWood from '~icons/game-icons/dead-wood';
 import GiEel from '~icons/game-icons/eel';
+import GiEclipse from '~icons/game-icons/eclipse';
+import GiFallingStar from '~icons/game-icons/falling-star';
+import GiRiver from '~icons/game-icons/river';
 import GiEyeball from '~icons/game-icons/eyeball';
 import GiMagicGate from '~icons/game-icons/magic-gate';
 import GiMagicSwirl from '~icons/game-icons/magic-swirl';
@@ -48,6 +53,7 @@ export const GOOD_ICON: Record<GoodId, Icon> = {
   eels: GiEel,
   vellum: GiScrollUnfurled,
   vis: GiCrystal,
+  bog_oak: GiDeadWood,
   insight: GiOpenBook,
 };
 
@@ -59,6 +65,8 @@ export const BUILDING_ICON: Record<BuildingId, Icon> = {
   farm: GiWheat,
   eel_weir: GiEel,
   hostel: GiPilgrimHat,
+  wormwood: GiFallingStar,
+  bog_camp: GiDeadWood,
   salt_meadow: GiSheep,
   parchmenter: GiScrollQuill,
   quarry: GiMining,
@@ -83,6 +91,9 @@ export const I = {
   bribe: GiCoinsPile,
   alms: GiBread,
   dike: GiStoneWall,
+  knight: GiBlackKnightHelm,
+  dark: GiEclipse,
+  river: GiRiver,
   terrace: GiStairs,
   device: GiAnvil,
   labText: GiQuillInk,
