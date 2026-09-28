@@ -204,6 +204,7 @@ export interface State {
   dikes: number;
   /** Stone quarried over the run; it opens terraces. */
   quarried: number;
+  /** Replaced, never changed in place: `modifiers()` caches what it adds up to per object. */
   research: Partial<Record<ResearchId, number>>;
   labTexts: number;
   devices: Partial<Record<BuildingId, number>>;
