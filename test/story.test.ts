@@ -9,9 +9,14 @@ const ok = (r: ReturnType<typeof apply>) => {
   if ('error' in r) throw new Error(r.error);
   return r;
 };
-/** Runs the trial to the weir beat, taking the first choice on every earlier card. */
+/** Runs the trial to the weir beat, set up as its guide says, taking the first choice on every earlier card. */
 function atTheWeir(): State {
   let s = ok(apply(createRun('trial', 1), { type: 'choose', option: 0 }));
+  s = ok(apply(s, { type: 'workers', building: 'salt_pan', delta: 2 }));
+  s = ok(apply(s, { type: 'porters', zone: 'marsh', delta: 1 }));
+  s = stepTo(s, 40);
+  s = ok(apply(s, { type: 'build', building: 'tide_pool' }));
+  s = ok(apply(s, { type: 'workers', building: 'tide_pool', delta: 1 }));
   s = stepTo(s, 60);
   expect(s.events[0]?.title).toBe('The eel rent');
   s = ok(apply(s, { type: 'choose', option: 0 }));

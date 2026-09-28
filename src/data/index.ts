@@ -195,6 +195,8 @@ export type BuildingId = keyof typeof BUILDINGS;
 export const DEFS: Record<BuildingId, BuildingDef> = BUILDINGS;
 
 export const HALL_HOUSING = 8;
+/** While there's housing, a new hand arrives this often (seconds). */
+export const HAND_EVERY = 20;
 /** Output of a fuelled building (Salt-works, Quarry) while there is Bread to burn. */
 export const FUEL_MULT = 1.5;
 /** A dike wins land from the sea: Polder slots, paid in Stone and in Bread for the diggers. */
@@ -791,6 +793,12 @@ export type Condition =
   | { kind: 'hands'; atLeast: number }
   | { kind: 'insightMade'; atLeast: number }
   | { kind: 'researched'; atLeast: number }
+  /** Hands working a building type. */
+  | { kind: 'workers'; building: BuildingId; atLeast: number }
+  | { kind: 'porters'; zone: ZoneId; atLeast: number }
+  | { kind: 'built'; building: BuildingId; atLeast: number }
+  /** Experiments begun this run. */
+  | { kind: 'experiments'; atLeast: number }
   | { kind: 'bells'; atLeast: number }
   /** A story beat has played. */
   | { kind: 'fired'; knot: string }
@@ -813,6 +821,24 @@ export interface UnlockDef {
   /** Building ids, `recipe:<id>`, `magus:<id>`, or a feature: `research`, `notice`, `endow`, `gate`. */
   reveal: readonly string[];
   card?: { title: string; text: string };
+}
+
+/** One line of the trial's guide: shown until its condition is met. Without a condition it stays to the end. */
+export interface GuideStep {
+  text: string;
+  done?: Condition;
+  /** The tab that holds the step's action: it pulses while it isn't open. */
+  tab?: 'covenant' | 'magi' | 'research';
+  /** The building, or the zone's porters, the step means: its card gets a gold border. */
+  building?: BuildingId;
+  porters?: ZoneId;
+}
+/** How a run ends: the condition, the cause, and the end screen's title and epitaph. */
+export interface Ending {
+  when: Condition;
+  cause: string;
+  title: string;
+  line: string;
 }
 
 export interface ScenarioDef {
@@ -839,8 +865,12 @@ export interface ScenarioDef {
   /** Revealed from the start: recipes and features (see UnlockDef). */
   unlocked: readonly string[];
   unlocks?: readonly UnlockDef[];
-  win: readonly { when: Condition; cause: string }[];
-  loss: readonly { when: Condition; cause: string }[];
+  win: readonly Ending[];
+  loss: readonly Ending[];
+  /** The trial's step-by-step guide (`scenarios.md`). */
+  guide?: readonly GuideStep[];
+  /** Limits the Research tab to these items. */
+  research?: readonly ResearchId[];
   intro?: EventDef;
   story?: readonly StoryBeat[];
   /** The Normandy Tribunal meets in this scenario (`tribunal.md`). */
@@ -859,6 +889,29 @@ const YS_WON: Condition = {
   ],
 };
 export const START_YEAR = 1220;
+/** The full run's and the stages' endings. */
+const FULL_WIN: readonly Ending[] = [
+  {
+    when: YS_WON,
+    cause: 'The seventh bell rings, and there is no more sea.',
+    title: 'NO MORE SEA',
+    line: 'The seventh bell rings under the bay, and the tide goes out and does not come back.',
+  },
+];
+const FULL_LOSS: readonly Ending[] = [
+  {
+    when: { kind: 'notice', atLeast: 100 },
+    cause: 'The Order renounces the covenant.',
+    title: 'RENOUNCED',
+    line: 'The Tribunal has spoken your name backward. Your sigils are struck from the books. Your hill is only salt again.',
+  },
+  {
+    when: { kind: 'noMagi' },
+    cause: 'The last magus dies, and no apprentice answers to the name.',
+    title: 'THE LINE IS BROKEN',
+    line: 'The last magus closed their eyes, and no young voice answered. The aura sinks back into the marsh like a stone into black water.',
+  },
+];
 
 const inYear = (y: number): Condition => ({ kind: 'time', atLeast: (y - START_YEAR) * YEAR });
 /** A beat that plays in year `y` or later while the eels thread is open. */
@@ -907,36 +960,102 @@ const EELS: readonly StoryBeat[] = [
 export const SCENARIOS = {
   trial: {
     name: 'Trial of the Tide Pool',
-    goal: 'Gather 500 Insight before the Tribunal of 1222',
+    goal: 'Gather 500 Insight before the Tribunal of 1224',
     start: {
-      res: { silver: 60, vis: 5 },
+      res: { silver: 20 },
       hands: 4,
       buildings: {
         sanctum: { count: 1, workers: 0 },
-        salt_pan: { count: 1, workers: 1 },
-        tide_pool: { count: 1, workers: 1 },
+        salt_pan: { count: 1, workers: 0 },
       },
-      porters: { marsh: 1 },
+      porters: {},
       magi: [{ id: 'aldric', sanctum: true }],
     },
     allowed: ['salt_pan', 'tide_pool', 'knights_barrow'],
-    unlocked: ['notice'],
+    unlocked: [],
+    unlocks: [
+      // Aldric reads from the first second, so the tab waits for the first Study the Vis instead.
+      { when: { kind: 'experiments', atLeast: 1 }, reveal: ['research'] },
+    ],
+    research: ['salt_rakes'],
+    guide: [
+      {
+        text: 'Put 2 hands to work in the Salt-works.',
+        done: { kind: 'workers', building: 'salt_pan', atLeast: 2 },
+        tab: 'covenant',
+        building: 'salt_pan',
+      },
+      {
+        text: 'Make a hand a porter. Salt sells for Silver only once it is carried to the Hall.',
+        done: { kind: 'porters', zone: 'marsh', atLeast: 1 },
+        tab: 'covenant',
+        porters: 'marsh',
+      },
+      {
+        text: 'Save 40 Silver and build the Tide Pool. It gathers Vis.',
+        done: { kind: 'built', building: 'tide_pool', atLeast: 1 },
+        tab: 'covenant',
+        building: 'tide_pool',
+      },
+      {
+        text: 'Put 2 hands to work at the Tide Pool.',
+        done: { kind: 'workers', building: 'tide_pool', atLeast: 2 },
+        tab: 'covenant',
+        building: 'tide_pool',
+      },
+      {
+        text: 'The Marsh now makes more than one porter can carry. Make a second porter.',
+        done: { kind: 'porters', zone: 'marsh', atLeast: 2 },
+        tab: 'covenant',
+        porters: 'marsh',
+      },
+      {
+        text: 'Put 2 idle hands in the Sanctum as assistants. Each makes Aldric work 25% faster.',
+        done: { kind: 'workers', building: 'sanctum', atLeast: 2 },
+        tab: 'covenant',
+        building: 'sanctum',
+      },
+      {
+        text: 'At 5 Vis, open the Magi tab and have Aldric Study the Vis.',
+        done: { kind: 'experiments', atLeast: 1 },
+        tab: 'magi',
+      },
+      {
+        text: 'When the study is done, learn Salt Rakes in the Research tab: more Salt, more Silver.',
+        done: { kind: 'researched', atLeast: 1 },
+        tab: 'research',
+      },
+      {
+        text: 'Keep Aldric studying. Extra Vis in a study yields more Insight, when there is Vis to spare.',
+      },
+    ],
     win: [
       {
-        when: { kind: 'res', good: 'insight', atLeast: 500 },
+        when: { kind: 'insightMade', atLeast: 500 },
         cause: 'Aldric fills a book with what the Tide Pool knows.',
+        title: 'CHARTERED',
+        line: 'The Tribunal reads the book, and the covenant of Mont-Dol is chartered.',
       },
     ],
     loss: [
-      { when: { kind: 'notice', atLeast: 50 }, cause: 'The Order takes Notice.' },
-      { when: { kind: 'time', atLeast: 2 * YEAR }, cause: 'The year 1222 begins, and the book is still thin.' },
+      {
+        when: { kind: 'time', atLeast: 4 * YEAR },
+        cause: 'The year 1224 begins, and the book is still thin.',
+        title: 'THE BOOK IS THIN',
+        line: 'The Tribunal turns the few pages, and turns Aldric away. The tower on Mont-Dol stays a tower.',
+      },
     ],
     intro: {
       title: 'Spring 1220',
-      text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. The Tribunal meets in 1222 to decide whether to charter the covenant: bring it five hundred pages of Insight.',
+      text: 'Aldric has a tower on Mont-Dol, four idle hands and a salt-works on the flats. Out on the flats is a pool the tide never empties, and the pool holds vis.\n\nThe Tribunal meets in 1224 to decide whether to charter the covenant. Bring it five hundred pages of Insight: sell salt for Silver, buy the pool, and burn its vis in the lab.',
       options: [{ label: 'Begin', effects: [] }],
     },
-    story: EELS,
+    // The weir is built below the Tide Pool: in the trial it waits until there is one.
+    story: EELS.map((b) =>
+      b.knot === 'eels_2_the_weir'
+        ? { ...b, when: { kind: 'all', of: [b.when, { kind: 'built', building: 'tide_pool', atLeast: 1 }] } }
+        : b,
+    ),
   },
   grow: {
     name: 'The Covenant Must Grow',
@@ -956,7 +1075,7 @@ export const SCENARIOS = {
     allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
     unlocked: ['eelRent'],
     unlocks: [
-      { when: { kind: 'insightMade', atLeast: 1 }, reveal: ['research'] },
+      { when: { kind: 'insightMade', atLeast: 1 }, reveal: ['research', 'aura'] },
       {
         when: { kind: 'hands', atLeast: 8 },
         reveal: ['farm', 'cottage'],
@@ -986,7 +1105,7 @@ export const SCENARIOS = {
         reveal: ['parchmenter', 'library', 'regio_spring', 'faerie', 'recipe:lab_text', 'magus:sabine', 'magus:herve'],
         card: {
           title: 'Two more magi',
-          text: 'Word has reached the Order that Mont-Dol can feed a covenant. Sabine and Hervé arrive with their books in a cart. Sabine, thirty-one, wants everything the drowned knew, with her name cut into the Order’s stone above it. Hervé, thirty-nine, says the bells under the bay were blessed before Rome ever came to this coast. Each needs a Sanctum before they can work. They know of a third vis source, the Regio Spring, where the fae take offerings, and they want Vellum for Lab Texts.',
+          text: 'Word has reached the Order that Mont-Dol can feed a covenant. Sabine and Hervé arrive with their books in a cart. Sabine, thirty-one, wants everything the drowned knew, with her name cut into the Order’s stone above it. Hervé, thirty-nine, says the bells under the bay were blessed before Rome ever came to this coast.\n\nEach needs a Sanctum before they can work, and a Sanctum is built of Stone: quarry Mont-Dol for it.\n\nThey know of a third vis source, the Regio Spring, where the fae take offerings. And they want Vellum, from a Parchmenter, to write Lab Texts.',
         },
       },
       { when: { kind: 'notice', atLeast: 1 }, reveal: ['notice'] },
@@ -1007,11 +1126,8 @@ export const SCENARIOS = {
         },
       },
     ],
-    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
-    loss: [
-      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
-    ],
+    win: FULL_WIN,
+    loss: FULL_LOSS,
     intro: {
       title: 'Spring 1220',
       text: 'Aldric climbs Mont-Dol alone: the black hill in the marsh where the archangel ground his heel into the Devil and left the print in the stone. The wind comes off the bay with brine and the smoke of the salt-pans. Across the water, Mont-Saint-Michel wears a cage of scaffolding: the monks are raising the Merveille, stone on stone, toward heaven.\n\nBelow him his few hands rake salt-sand on the flats and lift eels from the weir. Here, eels pay the rent, and eels bring families up the hill.\n\nHe was forty-eight this winter. On still nights he hears bells under the water. He has heard them since the year the sea took his brother. Under the reeds, under the eels, under a fathom of black water lies the Drowned Regio, sealed behind the Drowned Gate. It is said no one there grows old, and that the drowned are only waiting.\n\nOpen the Gate. Thicken the aura until the hill hums like a struck bell. But the bishop counts sins, the lord of Dol counts silver, and the Order of Hermes counts Notice, and at one hundred casts you out. And Time counts everything. Magi age. Magi die. Take apprentices, or the line ends in the mud.\n\nThere is no deadline. There is only the tide.',
@@ -1056,6 +1172,7 @@ export const SCENARIOS = {
     allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
     unlocked: [
       'research',
+      'aura',
       'notice',
       'endow',
       'farm',
@@ -1078,11 +1195,8 @@ export const SCENARIOS = {
       'apprentices',
       'recipe:longevity',
     ],
-    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
-    loss: [
-      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
-    ],
+    win: FULL_WIN,
+    loss: FULL_LOSS,
     intro: {
       title: 'Spring 1236',
       text: 'Sixteen years on. Three magi, twenty-six hands, six salt-works and three sources of vis. Aldric is sixty-four, and his hands shake. Dol has noticed: Notice is climbing toward the lord’s tax and settling well above it. The Aegis of the Hearth is still to be learned, and the Drowned Gate still to be found.',
@@ -1140,6 +1254,7 @@ export const SCENARIOS = {
     allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
     unlocked: [
       'research',
+      'aura',
       'notice',
       'endow',
       'farm',
@@ -1164,11 +1279,8 @@ export const SCENARIOS = {
       'apprentices',
       'recipe:longevity',
     ],
-    win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
-    loss: [
-      { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
-    ],
+    win: FULL_WIN,
+    loss: FULL_LOSS,
     intro: {
       title: 'Spring 1250',
       text: 'Thirty years on. Aldric and Hervé are dead; their apprentices answer to their names. The Gate stands in the marsh with four thousand pages of Insight poured into it, and under the mud something is listening. Seven bells hang in drowned Ys. Pour Insight and goods into the Gate, and ring them one by one.',

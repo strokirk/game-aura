@@ -1,19 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { simulate } from '../sim/run.ts';
-import { STRATEGIES } from '../sim/strategies.ts';
+import { guided, STRATEGIES } from '../sim/strategies.ts';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i + 1);
 
 describe('balance: trial', () => {
-  it('a sensible player wins in 1:30–4:00 in at least 90% of seeds, median at least 2:00', () => {
+  it('a player who follows the guide to the letter, a click every 8 s, wins by 6:30 in at least 90% of seeds', () => {
+    const wins = SEEDS.map((seed) => simulate('trial', seed, guided(8)).outcome).filter((o) => o?.kind === 'win');
+    expect(wins.length).toBeGreaterThanOrEqual(45);
+    expect(Math.max(...wins.map((o) => o!.t))).toBeLessThanOrEqual(390);
+  });
+
+  it('an efficient player wins in 2:30–5:00 in at least 90% of seeds, median at least 3:00', () => {
     const times = SEEDS.map((seed) => simulate('trial', seed, STRATEGIES.sensible!).outcome)
       .filter((o) => o?.kind === 'win')
       .map((o) => o!.t)
       .sort((a, b) => a - b);
     expect(times.length).toBeGreaterThanOrEqual(45);
-    expect(times[0]).toBeGreaterThanOrEqual(90);
-    expect(times.at(-1)).toBeLessThanOrEqual(240);
-    expect(times[times.length >> 1]).toBeGreaterThanOrEqual(120);
+    expect(times[0]).toBeGreaterThanOrEqual(150);
+    expect(times.at(-1)).toBeLessThanOrEqual(300);
+    expect(times[times.length >> 1]).toBeGreaterThanOrEqual(180);
   });
 
   it('an idle player never wins', () => {

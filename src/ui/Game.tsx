@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Match, Show, Switch } from 'solid-js';
+import { createMemo, createSignal, For, Match, type ParentProps, Show, Switch } from 'solid-js';
 import {
   agingChance,
   apprenticeBoost,
@@ -6,6 +6,7 @@ import {
   auraBoosts,
   buildable,
   buildCost,
+  buildNotice,
   canAfford,
   canExpand,
   cap,
@@ -13,15 +14,20 @@ import {
   dikeCost,
   expandCost,
   experimentPlan,
+  goalProgress,
+  guideStep,
   has,
   housing,
   idleHands,
+  isBlocked,
   isMaxed,
   labTotal,
   type MagusState,
   magusName,
   maxExtraVis,
   nameOf,
+  noticeLimit,
+  noticeRest,
   present,
   type Rates,
   rates,
@@ -39,6 +45,7 @@ import {
   zoneSlots,
   zoneUsed,
 } from '../core/index.ts';
+import { GOOD_ABOUT } from '../data/glossary.ts';
 import {
   AGING,
   APPRENTICE,
@@ -53,6 +60,8 @@ import {
   GOOD_INFO,
   GOODS,
   type GoodId,
+  HAND_EVERY,
+  NOTICE,
   PRESERVE,
   RECIPES,
   type RecipeDef,
@@ -70,7 +79,7 @@ import { BUILDING_ICON, GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Odds, Portrait, Stepper } from './kit.tsx';
 import { AuraCard, Gate, NoticeCard, Research } from './Panels.tsx';
 import { Rich } from './Rich.tsx';
-import { act, game, options, type Pop, pops, setPaused, setSpeed, speed } from './store.ts';
+import { act, game, options, type Pop, pops, say, setPaused, setSpeed, speed } from './store.ts';
 
 type Tab = 'covenant' | 'magi' | 'research' | 'gate' | 'chronicle';
 const TABS: [Tab, string][] = [
@@ -87,9 +96,18 @@ export function Game() {
   const s = () => game.s as State;
   const r = createMemo(() => rates(s()));
   const [tab, setTab] = createSignal<Tab>('covenant');
+  const guide = () => guideStep(s());
+  const short = () => Object.values(r().zones).some((z) => z.factor < 1);
   return (
     <div class="flex h-dvh flex-col">
       <Header s={s()} r={r()} />
+      <Show when={guide()}>
+        {(g) => (
+          <div class="border-b border-line bg-bar px-4 py-1.5 text-sm text-gold" role="status">
+            <b>Next:</b> <Rich text={g().text} />
+          </div>
+        )}
+      </Show>
       <div class="mx-auto w-full max-w-2xl flex-1 overflow-y-auto px-4 py-3">
         <Switch>
           <Match when={tab() === 'covenant'}>
@@ -118,10 +136,10 @@ export function Game() {
               type="button"
               aria-pressed={tab() === id}
               onClick={() => setTab(id)}
-              class={`min-h-13 flex-1 cursor-pointer ${tab() === id ? 'text-gold shadow-[inset_0_3px_0_var(--color-gold)]' : ''}`}
+              class={`min-h-13 flex-1 cursor-pointer ${tab() === id ? 'text-gold shadow-[inset_0_3px_0_var(--color-gold)]' : ''} ${guide()?.tab === id && tab() !== id ? 'animate-beckon text-gold' : ''}`}
             >
               {label}
-              <Show when={id === 'magi' && s().magi.some((m) => m.sanctum && !m.exp)}>
+              <Show when={(id === 'magi' && s().magi.some((m) => labReady(s(), m))) || (id === 'covenant' && short())}>
                 <span class="ml-1 text-warn" aria-hidden="true">
                   •
                 </span>
@@ -133,6 +151,10 @@ export function Game() {
     </div>
   );
 }
+
+/** A magus who could start Study the Vis right now: in the Sanctum, free, not blocked, and with the Vis. */
+const labReady = (s: State, m: MagusState) =>
+  present(m) && !m.exp && !isBlocked(s, `experiment:${m.id}`) && maxExtraVis(s, m.id, 'study_vis') >= 0;
 
 /** Floating numbers over a resource when it jumps. */
 function Pops(p: { k: Pop['key'] }) {
@@ -188,46 +210,74 @@ function Header(p: { s: State; r: Rates }) {
       </div>
       <div class="my-1 text-sm text-gold">
         Goal: <Rich text={scenarioOf(p.s).goal} />
+        <Show when={goalProgress(p.s)}>
+          {(g) => (
+            <b>
+              {' '}
+              · {num(Math.min(g().have, g().need))}/{num(g().need)}
+            </b>
+          )}
+        </Show>
         <Show when={options().dev}>
           <Dim> · seed {p.s.seed}</Dim>
         </Show>
       </div>
+      {/* Compact: up to 11 chips share one strip. Tapping a chip explains it; red means full. */}
       <div class="grid grid-cols-5 gap-x-2 gap-y-1 sm:grid-cols-10">
-        <div class="relative">
-          <Pops k="hands" />
+        <Chip
+          k="hands"
+          about={`Hands: ${p.s.hands} of ${housing(p.s)} housed, ${idleHands(p.s)} idle. They work buildings or carry goods; idle hands do nothing. A new hand comes every ${HAND_EVERY} s while there is room.`}
+        >
           <Ico icon={I.hands} class="mr-1 text-gold" />
           <b class={idleHands(p.s) > 0 ? 'text-warn' : ''}>{idleHands(p.s)}</b>
           <Dim> idle</Dim>
-          <div class="text-xs text-dim">
+          <span class="block text-xs text-dim">
             of {p.s.hands}/{housing(p.s)}
-          </div>
-        </div>
+          </span>
+        </Chip>
         <For each={GOODS.filter(shown)}>
           {(g) => (
-            // Compact: 8 goods share one strip. The name and cap are in the tooltip; red means full.
-            <div class="relative" title={`${GOOD_INFO[g].name}: ${num(p.s.res[g])} of ${num(cap(p.s, g))}`}>
-              <Pops k={g} />
+            <Chip
+              k={g}
+              about={`${GOOD_INFO[g].name}: ${num(p.s.res[g])} of ${num(cap(p.s, g))} stored, ${rate(p.r.net[g])}. ${GOOD_ABOUT[g]}`}
+            >
               <Ico icon={GOOD_ICON[g]} label={GOOD_INFO[g].name} class="mr-1 text-gold" />
               <b class={p.s.res[g] >= cap(p.s, g) - 1e-9 ? 'text-bad' : ''}>{num(p.s.res[g])}</b>
-              <div class={`text-xs ${p.r.net[g] < -1e-9 ? 'text-bad' : 'text-dim'}`}>{rate(p.r.net[g])}</div>
-            </div>
+              <span class={`block text-xs ${p.r.net[g] < -1e-9 ? 'text-bad' : 'text-dim'}`}>{rate(p.r.net[g])}</span>
+            </Chip>
           )}
         </For>
         <Show when={has(p.s, 'notice')}>
-          <div class="relative">
-            <Pops k="notice" />
+          <Chip
+            k="notice"
+            about={`Notice: ${Math.floor(p.s.notice)} now, settling at ${Math.round(noticeRest(p.s, p.r))}. The attention the covenant draws; every building adds to it. At ${noticeLimit(p.s)} the covenant is lost.`}
+          >
             <Ico icon={I.notice} class="mr-1 text-gold" />
-            <b class={p.s.notice >= 75 ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
-            <div class="text-xs text-dim">settles {Math.round(p.r.noticeGen * 10)}</div>
-          </div>
-          <div title="The covenant's aura: Magic less the Divine">
+            <b class={p.s.notice >= NOTICE.strike.at ? 'text-bad' : ''}>{Math.floor(p.s.notice)}</b>
+            <span class="block text-xs text-dim">settles {Math.round(noticeRest(p.s, p.r))}</span>
+          </Chip>
+        </Show>
+        <Show when={has(p.s, 'aura')}>
+          <Chip
+            about={`Aura ${aura(p.s)}: the covenant's Magic less the Divine. A stronger aura speeds and strengthens the labs; the Aura card on the Covenant tab shows how.`}
+          >
             <Ico icon={I.aura} class="mr-1 text-gold" />
             <b class={aura(p.s) < AURA.base ? 'text-bad' : ''}>{aura(p.s)}</b>
-            <div class="text-xs text-dim">aura</div>
-          </div>
+            <span class="block text-xs text-dim">aura</span>
+          </Chip>
         </Show>
       </div>
     </header>
+  );
+}
+
+/** A header chip: tap it to have it explained. */
+function Chip(p: ParentProps<{ k?: Pop['key']; about: string }>) {
+  return (
+    <button type="button" class="relative cursor-help text-left" onClick={() => say(p.about)}>
+      <Show when={p.k}>{(k) => <Pops k={k()} />}</Show>
+      {p.children}
+    </button>
   );
 }
 
@@ -248,7 +298,7 @@ function Covenant(p: { s: State; r: Rates }) {
             <b>{p.s.hands}</b> of {housing(p.s)} housed · <b>{idleHands(p.s)}</b> idle
           </span>
           <Show when={p.s.hands < housing(p.s)}>
-            <Dim>a new hand every 20 s while there's room</Dim>
+            <Dim>a new hand every {HAND_EVERY} s while there's room</Dim>
           </Show>
         </div>
         <Show when={has(p.s, 'farm')}>
@@ -265,6 +315,8 @@ function Covenant(p: { s: State; r: Rates }) {
       </Card>
       <Show when={has(p.s, 'notice')}>
         <NoticeCard s={p.s} r={p.r} />
+      </Show>
+      <Show when={has(p.s, 'aura')}>
         <AuraCard s={p.s} r={p.r} />
       </Show>
       <For each={zones()}>
@@ -273,7 +325,8 @@ function Covenant(p: { s: State; r: Rates }) {
             <Label>
               {ZONES[z].name}{' '}
               <Dim class="text-xs">
-                · {zoneUsed(p.s, z)}/{zoneSlots(p.s, z)} plots · Notice ×{ZONES[z].noticeFactor}
+                · {zoneUsed(p.s, z)}/{zoneSlots(p.s, z)} plots
+                <Show when={has(p.s, 'notice')}> · Notice ×{ZONES[z].noticeFactor}</Show>
               </Dim>
             </Label>
             <Show when={z === 'hearth' && count(p.s, 'quarry') > 0 && Number.isFinite(terraces(p.s).next)}>
@@ -310,7 +363,7 @@ function Covenant(p: { s: State; r: Rates }) {
               </Card>
             </Show>
             <Show when={ZONES[z].carry > 0}>
-              <Card warn={p.r.zones[z].factor < 1}>
+              <Card warn={p.r.zones[z].factor < 1} glow={guideStep(p.s)?.porters === z}>
                 <Stepper
                   label="Porters"
                   value={p.s.porters[z] ?? 0}
@@ -342,8 +395,10 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
   const maxed = () => isMaxed(p.s, p.id);
   const caps = () => (def().stores ?? []).map((g) => GOOD_INFO[g].name);
   const out = () => p.r.byBuilding[p.id] ?? {};
+  const zone = () => def().zone;
+  const short = () => n() > 0 && p.r.zones[zone()].factor < 1;
   return (
-    <Card>
+    <Card glow={guideStep(p.s)?.building === p.id}>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <b>
           <Ico icon={BUILDING_ICON[p.id]} class="mr-1 text-gold" />
@@ -363,6 +418,11 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
       <Dim class="text-sm">
         <Rich text={def().blurb} />
       </Dim>
+      <Show when={short()}>
+        <b class="block text-sm text-warn">
+          The {ZONES[zone()].name} is short of porters: part of this is lost on the way to the Hall.
+        </b>
+      </Show>
       <Show when={caps().length}>
         <Dim class="block text-sm">
           Storage ×{STORE_MULT} each: {caps().join(', ')}
@@ -404,6 +464,9 @@ function Building(p: { s: State; r: Rates; id: BuildingId }) {
         >
           <Button class="flex-1" disabled={!canAfford(p.s, c())} onClick={() => act({ type: 'build', building: p.id })}>
             {n() ? 'Build another' : 'Build'} · {cost(c())}{' '}
+            <Show when={has(p.s, 'notice') && buildNotice(p.s, p.id) >= 0.05}>
+              <Dim class="text-sm">· +{num(buildNotice(p.s, p.id))} Notice at rest</Dim>
+            </Show>{' '}
             <Dim class="text-sm">{eta(timeToAfford(p.s, c(), p.r))}</Dim>
           </Button>
         </Show>
@@ -494,7 +557,11 @@ function Magus(p: { s: State; m: MagusState }) {
         fallback={
           <Dim>
             <Rich
-              text={p.m.sanctum ? 'Reading in the Sanctum.' : 'Waiting in the Hall. Build a Sanctum for this magus.'}
+              text={
+                p.m.sanctum
+                  ? 'Reading in the Sanctum.'
+                  : 'Waiting in the Hall. Build a Sanctum for this magus: it takes Silver, and Stone from a Quarry.'
+              }
             />
           </Dim>
         }
@@ -508,7 +575,7 @@ function Magus(p: { s: State; m: MagusState }) {
             <Bar pct={((p.s.t - e().start) / (e().end - e().start)) * 100} />
             <Dim class="text-sm">
               <Show when={RECIPES[e().recipe].result === 'insight'}>{num(e().insight)} Insight · </Show>
-              <Rich text={`${Math.round(e().botch * 100)}% botch`} />
+              <Rich text={`${Math.round(e().botch * 100)}% botch`} /> · reading pauses until it ends
             </Dim>
           </div>
         )}

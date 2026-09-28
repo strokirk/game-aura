@@ -19,6 +19,7 @@ import {
   expandCost,
   experimentPlan,
   giftCost,
+  guideStep,
   has,
   housing,
   idleHands,
@@ -48,6 +49,7 @@ import {
   GATE,
   GOODS,
   type GoodId,
+  type GuideStep,
   NOTICE,
   RECIPES,
   RESEARCH,
@@ -201,7 +203,49 @@ function reorganize(s: State, rnd: () => number): Action[] {
   return [...off, ...placeHands(after(s, off), (xs) => pickOf(xs, rnd))];
 }
 
+/** What a player does to carry out a guide step: one click. The last step, with no condition, is "keep studying". */
+function guideAction(s: State, done: GuideStep['done']): Action | undefined {
+  switch (done?.kind) {
+    case 'workers':
+      return { type: 'workers', building: done.building, delta: 1 };
+    case 'porters':
+      return { type: 'porters', zone: done.zone, delta: 1 };
+    case 'built':
+      return { type: 'build', building: done.building };
+    case 'researched':
+      return visibleResearch(s).map((id): Action => ({ type: 'research', id }))[0];
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * A player who does exactly what the trial's guide line says and nothing more, one click every `delay` seconds:
+ * the guide's own balance check. Studies with no extra Vis, never builds the Barrow, takes the first option on cards.
+ */
+export function guided(delay: number): Strategy {
+  let last = Number.NEGATIVE_INFINITY;
+  return (s) => {
+    if (s.t < last) last = Number.NEGATIVE_INFINITY; // a new run
+    if (s.events.length || s.t - last < delay) return [];
+    const step = guideStep(s);
+    const m = s.magi[0];
+    const studying = !step?.done || step.done.kind === 'experiments' || step.done.kind === 'researched';
+    const study: Action | undefined =
+      m && present(m) && !m.exp && canAfford(s, experimentPlan(s, m.id, 'study_vis', 0).cost)
+        ? { type: 'experiment', magus: m.id, recipe: 'study_vis', extra: 0 }
+        : undefined;
+    const a = guideAction(s, step?.done) ?? (studying ? study : undefined);
+    const pick = a && legal(s, a) ? a : studying && study && legal(s, study) ? study : undefined;
+    if (!pick) return [];
+    last = s.t;
+    return [pick];
+  };
+}
+
 export const STRATEGIES: Record<string, Strategy> = {
+  /** Follows the trial's guide to the letter, a click every 8 s. */
+  guided: guided(8),
   /** Does nothing but dismiss cards. Must lose the trial. */
   idle: () => [],
 
@@ -226,17 +270,31 @@ export const STRATEGIES: Record<string, Strategy> = {
     return [...out, ...placeHands(after(s, out), (xs) => pickOf(xs, rnd))];
   },
 
-  /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
+  /**
+   * Follows the trial's guide: 2 hands on the Salt-works, the Marsh carried, the Tide Pool bought and worked, Salt Rakes
+   * learned, then the Barrow and the Sanctum's assistants. Runs experiments with all spare Vis.
+   */
   sensible: (s) => {
     const out: Action[] = [];
-    if (idleHands(s) > 0) {
-      const r = rates(s);
-      const tide = s.buildings.tide_pool;
-      if (tide && tide.workers < workerSlots(s, 'tide_pool'))
-        out.push({ type: 'workers', building: 'tide_pool', delta: 1 });
-      else if (r.zones.marsh.factor < 1) out.push({ type: 'porters', zone: 'marsh', delta: 1 });
-      else out.push({ type: 'workers', building: 'salt_pan', delta: 1 });
-    }
+    for (const id of ['tide_pool', 'knights_barrow'] as const)
+      if (buildable(s, id) && !isMaxed(s, id) && canAfford(s, buildCost(s, id))) {
+        out.push({ type: 'build', building: id });
+        break;
+      }
+    for (const id of visibleResearch(s))
+      if (!(s.research[id] ?? 0) && canAffordResearch(s, researchCost(s, id))) out.push({ type: 'research', id });
+    const hands = plan(s, (x) => {
+      if (idleHands(x) <= 0) return undefined;
+      const r = rates(x);
+      const room = (id: BuildingId) => count(x, id) > 0 && (x.buildings[id]?.workers ?? 0) < workerSlots(x, id);
+      if (room('salt_pan') && (x.buildings.salt_pan?.workers ?? 0) < 2)
+        return { type: 'workers', building: 'salt_pan', delta: 1 };
+      if (r.zones.marsh.made > r.zones.marsh.capacity + 1e-6) return { type: 'porters', zone: 'marsh', delta: 1 };
+      for (const id of ['tide_pool', 'knights_barrow', 'sanctum', 'salt_pan'] as const)
+        if (room(id)) return { type: 'workers', building: id, delta: 1 };
+      return undefined;
+    });
+    out.push(...hands);
     for (const m of s.magi) {
       if (!m.sanctum || m.exp) continue;
       const extra = Math.max(0, Math.min(EXPERIMENT.maxExtraVis, Math.floor(s.res.vis) - 5));

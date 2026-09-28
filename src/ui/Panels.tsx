@@ -19,6 +19,8 @@ import {
   lowTide,
   nextTribunal,
   noticeDecay,
+  noticeLimit,
+  noticeRest,
   offerCost,
   type Rates,
   researchCost,
@@ -92,8 +94,20 @@ export function Research(p: { s: State; r: Rates }) {
   );
 }
 
+/** Only the next line Notice will cross, not all of them. */
+function nextThreshold(s: State) {
+  const limit = noticeLimit(s);
+  const lines: [number, string][] = [
+    [NOTICE.tax.at, 'the lord taxes'],
+    [NOTICE.strike.at, 'the porters strike'],
+    [NOTICE.audit.at, 'the Order audits'],
+  ];
+  const next = lines.find(([at]) => at > s.notice && at < limit);
+  return next ? `at ${next[0]} ${next[1]}` : `at ${limit} the covenant is lost`;
+}
+
 export function NoticeCard(p: { s: State; r: Rates }) {
-  const settles = () => p.r.noticeGen * 10;
+  const settles = () => noticeRest(p.s, p.r);
   return (
     <Card warn={settles() >= NOTICE.strike.at}>
       <Label>
@@ -102,10 +116,7 @@ export function NoticeCard(p: { s: State; r: Rates }) {
       <div class="text-sm">
         Now <b>{Math.floor(p.s.notice)}</b> · rising {num(p.r.noticeGen)} a minute · settles at{' '}
         <b>{Math.round(settles())}</b>
-        <Dim>
-          {' '}
-          · tax at {NOTICE.tax.at}, strike at {NOTICE.strike.at}, audit at {NOTICE.audit.at}, Renounced at 100
-        </Dim>
+        <Dim> · {nextThreshold(p.s)}</Dim>
       </div>
       <Show when={nextTribunal(p.s)}>
         {(y) => (

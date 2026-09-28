@@ -1,5 +1,5 @@
-import { For, Match, Show, Switch } from 'solid-js';
-import { canAfford, chairName, nameOf, type State, scenarioOf, year } from '../core/index.ts';
+import { createEffect, createSignal, For, Match, on, Show, Switch } from 'solid-js';
+import { canAfford, chairName, ending, nameOf, type State, scenarioOf, year } from '../core/index.ts';
 import { AURA, type MagusId, SCENARIOS, type ScenarioDef, type ScenarioId } from '../data/index.ts';
 import { mmss, num } from './format.ts';
 import { Game } from './Game.tsx';
@@ -214,10 +214,32 @@ const EVENT_ART: Record<string, string> = {
   'The Gate rises': 'win',
 };
 
+/** A card's text in pages of whole paragraphs, each about this long at most. */
+const PAGE_CHARS = 450;
+export function pages(text: string): string[] {
+  const out: string[] = [];
+  for (const para of text.split(/\n\n+/)) {
+    const last = out.length - 1;
+    if (last >= 0 && out[last]!.length + para.length + 2 <= PAGE_CHARS) out[last] += `\n\n${para}`;
+    else out.push(para);
+  }
+  return out;
+}
+
 function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
+  const [page, setPage] = createSignal(0);
+  const all = () => pages(p.ev.text);
+  const last = () => page() >= all().length - 1;
+  // A new card starts at its first page.
+  createEffect(
+    on(
+      () => p.ev.title + p.ev.text,
+      () => setPage(0),
+    ),
+  );
   return (
     <Overlay>
-      <Show when={EVENT_ART[p.ev.title]}>
+      <Show when={page() === 0 && EVENT_ART[p.ev.title]}>
         {(name) => (
           <div class="-mx-4 -mt-4 mb-2 overflow-hidden rounded-t-xl">
             <Art name={name()} class="h-32" />
@@ -226,42 +248,42 @@ function EventCard(p: { ev: NonNullable<typeof game.s>['events'][number] }) {
       </Show>
       <h2 class="mb-2 text-2xl">{p.ev.title}</h2>
       <p class="mb-4 whitespace-pre-line text-[1.1rem] leading-relaxed">
-        <Rich text={p.ev.text} />
+        <Rich text={all()[page()] ?? ''} />
       </p>
+      <Show when={all().length > 1}>
+        <div class="mb-3 flex justify-center gap-1.5" role="img" aria-label={`Page ${page() + 1} of ${all().length}`}>
+          <For each={all()}>
+            {(_, i) => <span class={`size-1.5 rounded-full ${i() === page() ? 'bg-gold' : 'bg-line'}`} />}
+          </For>
+        </div>
+      </Show>
       <div class="flex flex-col gap-2">
-        <For each={p.ev.options}>
-          {(o, i) => (
-            <Button
-              primary
-              disabled={!!o.cost && !canAfford(game.s as State, o.cost)}
-              onClick={() => act({ type: 'choose', option: i() })}
-            >
-              <span>
-                <Rich text={o.label} plain />
-              </span>
+        <Show
+          when={last()}
+          fallback={
+            <Button primary onClick={() => setPage(page() + 1)}>
+              Continue
             </Button>
-          )}
-        </For>
+          }
+        >
+          <For each={p.ev.options}>
+            {(o, i) => (
+              <Button
+                primary
+                disabled={!!o.cost && !canAfford(game.s as State, o.cost)}
+                onClick={() => act({ type: 'choose', option: i() })}
+              >
+                <span>
+                  <Rich text={o.label} plain />
+                </span>
+              </Button>
+            )}
+          </For>
+        </Show>
       </div>
     </Overlay>
   );
 }
-
-/** The end screen's one huge word, by how the run ended. */
-function endTitle(cause: string, won: boolean) {
-  if (won) return 'NO MORE SEA';
-  if (/renounce/i.test(cause)) return 'RENOUNCED';
-  if (/apprentice|magus dies/i.test(cause)) return 'THE LINE IS BROKEN';
-  return 'THE HILL IS EMPTY';
-}
-const END_LINES: Record<string, string> = {
-  RENOUNCED:
-    'The Tribunal has spoken your name backward. Your sigils are struck from the books. Your hill is only salt again.',
-  'THE LINE IS BROKEN':
-    'The last magus closed their eyes, and no young voice answered. The aura sinks back into the marsh like a stone into black water.',
-  'THE HILL IS EMPTY': 'The last hand has walked down to Dol. Nobody carries the vis now, and the tower goes dark.',
-  'NO MORE SEA': 'The seventh bell rings under the bay, and the tide goes out and does not come back.',
-};
 
 /** The nag: what the next covenant inherits, from the legacy already saved. */
 function inheritance(): string {
@@ -279,7 +301,7 @@ function inheritance(): string {
 function End() {
   const s = () => game.s!;
   const won = () => s().outcome?.kind === 'win';
-  const title = () => endTitle(s().outcome?.cause ?? '', won());
+  const end = () => ending(s());
   const stats = (): [string, string][] => [
     ['Ended', `${year(s())}, after ${mmss(s().t)}`],
     ['Insight gathered', num(s().stats.insightMade)],
@@ -299,10 +321,10 @@ function End() {
       <h1
         class={`text-center font-bold text-4xl uppercase tracking-[0.2em] sm:text-6xl ${won() ? 'text-gold' : 'text-bad'}`}
       >
-        {title()}
+        {end()?.title ?? (won() ? 'WON' : 'LOST')}
       </h1>
       <Tagline>{s().outcome?.cause}</Tagline>
-      <p class="max-w-md text-center">{END_LINES[title()]}</p>
+      <p class="max-w-md text-center">{end()?.line}</p>
       <Show when={scenarioOf(s()).legacy}>
         <p class="max-w-md text-center italic text-gold">
           {won() ? 'And the hill remembers.' : 'But the Gate still waits under the tide, and the Gate remembers.'}{' '}
