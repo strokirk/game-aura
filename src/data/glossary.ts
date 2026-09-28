@@ -15,7 +15,7 @@ export const GLOSSARY = {
   stone: { forms: ['Stone'], text: 'Granite from Mont-Dol, for Sanctums, storehouses and the Gate.' },
   bread: {
     forms: ['Bread'],
-    text: 'Food. Every hand eats a little every second; without it they work at half speed and leave.',
+    text: 'Hard work runs on it: Quarries and Salt-works burn a little and work half as hard again while there is any. It also pays for alms, pilgrims and dikes.',
   },
   vellum: { forms: ['Vellum'], text: 'Calfskin prepared for writing. Lab Texts are written on it.' },
   vis: {
@@ -23,13 +23,17 @@ export const GLOSSARY = {
     text: 'Raw magic, gathered at a few special places. All of the covenant’s vis is Vim vis, the Form of magic itself. Experiments burn it.',
   },
   insight: { forms: ['Insight'], text: 'What the magi learn. Research is bought with it.' },
+  tribunal: {
+    forms: ['Tribunal'],
+    text: 'The magi of the Normandy Tribunal, meeting every 7 years. A quiet, vis-rich covenant has influence and gets gifts; every meeting decrees two activities suspect, tripling their Notice.',
+  },
   notice: {
     forms: ['Notice'],
     text: 'The attention the covenant draws. Every building adds to it, and it settles where growth and forgetting balance. The Order judges it: at the limit, the covenant is Renounced.',
   },
   hands: {
     forms: ['hands', 'hand', 'Hands'],
-    text: 'The covenant’s servants, the covenfolk. They work buildings or carry goods, and they eat Bread.',
+    text: 'The covenant’s servants, the covenfolk. They work buildings or carry goods.',
   },
   porters: {
     forms: ['porters', 'porter', 'Porters'],

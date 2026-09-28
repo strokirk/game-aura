@@ -23,6 +23,7 @@ For every concept, decide up front whether it can ever be **0**, **1** or **N**.
 | Experiment recipes | 3 | Registry | More recipes are content |
 | Modifiers (research, traits, Lab Texts, Devices, ink) | Dozens | One list of modifier objects, applied in one place | No effect is special-cased in code |
 | Bells | 7 | List | Longer finales later |
+| Tribunal decrees | 2 at a time, from 7 | List of indices into a registry | More decrees are content; votes and motions later |
 | Event choices | 1–3 | List | Bigger events later |
 | Story threads | 2 | Registry of threads with their triggers | More threads are content |
 | Covenants | 1 | An object, not global state | Rival covenants are a likely direction |

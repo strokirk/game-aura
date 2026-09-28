@@ -109,6 +109,11 @@ flowchart LR
   Bribe -.->|lowers| Notice
   Study -.->|botch| Notice
   Notice -.->|tax, strike, audit| Silver
+  Notice -.->|low: influence| Tribunal(The Tribunal, every 7 years)
+  Vis -.->|in store: influence| Tribunal
+  Tribunal -->|gifts| LabText
+  Tribunal -->|gifts| Device
+  Tribunal -.->|decrees: x3 Notice| Buildings
 
   Silver --> Gate
   Stone -->|Gate porters| Gate

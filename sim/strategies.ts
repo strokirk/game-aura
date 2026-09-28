@@ -156,7 +156,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     };
     const load = (id: BuildingId) => (s.buildings[id]?.workers ?? 0) / (SHARE[id] ?? 1);
     const jobs = (Object.keys(SHARE) as BuildingId[]).filter((id) => free(id));
-    const gateShort = !!s.gate && s.gate.porters < 3 && (s.devices.quarry ?? 0) >= 8;
+    const gateShort = !!s.gate && s.gate.porters < 3 && (!s.gate.raised || (s.devices.quarry ?? 0) >= 8);
     const needStone = !!s.gate?.raised && free('quarry');
     if (idleHands(s) === 0 && (hungry || short || gateShort || needStone)) {
       const keep = s.gate ? ['tide_pool', 'knights_barrow', 'regio_spring', 'quarry'] : [];

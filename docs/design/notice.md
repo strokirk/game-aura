@@ -26,6 +26,7 @@ Notice is the game's pollution: growth makes it, and too much of it ends the run
 - **Endow the Parish:** pay 500 × 2^n Silver (n = Endowments so far: 500, 1,000, 2,000…) to reduce generation by 1 per minute, permanently. It lowers the equilibrium by 10.
 - **Give Alms:** pay 200 × 2^n Bread (n = Alms so far) to reduce generation by 1 per minute, permanently: Endow's Bread twin. The poor of Dol pray for a covenant that feeds them.
 - **Eels for the Monks:** send 50 × 1.5^n Eels across the sands to the abbey of Mont-Saint-Michel (monasteries took their rents in eels) to lower current Notice by 15 at once. Bribe's twin, paid in kind.
+- **The Tribunal** (`tribunal.md`): every 7 years from 1227 it decrees 2 activities suspect, tripling their Notice until the next meeting. Low Notice and a store of Vis give the covenant influence there, and influence brings gifts.
 - **The hidden hour:** after the fourth bell, Notice generation stops for 60 s of every 5 minutes.
 - **Bribe the Lord:** pay 100 × 2^n Silver (n = bribes so far) to lower current Notice by 20 at once. The equilibrium doesn't move, so Notice creeps back over about 10 minutes.
 

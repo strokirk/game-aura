@@ -11,7 +11,9 @@ import {
   giftCost,
   has,
   idleHands,
+  influence,
   lowTide,
+  nextTribunal,
   type Rates,
   researchCost,
   type State,
@@ -19,7 +21,18 @@ import {
   visibleResearch,
   year,
 } from '../core/index.ts';
-import { GATE, GOOD_INFO, GOODS, type GoodId, NOTICE, RESEARCH_DEFS, ZONES, type ZoneId } from '../data/index.ts';
+import {
+  DECREES,
+  GATE,
+  GOOD_INFO,
+  GOODS,
+  type GoodId,
+  NOTICE,
+  RESEARCH_DEFS,
+  TRIBUNAL,
+  ZONES,
+  type ZoneId,
+} from '../data/index.ts';
 import { cost, eta, num } from './format.ts';
 import { GOOD_ICON, I } from './icons.tsx';
 import { Bar, Button, Card, Dim, Ico, Label, Stepper } from './kit.tsx';
@@ -85,6 +98,21 @@ export function NoticeCard(p: { s: State; r: Rates }) {
           · tax at {NOTICE.tax.at}, strike at {NOTICE.strike.at}, audit at {NOTICE.audit.at}, Renounced at 100
         </Dim>
       </div>
+      <Show when={nextTribunal(p.s)}>
+        {(y) => (
+          <div class="mt-1 text-sm">
+            <Rich text="Tribunal" /> in <b>{y()}</b> · influence now <b>{influence(p.s)}</b>
+            <Dim> (1 per 20 Notice under 100, 1 per 20 Vis; a gift per 2)</Dim>
+            <For each={p.s.decrees}>
+              {(i) => (
+                <div class="text-warn">
+                  Decree {DECREES[i]?.name}: ×{TRIBUNAL.mult} Notice until {y()}
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </Show>
       <Show when={has(p.s, 'endow')}>
         <div class="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Button disabled={!canAfford(p.s, endowCost(p.s))} onClick={() => act({ type: 'endow' })} class="flex-col">

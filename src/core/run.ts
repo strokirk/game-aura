@@ -7,6 +7,7 @@ import {
   COST_GROWTH,
   type Condition,
   type Cost,
+  DECREES,
   DEFS,
   DIKE,
   type Effect,
@@ -40,6 +41,7 @@ import {
   START_YEAR,
   TERRACE,
   type Thread,
+  TRIBUNAL,
   TWILIGHT_TRAITS,
   WARP,
   YEAR,
@@ -153,6 +155,8 @@ export interface State {
   gate: GateState | null;
   /** The zone the Couesnon doubles, and the year it last moved. */
   couesnon: { zone: ZoneId; year: number } | null;
+  /** The Tribunal's standing decrees (indices into DECREES), until the next meeting. */
+  decrees: number[];
   /** The last year whose yearly events (raids, storms) have happened. */
   yearDone: number;
   events: EventDef[];
@@ -214,6 +218,7 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     devices: { ...sc.start.devices },
     gate: sc.start.gate ? newGate(sc.start.gate) : null,
     couesnon: null,
+    decrees: [],
     yearDone: START_YEAR + Math.floor((sc.start.t ?? 0) / YEAR),
     events: sc.intro ? [structuredClone(sc.intro) as EventDef] : [],
     ink: {},
@@ -476,7 +481,7 @@ export function rates(s: State): Rates {
   let wakes = 0;
   for (const id of keys(s.buildings)) {
     const def = B[id];
-    noticeSum += count(s, id) * zoneNotice(s, def.zone, mods);
+    noticeSum += count(s, id) * zoneNotice(s, def.zone, mods) * decreeMult(s, id);
     // The Bell of Blood: brine carries vis.
     const pw: Cost = id === 'salt_pan' && rung >= 2 ? { ...def.perWorker, vis: GATE.bloodVis } : (def.perWorker ?? {});
     const uses: Cost = def.uses ?? {};
@@ -547,7 +552,7 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
   m.exp = null;
   if (roll < e.botch) {
     s.stats.botches++;
-    s.notice += EXPERIMENT.botchNotice;
+    s.notice += EXPERIMENT.botchNotice * decreeMult(s);
     m.warp++;
     log(
       s,
@@ -784,11 +789,55 @@ function ring(s: State, n: number) {
   }
 }
 
-/** Once a year after the fifth and sixth bells: raids from the Pit, and storms on the dikes. */
+/** Influence at the Tribunal: quiet and vis-rich covenants are heard. */
+export const influence = (s: State) =>
+  Math.max(0, Math.floor((100 - s.notice) / TRIBUNAL.perNotice)) + Math.floor(s.res.vis / TRIBUNAL.perVis);
+/** The year of the next Tribunal, or null if it doesn't meet in this scenario. */
+export function nextTribunal(s: State) {
+  if (!scenarioOf(s).tribunal) return null;
+  // The first year whose yearly events haven't happened yet.
+  const y = s.yearDone + 1;
+  if (y <= TRIBUNAL.first) return TRIBUNAL.first;
+  return TRIBUNAL.first + Math.ceil((y - TRIBUNAL.first) / TRIBUNAL.every) * TRIBUNAL.every;
+}
+/** A standing decree triples the Notice of its activity: a building type, or botches when none is given. */
+export const decreeMult = (s: State, building?: BuildingId) =>
+  s.decrees.some((i) => DECREES[i]?.building === building) ? TRIBUNAL.mult : 1;
+
+function tribunal(s: State) {
+  const inf = influence(s);
+  const why = `Notice ${Math.floor(s.notice)}: ${Math.max(0, Math.floor((100 - s.notice) / TRIBUNAL.perNotice))}, Vis ${Math.floor(s.res.vis)}: ${Math.floor(s.res.vis / TRIBUNAL.perVis)}`;
+  // Draw distinct decrees.
+  const pool = DECREES.map((_, i) => i);
+  s.decrees = [];
+  for (let k = 0; k < TRIBUNAL.decrees && pool.length; k++)
+    s.decrees.push(pool.splice(Math.floor(nextRandom(s.rng) * pool.length), 1)[0]!);
+  const gifts: string[] = [];
+  const producers = keys(s.buildings).filter((id) => B[id].perWorker && (s.buildings[id]?.workers ?? 0) > 0);
+  const best = producers.sort((a, b) => (s.buildings[b]?.workers ?? 0) - (s.buildings[a]?.workers ?? 0))[0];
+  for (let k = 0; k < Math.floor(inf / TRIBUNAL.perGift); k++) {
+    if (best && nextRandom(s.rng) < 0.5) {
+      s.devices[best] = (s.devices[best] ?? 0) + 1;
+      gifts.push(`a device for the ${B[best].name}`);
+    } else {
+      s.labTexts++;
+      gifts.push('a Lab Text');
+    }
+  }
+  const decreed = s.decrees.map((i) => DECREES[i]!.name).join(' and ');
+  card(
+    s,
+    `The Tribunal of ${year(s)}`,
+    `The magi of the Normandy Tribunal meet, and Mont-Dol has ${inf} influence (${why}). They decree ${decreed}: until the next Tribunal, those draw three times the Notice. ${gifts.length ? `For the covenant's standing they give ${gifts.join(', ')}.` : 'They give the covenant nothing.'}`,
+  );
+}
+
+/** Once a year: the Tribunal every 7 years; after the fifth and sixth bells, raids from the Pit and storms on the dikes. */
 function yearly(s: State) {
   const y = year(s);
   if (y <= s.yearDone) return;
   s.yearDone = y;
+  if (scenarioOf(s).tribunal && y >= TRIBUNAL.first && (y - TRIBUNAL.first) % TRIBUNAL.every === 0) tribunal(s);
   if (bells(s) >= 5) {
     const crowded = (keys(ZONES) as ZoneId[]).reduce((a, z) => (zoneUsed(s, z) > zoneUsed(s, a) ? z : a), 'hearth');
     const prey = keys(s.buildings)
