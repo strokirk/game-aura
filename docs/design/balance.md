@@ -17,6 +17,7 @@ The balance simulation is the source of truth for every number in the design. A 
 | --- | --- | --- |
 | Trial | Sensible | Wins in 1:30–4:00 in ≥ 90% of seeds, median ≥ 2:00 |
 | Trial | Idle (does nothing) | Loses |
+| Trial, full run | Random (legal actions at random) | A fuzzer: never crashes, replays exactly |
 | Full run | Careful | Wins in 60–75 min `[PLAYTEST: the careful strategy reaches the first Rite on some seeds and wins none yet]` |
 | Full run | Reckless, without bribes | Renounced `[PLAYTEST: not simulated yet]` |
 | Full run | Timid | Runs out of time `[PLAYTEST: not simulated yet]` |
