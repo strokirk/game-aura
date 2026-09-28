@@ -1,5 +1,6 @@
 import {
   type Action,
+  apply,
   buildable,
   buildCost,
   canAfford,
@@ -20,14 +21,91 @@ import {
   workerSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { type BuildingId, DEFS, EXPERIMENT, NOTICE, type ZoneId } from '../src/data/index.ts';
+import { nextRandom, seedRng } from '../src/core/rng.ts';
+import {
+  type BuildingId,
+  DEFS,
+  EXPERIMENT,
+  NOTICE,
+  RECIPES,
+  RESEARCH,
+  type RecipeId,
+  type ResearchId,
+  ZONES,
+  type ZoneId,
+} from '../src/data/index.ts';
 
 /** A scripted player: called once per simulated second, returns the actions to try. */
 export type Strategy = (s: State) => Action[];
 
+const keys = <K extends string>(o: Partial<Record<K, unknown>>) => Object.keys(o) as K[];
+const deltas = [1, -1];
+
+/**
+ * Every action the random player can take, by type: each entry lists the candidates in a state.
+ * Keyed by `Action['type']`, so tsc fails until a new action type gets its one line here.
+ */
+const CANDIDATES: { [K in Action['type']]: (s: State) => Extract<Action, { type: K }>[] } = {
+  build: () => keys(DEFS).map((building) => ({ type: 'build', building })),
+  dike: () => [{ type: 'dike' }],
+  workers: (s) =>
+    keys(s.buildings).flatMap((building) => deltas.map((delta) => ({ type: 'workers', building, delta }))),
+  porters: () => keys(ZONES).flatMap((zone) => deltas.map((delta) => ({ type: 'porters', zone, delta }))),
+  gatePorters: () => deltas.map((delta) => ({ type: 'gatePorters', delta })),
+  experiment: (s) =>
+    s.magi.flatMap((m) =>
+      keys<RecipeId>(RECIPES).flatMap((recipe) =>
+        [0, EXPERIMENT.maxExtraVis].flatMap((extra) =>
+          RECIPES[recipe].result === 'device'
+            ? keys(s.buildings).map((target) => ({ type: 'experiment' as const, magus: m.id, recipe, extra, target }))
+            : [{ type: 'experiment' as const, magus: m.id, recipe, extra }],
+        ),
+      ),
+    ),
+  study: (s) => s.magi.map((m) => ({ type: 'study', magus: m.id })),
+  research: () => keys<ResearchId>(RESEARCH).map((id) => ({ type: 'research', id })),
+  endow: () => [{ type: 'endow' }],
+  bribe: () => [{ type: 'bribe' }],
+  alms: () => [{ type: 'alms' }],
+  keepSalt: () => [{ type: 'keepSalt' }],
+  gate: () => (['found', 'pour', 'vis', 'rite'] as const).map((op) => ({ type: 'gate', op })),
+  choose: (s) => (s.events[0]?.options ?? []).map((_, option) => ({ type: 'choose', option })),
+};
+const KINDS = keys(CANDIDATES);
+
+/** A generator seeded from the run's seed and the moment, so the random player replays exactly without touching `s.rng`. */
+function momentRng(s: State): () => number {
+  const h =
+    Math.imul(s.seed ^ 0x5bd1e995, 0x9e3779b1) ^ Math.imul(Math.round(s.t * 4) + 1, 0x85ebca6b) ^ s.events.length;
+  const r = seedRng(h);
+  return () => nextRandom(r);
+}
+const pickOf = <T>(xs: readonly T[], rnd: () => number): T | undefined => xs[Math.floor(rnd() * xs.length)];
+/** Whether apply() accepts the action. The log is left out: legality never reads it, and cloning it is most of apply()'s cost. */
+const legal = (s: State, a: Action) => !('error' in apply({ ...s, log: [] }, a));
+
 export const STRATEGIES: Record<string, Strategy> = {
   /** Does nothing but dismiss cards. Must lose the trial. */
   idle: () => [],
+
+  /** A fuzzer and a baseline: up to 3 legal actions a second, picked at random; a random option on each card. */
+  random: (s) => {
+    const rnd = momentRng(s);
+    if (s.events.length) {
+      const opts = CANDIDATES.choose(s).filter((a) => legal(s, a));
+      const a = pickOf(opts, rnd);
+      return a ? [a] : [];
+    }
+    const out: Action[] = [];
+    const want = Math.floor(rnd() * 4);
+    // Sample a handful of candidates rather than testing them all.
+    for (let tries = 0; out.length < want && tries < 8; tries++) {
+      const kind = pickOf(KINDS, rnd)!;
+      const a = pickOf<Action>(CANDIDATES[kind](s), rnd);
+      if (a && a.type !== 'choose' && legal(s, a)) out.push(a);
+    }
+    return out;
+  },
 
   /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
   sensible: (s) => {
