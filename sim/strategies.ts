@@ -1,6 +1,7 @@
 import {
   type Action,
   apply,
+  applyInPlace,
   bellStatus,
   buildable,
   buildCost,
@@ -8,6 +9,7 @@ import {
   canAffordResearch,
   canExpand,
   cap,
+  clone,
   count,
   endowCost,
   expandCost,
@@ -106,19 +108,21 @@ function momentRng(s: State): () => number {
 const pickOf = <T>(xs: readonly T[], rnd: () => number): T | undefined => xs[Math.floor(rnd() * xs.length)];
 /** Whether apply() accepts the action. The log is left out: legality never reads it, and cloning it is most of apply()'s cost. */
 const legal = (s: State, a: Action) => !('error' in apply({ ...s, log: [] }, a));
-/** Applies actions in order to a copy, keeping those the core accepts: the strategy sees the effect of its own moves. */
-function plan(s: State, pick: (x: State) => Action | undefined, max = 60): Action[] {
+/** Applies picked actions in order to x (a copy the caller owns), until one is refused: the strategy sees the effect of its own moves. */
+function plan(x: State, pick: (x: State) => Action | undefined, max = 60): Action[] {
   const out: Action[] = [];
-  let x: State = { ...s, log: [] };
   for (let i = 0; i < max; i++) {
     const a = pick(x);
-    if (!a) break;
-    const r = apply(x, a);
-    if ('error' in r) break;
-    x = r;
+    if (!a || applyInPlace(x, a)) break;
     out.push(a);
   }
   return out;
+}
+/** A copy of s with these actions applied, those the core refuses skipped. */
+function after(s: State, actions: Action[]): State {
+  const x = clone(s);
+  for (const a of actions) applyInPlace(x, a);
+  return x;
 }
 
 /** Where a hand can go now: a worker slot with room, or a porter for a zone with anything to carry. */
@@ -130,11 +134,11 @@ function openJobs(s: State): Action[] {
 }
 
 /**
- * Every idle hand to work. Porters first wherever goods are being lost; then the job with the lowest share of
+ * Every idle hand to work, applied to x (a copy the caller owns). Porters first wherever goods are being lost; then the job with the lowest share of
  * its slots filled, so hands split evenly across everything the covenant has built.
  */
-function placeHands(s: State, pick: (xs: Action[], x: State) => Action | undefined = evenly): Action[] {
-  return plan(s, (x) => {
+function placeHands(x0: State, pick: (xs: Action[], x: State) => Action | undefined = evenly): Action[] {
+  return plan(x0, (x) => {
     if (idleHands(x) <= 0) return undefined;
     const r = rates(x);
     const short = keys(ZONES).find((z) => ZONES[z].carry > 0 && r.zones[z].made > r.zones[z].capacity + 1e-6);
@@ -161,12 +165,7 @@ function reorganize(s: State, rnd: () => number): Action[] {
       (s.porters[zone] ?? 0) > 0 ? [{ type: 'porters' as const, zone, delta: -(s.porters[zone] ?? 0) }] : [],
     ),
   ];
-  let x: State = { ...s, log: [] };
-  for (const a of off) {
-    const r = apply(x, a);
-    if (!('error' in r)) x = r;
-  }
-  return [...off, ...placeHands(x, (xs) => pickOf(xs, rnd))];
+  return [...off, ...placeHands(after(s, off), (xs) => pickOf(xs, rnd))];
 }
 
 export const STRATEGIES: Record<string, Strategy> = {
@@ -191,12 +190,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     }
     // Every now and then, reorganize: all hands off and placed again. Otherwise just put the idle to work.
     if (rnd() < 0.02) return [...out, ...reorganize(s, rnd)];
-    let x: State = { ...s, log: [] };
-    for (const a of out) {
-      const r = apply(x, a);
-      if (!('error' in r)) x = r;
-    }
-    return [...out, ...placeHands(x, (xs) => pickOf(xs, rnd))];
+    return [...out, ...placeHands(after(s, out), (xs) => pickOf(xs, rnd))];
   },
 
   /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
@@ -248,7 +242,10 @@ export const STRATEGIES: Record<string, Strategy> = {
         .filter((id) => has2(id))
         .map((id) => buildCost(s, id)),
     ];
-    const over = (g: 'insight' | 'vis' | 'silver' | 'stone' | 'vellum') => costs.some((c) => (c[g] ?? 0) > cap(s, g));
+    const over = (g: 'insight' | 'vis' | 'silver' | 'stone' | 'vellum') => {
+      const c = cap(s, g);
+      return costs.some((x) => (x[g] ?? 0) > c);
+    };
     if (over('insight') || over('vis')) want.push('library');
     if (over('silver') || over('stone') || over('vellum')) want.push('storehouse');
     want.push('knights_barrow', 'regio_spring');
@@ -332,11 +329,6 @@ export const STRATEGIES: Record<string, Strategy> = {
       if ((studyCost(m).insight ?? 0) < s.res.insight * 0.1) out.push({ type: 'study', magus: m.id });
     });
     // Last: every idle hand to work, split evenly.
-    let x: State = { ...s, log: [] };
-    for (const a of out) {
-      const r2 = apply(x, a);
-      if (!('error' in r2)) x = r2;
-    }
-    return [...out, ...placeHands(x)];
+    return idleHands(s) > 0 ? [...out, ...placeHands(after(s, out))] : out;
   },
 };

@@ -245,7 +245,11 @@ export interface State {
 export type Result = State | { error: string };
 
 const keys = <K extends string>(o: Partial<Record<K, unknown>>) => Object.keys(o) as K[];
-const zeroGoods = () => Object.fromEntries(GOODS.map((g) => [g, 0])) as Record<GoodId, number>;
+const zeroGoods = () => {
+  const o = {} as Record<GoodId, number>;
+  for (const g of GOODS) o[g] = 0;
+  return o;
+};
 export const scenarioOf = (s: State): ScenarioDef => SCENARIOS[s.scenario];
 export const magusName = (id: MagusId) => MAGI.find((m) => m.id === id)?.name ?? id;
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
@@ -347,11 +351,42 @@ export const dark = (s: State) => bells(s) >= 4 && s.t % GATE.darkness.period < 
 
 // ─── Modifiers: every permanent bonus, gathered in one place ────────
 
-function modifiers(s: State): Modifier[] {
-  const out: Modifier[] = [];
+/** What all the research bought adds up to: a product per multiplier, a sum per addition. */
+interface Effects {
+  output: Partial<Record<BuildingId, number>>;
+  carry: Record<ZoneId, number>;
+  cap: Partial<Record<GoodId, number>>;
+  /** A zone's Notice factor, where research sets it. */
+  zoneNotice: Partial<Record<ZoneId, number>>;
+  botch: number;
+  baseline: number;
+  notice: number;
+  yield: number;
+  assistants: number;
+}
+/** Cached per `s.research` object, which is never mutated: buying research replaces it. */
+const effectsCache = new WeakMap<State['research'], Effects>();
+function modifiers(s: State): Effects {
+  let e = effectsCache.get(s.research);
+  if (e) return e;
+  const carry = {} as Record<ZoneId, number>;
+  for (const z of keys(ZONES)) carry[z] = 1;
+  e = { output: {}, carry, cap: {}, zoneNotice: {}, botch: 1, baseline: 1, notice: 1, yield: 1, assistants: 0 };
   for (const id of keys(s.research))
-    for (let i = 0; i < (s.research[id] ?? 0); i++) out.push(...RESEARCH_DEFS[id].effects);
-  return out;
+    for (let i = 0; i < (s.research[id] ?? 0); i++)
+      for (const x of RESEARCH_DEFS[id].effects as Modifier[]) {
+        if (x.kind === 'output') e.output[x.building] = (e.output[x.building] ?? 1) * x.mult;
+        if (x.kind === 'carry') for (const z of keys(ZONES)) carry[z] *= !x.zone || x.zone === z ? x.mult : 1;
+        if (x.kind === 'cap') e.cap[x.good] = (e.cap[x.good] ?? 1) * x.mult;
+        if (x.kind === 'zoneNotice') e.zoneNotice[x.zone] = x.factor;
+        if (x.kind === 'botch') e.botch *= x.mult;
+        if (x.kind === 'baseline') e.baseline *= x.mult;
+        if (x.kind === 'noticeGen') e.notice *= x.mult;
+        if (x.kind === 'yield') e.yield *= x.mult;
+        if (x.kind === 'assistants') e.assistants += x.add;
+      }
+  effectsCache.set(s.research, e);
+  return e;
 }
 const product = (xs: number[]) => xs.reduce((a, x) => a * x, 1);
 
@@ -394,8 +429,8 @@ export function agingChance(s: State, m: MagusState) {
   return Math.min(1, (m.age - AGING.from) * AGING.perYear * (m.longevity ? AGING.longevity : 1) * auraBoosts(s).aging);
 }
 
-function outputMult(s: State, mods: Modifier[], id: BuildingId, good: GoodId) {
-  let m = product(mods.flatMap((x) => (x.kind === 'output' && x.building === id ? [x.mult] : [])));
+function outputMult(s: State, fx: Effects, id: BuildingId, good: GoodId) {
+  let m = fx.output[id] ?? 1;
   m *= 1 + EXPERIMENT.device * (s.devices[id] ?? 0);
   m *= AURA.stain ** stains(s);
   if (isSite(id)) m *= auraBoosts(s).vis;
@@ -408,31 +443,26 @@ function outputMult(s: State, mods: Modifier[], id: BuildingId, good: GoodId) {
     if (x.good === good && (x.id === id || !(x.id in B)) && (x.until === null || x.until > s.t)) m *= x.mult;
   return m;
 }
-const carryMult = (mods: Modifier[], z: ZoneId) =>
-  product(mods.flatMap((x) => (x.kind === 'carry' && (!x.zone || x.zone === z) ? [x.mult] : [])));
-export function zoneNotice(s: State, z: ZoneId, mods = modifiers(s)) {
-  const set = mods.find((x) => x.kind === 'zoneNotice' && x.zone === z);
-  return set?.kind === 'zoneNotice' ? set.factor : ZONES[z].noticeFactor;
+export function zoneNotice(s: State, z: ZoneId, fx = modifiers(s)) {
+  return fx.zoneNotice[z] ?? ZONES[z].noticeFactor;
 }
-const botchMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'botch' ? [x.mult] : [])));
-const baselineMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'baseline' ? [x.mult] : [])));
-const noticeMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'noticeGen' ? [x.mult] : [])));
-const extraAssistants = (mods: Modifier[]) => mods.reduce((a, x) => a + (x.kind === 'assistants' ? x.add : 0), 0);
 
 // ─── Selectors ──────────────────────────────────────────────────────
 
 /** Every cap is a base times multipliers: storage buildings (×1.25 each) and research. */
-export function cap(s: State, g: GoodId, mods = modifiers(s)) {
+export function cap(s: State, g: GoodId, fx = modifiers(s)) {
   let c = GOOD_INFO[g].cap;
-  for (const id of keys(s.buildings)) if (B[id].stores?.includes(g)) c *= STORE_MULT ** count(s, id);
-  for (const x of mods) if (x.kind === 'cap' && x.good === g) c *= x.mult;
+  for (const id of STORERS) if (B[id].stores?.includes(g)) c *= STORE_MULT ** count(s, id);
+  c *= fx.cap[g] ?? 1;
   c = Math.floor(c);
   if (g === 'bread' || g === 'eels') c += Math.floor(s.res.salt / PRESERVE);
   return c;
 }
+/** The buildings that multiply storage caps. */
+const STORERS = keys(B).filter((id) => B[id].stores);
 export const count = (s: State, id: BuildingId) => s.buildings[id]?.count ?? 0;
 export const workerSlots = (s: State, id: BuildingId) =>
-  count(s, id) * (B[id].slots + (id === 'sanctum' ? extraAssistants(modifiers(s)) : 0));
+  count(s, id) * (B[id].slots + (id === 'sanctum' ? modifiers(s).assistants : 0));
 export const assigned = (s: State) =>
   keys(s.buildings).reduce((a, id) => a + (s.buildings[id]?.workers ?? 0), 0) +
   keys(s.porters).reduce((a, z) => a + (s.porters[z] ?? 0), 0) +
@@ -574,10 +604,10 @@ const traitMult = (s: State, m: MagusState | undefined, k: 'yield' | 'time') =>
 /** At work in the Sanctum: not in Twilight. */
 export const present = (m: MagusState) => m.sanctum && m.twilight === null;
 
-export function readingRate(s: State, m: MagusState, mods = modifiers(s)) {
+export function readingRate(s: State, m: MagusState, fx = modifiers(s)) {
   if (!m.sanctum) return 0;
   const lt = labTotal(m) + auraBoosts(s).lt;
-  return BASELINE_INSIGHT * lt * assistMult(s) * baselineMult(mods) * insightMult(s, m);
+  return BASELINE_INSIGHT * lt * assistMult(s) * fx.baseline * insightMult(s, m);
 }
 export const studyCost = (m: MagusState): Cost => ({ insight: Math.ceil(20 * 1.35 ** (m.lt - 10)) });
 
@@ -604,8 +634,8 @@ export function experimentPlan(s: State, magus: MagusId, recipe: RecipeId, extra
       (1 + EXPERIMENT.extraYield * extra) *
       (1 + EXPERIMENT.labText * s.labTexts) *
       traitMult(s, m, 'yield') *
-      product(modifiers(s).flatMap((x) => (x.kind === 'yield' ? [x.mult] : []))),
-    botch: (EXPERIMENT.botch + EXPERIMENT.extraBotch * extra + traitBotch) * botchMult(modifiers(s)),
+      modifiers(s).yield,
+    botch: (EXPERIMENT.botch + EXPERIMENT.extraBotch * extra + traitBotch) * modifiers(s).botch,
     discovery: EXPERIMENT.discovery + boosts.discovery,
   };
 }
@@ -631,7 +661,7 @@ export interface Rates {
 
 /** Every per-second rate in the game, computed in one place. The UI shows exactly what tick() applies. */
 export function rates(s: State): Rates {
-  const mods = modifiers(s);
+  const fx = modifiers(s);
   const net = zeroGoods();
   const byBuilding: Rates['byBuilding'] = {};
   const zones = Object.fromEntries(
@@ -643,19 +673,19 @@ export function rates(s: State): Rates {
   let wakes = 0;
   for (const id of keys(s.buildings)) {
     const def = B[id];
-    noticeSum += count(s, id) * zoneNotice(s, def.zone, mods) * decreeMult(s, id);
+    noticeSum += count(s, id) * zoneNotice(s, def.zone, fx) * decreeMult(s, id);
     // The Bell of Blood: brine carries vis.
     const pw: Cost = id === 'salt_pan' && rung >= 2 ? { ...def.perWorker, vis: GATE.bloodVis } : (def.perWorker ?? {});
-    const uses: Cost = def.uses ?? {};
-    const fed = keys(uses).every((g) => s.res[g] > 0);
+    const uses = def.uses;
+    const fed = !uses || keys(uses).every((g) => s.res[g] > 0);
     const w = fed ? Math.min(s.buildings[id]?.workers ?? 0, workerSlots(s, id)) : 0;
-    for (const g of keys(uses)) net[g] -= w * (uses[g] ?? 0);
+    if (uses) for (const g of keys(uses)) net[g] -= w * (uses[g] ?? 0);
     const fuelled = !!def.fuel && s.res.bread > 0;
     if (fuelled) net.bread -= w * (def.fuel ?? 0) * fuelRate;
     if (id === 'bog_camp' && w > 0) wakes += GATE.scissyNotice;
     const out: Cost = {};
     for (const g of keys(pw)) {
-      out[g] = w * (pw[g] ?? 0) * (fuelled ? FUEL_MULT : 1) * outputMult(s, mods, id, g);
+      out[g] = w * (pw[g] ?? 0) * (fuelled ? FUEL_MULT : 1) * outputMult(s, fx, id, g);
       zones[def.zone].made += out[g];
     }
     byBuilding[id] = out;
@@ -663,7 +693,7 @@ export function rates(s: State): Rates {
   for (const z of keys(ZONES)) {
     const zone = zones[z];
     if (ZONES[z].carry === 0) continue;
-    zone.capacity = zone.strike ? 0 : (s.porters[z] ?? 0) * ZONES[z].carry * carryMult(mods, z);
+    zone.capacity = zone.strike ? 0 : (s.porters[z] ?? 0) * ZONES[z].carry * fx.carry[z];
     zone.factor = zone.made > 0 ? Math.min(1, zone.capacity / zone.made) : 1;
   }
   for (const id of keys(byBuilding)) {
@@ -674,7 +704,7 @@ export function rates(s: State): Rates {
       net[g] += out[g];
     }
   }
-  for (const m of s.magi) if (present(m) && !m.exp) net.insight += readingRate(s, m, mods);
+  for (const m of s.magi) if (present(m) && !m.exp) net.insight += readingRate(s, m, fx);
   // Poured goods go to the Gate, uncapped, instead of the Hall (and poured Salt isn't sold).
   const gate = zeroGoods();
   for (const g of s.gate?.pour ?? [])
@@ -682,16 +712,16 @@ export function rates(s: State): Rates {
       gate[g] = net[g];
       net[g] = 0;
     }
-  const reserve = s.keepSalt ? cap(s, 'salt', mods) : 0;
+  const reserve = s.keepSalt ? cap(s, 'salt', fx) : 0;
   if (net.salt > 0 && s.res.salt >= reserve - 1e-9) {
     net.silver += net.salt * SALT_PRICE;
     net.salt = 0;
   }
-  const gateStone = s.gate ? s.gate.porters * ZONES.marsh.carry * carryMult(mods, 'marsh') : 0;
+  const gateStone = s.gate ? s.gate.porters * ZONES.marsh.carry * fx.carry.marsh : 0;
   if (rung >= 2) wakes += GATE.bloodNotice;
   const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
   const raised = AURA.raiseNotice * (s.research.raise_aura ?? 0);
-  const gen = dark(s) ? 0 : Math.max(0, (NOTICE_K * noticeSum + wakes + raised - levers) * noticeMult(mods));
+  const gen = dark(s) ? 0 : Math.max(0, (NOTICE_K * noticeSum + wakes + raised - levers) * fx.notice);
   return { net, byBuilding, zones, noticeGen: gen, gate, gateStone };
 }
 
@@ -1267,7 +1297,7 @@ function startStory(s: State) {
 const blocked = (s: State) => !!s.outcome || s.events.length > 0;
 
 /** A deep copy, except the log and Chronicle: their entries never change once written, so they're shared. */
-function clone(s: State): State {
+export function clone(s: State): State {
   const { log: l, chronicle: c, ...rest } = s;
   return { ...structuredClone(rest), log: [...l], chronicle: [...c] };
 }
@@ -1277,8 +1307,14 @@ export function step(s0: State, dt: number): State {
   if (blocked(s0)) return s0;
   const n = Math.floor((s0.acc + dt) / DT + 1e-9);
   if (n === 0) return { ...s0, acc: s0.acc + dt };
-  const s = clone(s0);
-  s.acc = s0.acc + dt - n * DT;
+  return advance(clone(s0), dt);
+}
+
+/** step() without the copy: mutates s. For code that owns its state, such as the sim. */
+export function advance(s: State, dt: number): State {
+  if (blocked(s)) return s;
+  const n = Math.floor((s.acc + dt) / DT + 1e-9);
+  s.acc = s.acc + dt - n * DT;
   for (let i = 0; i < n && !blocked(s); i++) tick(s);
   return s;
 }
@@ -1437,7 +1473,7 @@ function act(s: State, a: Action): string | undefined {
       const fromHall = Math.min(s.res.insight, c.insight ?? 0);
       if (s.gate) s.gate.store.insight -= (c.insight ?? 0) - fromHall;
       pay(s, { ...c, insight: fromHall });
-      s.research[a.id] = (s.research[a.id] ?? 0) + 1;
+      s.research = { ...s.research, [a.id]: (s.research[a.id] ?? 0) + 1 };
       for (const x of def.effects) if (x.kind === 'reveal') reveal(s, x.id);
       if (a.id === 'aegis') s.aura.aegisAt = s.t;
       if (a.id === 'raise_aura') {
@@ -1586,12 +1622,12 @@ function act(s: State, a: Action): string | undefined {
       const opt = ev?.options[a.option];
       if (!opt) return 'No such choice';
       if (opt.cost && !canAfford(s, opt.cost)) return 'Not enough';
-      if (opt.cost) pay(s, opt.cost);
       const thread = ev.thread ?? 'eels';
       const saved = s.ink[thread];
-      if (ev.knot && saved) {
-        const r = chooseInKnot(thread, saved, a.option);
-        if (!r) return 'No such choice';
+      const r = ev.knot && saved ? chooseInKnot(thread, saved, a.option) : undefined;
+      if (r === null) return 'No such choice';
+      if (opt.cost) pay(s, opt.cost);
+      if (r) {
         s.ink[thread] = r.saved;
         if (r.vars) s.story = r.vars;
         applyEffects(s, r.effects);
@@ -1604,14 +1640,22 @@ function act(s: State, a: Action): string | undefined {
 }
 
 export function apply(s0: State, a: Action): Result {
-  if (s0.outcome) return { error: 'The run is over' };
-  if (s0.events.length && a.type !== 'choose') return { error: 'An event is waiting' };
   const s = clone(s0);
+  const error = applyInPlace(s, a);
+  return error ? { error } : s;
+}
+
+/**
+ * apply() without the copy: mutates s and returns the rejection, if any. Every rule check in act() comes before
+ * its first change, so a rejected action leaves s as it was (the careful sim's replay test holds this).
+ */
+export function applyInPlace(s: State, a: Action): string | undefined {
+  if (s.outcome) return 'The run is over';
+  if (s.events.length && a.type !== 'choose') return 'An event is waiting';
   const error = act(s, a);
-  if (error) return { error };
+  if (error) return error;
   s.log.push({ t: s.t, action: a });
   checkOutcome(s);
-  return s;
 }
 
 // ─── Saves ──────────────────────────────────────────────────────────
