@@ -22,7 +22,7 @@ Win and loss conditions belong to a scenario (`scenarios.md`). Each is a list; a
 
 | Scenario | Win | Loss |
 | --- | --- | --- |
-| Trial of the Tide Pool | 500 Insight before the Tribunal of 1222 | Notice 50; 1222 begins |
+| Trial of the Tide Pool | 500 Insight gathered before the Tribunal of 1223 | Notice 50; 1223 begins |
 | The Covenant Must Grow | The seventh bell of Ys (`gate.md`) | Notice 100 (Renounced); no magus and no apprentice left (the line is broken) |
 
 ## Glossary

@@ -4,15 +4,48 @@ A **scenario** is data: a start state, an unlock set, and lists of win and loss 
 
 | Scenario | Start | Win | Loss | Length |
 | --- | --- | --- | --- | --- |
-| **Trial of the Tide Pool** | 4 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool worked, 60 Silver. Aldric only | 500 Insight before 1222 | Notice 50; 1222 begins | 3–5 min at 1× |
+| **Trial of the Tide Pool** | 4 idle hands, Aldric with a Sanctum, 1 unworked Salt-works, 20 Silver, no porters, no Vis site. Aldric only | 500 Insight gathered before 1223 | Notice 50; 1223 begins | 3–5 min at 1× |
 | **The Covenant Must Grow** | 6 hands, Aldric with a Sanctum, 1 Salt Pan, the Tide Pool, 1 Eel Weir, 2 Marsh porters, 60 Silver, 20 Eels, no Bread, plus the legacy. Sabine and Hervé arrive later | The seventh bell (`gate.md`) | Notice 100; the line is broken | 60–80 min |
 
 ## The trial
 
-The trial is the default scenario in development (`?scenario=trial` or the dev menu), the first thing an agent's simulation runs, and the tutorial.
+The trial is the tutorial, the default scenario in development (`?scenario=trial` or the dev menu), and the first thing an agent's simulation runs. It teaches one loop, and nothing else: **hands make Silver, Silver buys a Vis site, Vis becomes Insight, Insight buys research.**
 
-- A player who runs one extra-Vis experiment and assigns hands sensibly wins in about 2.5 minutes (the sim's median).
-- A player who ignores the eels (taking the weir drops the Tide Pool's Vis to 80%) needs about 4.5 minutes, close to the Tribunal of 1222.
+**Input:** the player follows the **guide**, one step at a time.
+
+**System:** the guide is a list of steps in the scenario's data, each a line of text and a condition. The current step is the first whose condition isn't met, so a step that is undone (a hand taken off the Salt-works) comes back. A step can name a tab and a building to point at. The last step has no condition: it stays until the run ends.
+
+| Step | Says | Done when | Points at |
+| --- | --- | --- | --- |
+| 1 | Put 2 hands to work in the Salt-works. | 2 workers in the Salt-works | The Salt-works |
+| 2 | Make a hand a porter. Salt sells for Silver only once it is carried to the Hall. | 1 Marsh porter | The Marsh porters |
+| 3 | Save 40 Silver and build the Tide Pool. It gathers Vis. | The Tide Pool built | The Tide Pool |
+| 4 | Put 2 hands to work at the Tide Pool. | 2 workers at the Tide Pool | The Tide Pool |
+| 5 | The Marsh now makes more than one porter can carry. Make a second porter. | 2 Marsh porters | The Marsh porters |
+| 6 | Put 2 idle hands in the Sanctum as assistants. Each makes Aldric work 25% faster. | 2 assistants in the Sanctum | The Sanctum |
+| 7 | At 5 Vis, open the Magi tab and have Aldric Study the Vis. | 1 experiment begun | The Magi tab |
+| 8 | When the study is done, learn Salt Rakes in the Research tab: more Salt, more Silver. | 1 research bought | The Research tab |
+| 9 | Keep Aldric studying. The Drowned Knight's Barrow is a second Vis site, and extra Vis makes a study yield more. | Never: it stays | — |
+
+**Feedback:** the guide is one gold line under the goal in the header, prefixed "Next:", on every tab. The tab it names pulses, and the building or porter card it names has a gold border. The goal line shows the progress: "Goal: Gather 500 Insight before the Tribunal of 1223 · 180/500".
+
+**What the trial reveals:** only what the loop needs. At the start: the Hall, Aldric's Sanctum, the Salt-works, the Tide Pool and the Barrow (to build), hands, Silver. Vis and Insight appear in the header when they first move. The Research tab appears when Aldric begins his first Study the Vis (he reads from the first second, so the first Insight comes too early to mean anything) and lists **one item, Salt Rakes**. Notice appears when it passes 1, as in the full run. The trial never shows the aura, the Tribunal, Bread or the Bocage.
+
+**Parameters:**
+
+| Parameter | Value |
+| --- | --- |
+| Start | 4 hands, none assigned; housing 8, a new hand every 20 s, so the 8 hands the guide places are all there by 1:20 |
+| Start goods | 20 Silver, 0 Vis |
+| Tide Pool, Barrow | 40 Silver each, 0.08 Vis/s per worker, 2 workers |
+| Win | 500 Insight **gathered** (spending it on research doesn't count against it) |
+| Loss | Notice 50; the start of 1223 (360 s) |
+| Research on offer | Salt Rakes only (50 Insight) |
+
+**Why:** a tutorial that can be won by pressing one button teaches one button. Starting with idle hands and no Vis site makes the player build the whole chain once, in order, and each step's reward is the next step's input, the way *A Dark Room* hands over one verb at a time. The win counts Insight gathered, not held, so the one research never feels like a trap. The Tribunal sits in 1223, three years out: buying the Vis site takes the first minute, and the extra year leaves room for one botch or a bad bargain with the eels.
+
+- A player who follows the guide and keeps Aldric studying wins in about 3½ minutes at 1×, with a year to spare for a botch or the weir (`balance.md`).
+- The eels thread's first 2 beats play here too; taking the weir drops the Tide Pool's Vis to 80% for 10 minutes and costs about half a minute.
 
 ## Staged unlocks (full run)
 
@@ -21,7 +54,7 @@ Nothing appears before it matters. Each unlock is an entry in data: a condition 
 | When | Unlocks |
 | --- | --- |
 | Start | The Hall, Aldric's Sanctum, Salt Pans, the Tide Pool, hands, Silver, Vis and Insight |
-| First Insight | *Study the Vis*; the Research tab with its first 3 items |
+| First Insight | *Study the Vis*; the Research tab with its first 3 items; the Aura card |
 | 8 hands (the Hall is full) | The Bocage zone, Farms, Cottages; a "The Hall is full" card |
 | First research bought | Stone, Quarries, Storehouses, the Drowned Knight's Barrow, *Enchant a Device*, the *Longevity Ritual*, apprentices |
 | 10 hands | Parchmenters, Vellum, Libraries, the Regio Spring and its offerings, *Write a Lab Text*; Sabine and Hervé arrive |

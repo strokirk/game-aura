@@ -21,12 +21,11 @@ export function Button(p: ButtonProps) {
   );
 }
 
-export function Card(p: ParentProps<{ warn?: boolean; class?: string }>) {
-  return (
-    <section class={`mb-2.5 rounded-xl border bg-card p-3 ${p.warn ? 'border-warn' : 'border-line'} ${p.class ?? ''}`}>
-      {p.children}
-    </section>
-  );
+/** `glow` marks the card the trial's guide points at. */
+export function Card(p: ParentProps<{ warn?: boolean; glow?: boolean; class?: string }>) {
+  const edge = () =>
+    p.glow ? 'border-gold shadow-[0_0_1rem_-0.25rem_var(--color-gold)]' : p.warn ? 'border-warn' : 'border-line';
+  return <section class={`mb-2.5 rounded-xl border bg-card p-3 ${edge()} ${p.class ?? ''}`}>{p.children}</section>;
 }
 
 export const Label = (p: ParentProps) => <h3 class="mb-1.5 text-sm uppercase tracking-widest">{p.children}</h3>;
@@ -81,12 +80,13 @@ export function Stepper(p: {
   );
 }
 
+/** A dialog over the screen. It never grows past the screen: a long one scrolls inside. */
 export const Overlay = (p: ParentProps) => (
   <div class="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-4">
     <div
       role="dialog"
       aria-modal="true"
-      class="w-full max-w-md animate-card-in rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]"
+      class="max-h-full w-full max-w-md animate-card-in overflow-y-auto rounded-xl border border-gold bg-card p-4 shadow-[0_0_2rem_-0.5rem_var(--color-gold)]"
     >
       {p.children}
     </div>

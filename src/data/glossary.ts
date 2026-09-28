@@ -1,6 +1,6 @@
 // Game terms the interface highlights wherever they appear in text, Old World style.
 // `forms` are the exact spellings matched as whole words; the first is the display name.
-import { BASELINE_INSIGHT, EXPERIMENT, RECIPES } from './index.ts';
+import { BASELINE_INSIGHT, EXPERIMENT, type GoodId, RECIPES } from './index.ts';
 
 export interface Term {
   forms: readonly string[];
@@ -84,6 +84,19 @@ export const GLOSSARY = {
   dol: { forms: ['Dol'], text: 'The town below the hill, with a bishop, a cathedral and a great many opinions.' },
 } as const satisfies Record<string, Term>;
 export type TermId = keyof typeof GLOSSARY;
+
+/** What each good is for: shown when its chip in the header is tapped. */
+export const GOOD_ABOUT: Record<GoodId, string> = {
+  silver: GLOSSARY.silver.text,
+  salt: 'Boiled from the salt-sand on the flats. The Hall sells it for Silver as it arrives, unless told to keep it to preserve food.',
+  stone: GLOSSARY.stone.text,
+  bread: GLOSSARY.bread.text,
+  eels: 'The marsh pays its rent in eels, and every new hand costs a few. The monks across the bay take them as gifts.',
+  vellum: GLOSSARY.vellum.text,
+  vis: GLOSSARY.vis.text,
+  bog_oak: 'Black oak from the drowned forest of Scissy. It never rots.',
+  insight: GLOSSARY.insight.text,
+};
 
 /** Hermetic Arts: a Technique (what is done) and a Form (what it is done to). "Rego Aquam" is controlling water. */
 export const TECHNIQUES = {

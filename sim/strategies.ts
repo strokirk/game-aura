@@ -199,17 +199,31 @@ export const STRATEGIES: Record<string, Strategy> = {
     return [...out, ...placeHands(x, (xs) => pickOf(xs, rnd))];
   },
 
-  /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
+  /**
+   * Follows the trial's guide: 2 hands on the Salt-works, the Marsh carried, the Tide Pool bought and worked, Salt Rakes
+   * learned, then the Barrow and the Sanctum's assistants. Runs experiments with all spare Vis.
+   */
   sensible: (s) => {
     const out: Action[] = [];
-    if (idleHands(s) > 0) {
-      const r = rates(s);
-      const tide = s.buildings.tide_pool;
-      if (tide && tide.workers < workerSlots(s, 'tide_pool'))
-        out.push({ type: 'workers', building: 'tide_pool', delta: 1 });
-      else if (r.zones.marsh.factor < 1) out.push({ type: 'porters', zone: 'marsh', delta: 1 });
-      else out.push({ type: 'workers', building: 'salt_pan', delta: 1 });
-    }
+    for (const id of ['tide_pool', 'knights_barrow'] as const)
+      if (buildable(s, id) && !isMaxed(s, id) && canAfford(s, buildCost(s, id))) {
+        out.push({ type: 'build', building: id });
+        break;
+      }
+    for (const id of visibleResearch(s))
+      if (!(s.research[id] ?? 0) && canAffordResearch(s, researchCost(s, id))) out.push({ type: 'research', id });
+    const hands = plan(s, (x) => {
+      if (idleHands(x) <= 0) return undefined;
+      const r = rates(x);
+      const room = (id: BuildingId) => count(x, id) > 0 && (x.buildings[id]?.workers ?? 0) < workerSlots(x, id);
+      if (room('salt_pan') && (x.buildings.salt_pan?.workers ?? 0) < 2)
+        return { type: 'workers', building: 'salt_pan', delta: 1 };
+      if (r.zones.marsh.made > r.zones.marsh.capacity + 1e-6) return { type: 'porters', zone: 'marsh', delta: 1 };
+      for (const id of ['tide_pool', 'knights_barrow', 'sanctum', 'salt_pan'] as const)
+        if (room(id)) return { type: 'workers', building: id, delta: 1 };
+      return undefined;
+    });
+    out.push(...hands);
     for (const m of s.magi) {
       if (!m.sanctum || m.exp) continue;
       const extra = Math.max(0, Math.min(EXPERIMENT.maxExtraVis, Math.floor(s.res.vis) - 5));

@@ -15,6 +15,7 @@ import {
   DIKE,
   EEL_RENT,
   type Effect,
+  type Ending,
   type EventDef,
   EXPAND,
   EXPERIMENT,
@@ -25,6 +26,7 @@ import {
   GOOD_INFO,
   GOODS,
   type GoodId,
+  type GuideStep,
   HALL_HOUSING,
   MAGI,
   type MagusId,
@@ -414,6 +416,11 @@ export function zoneNotice(s: State, z: ZoneId, mods = modifiers(s)) {
   const set = mods.find((x) => x.kind === 'zoneNotice' && x.zone === z);
   return set?.kind === 'zoneNotice' ? set.factor : ZONES[z].noticeFactor;
 }
+/** How much one more of a building raises the Notice equilibrium: the "+X Notice at rest" on its Build button. */
+export function buildNotice(s: State, id: BuildingId) {
+  const mods = modifiers(s);
+  return 10 * NOTICE_K * zoneNotice(s, B[id].zone, mods) * decreeMult(s, id) * noticeMult(mods);
+}
 const botchMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'botch' ? [x.mult] : [])));
 const baselineMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'baseline' ? [x.mult] : [])));
 const noticeMult = (mods: Modifier[]) => product(mods.flatMap((x) => (x.kind === 'noticeGen' ? [x.mult] : [])));
@@ -524,6 +531,8 @@ export const canAffordResearch = (s: State, c: Cost) =>
   canAfford(s, { ...c, insight: Math.max(0, (c.insight ?? 0) - (s.gate?.store.insight ?? 0)) });
 
 export function visibleResearch(s: State): ResearchId[] {
+  const only = scenarioOf(s).research;
+  if (only) return [...only];
   const out: ResearchId[] = s.legacy.labTexts > 0 ? ['dig_library'] : [];
   let fresh = 0;
   for (const id of keys(RESEARCH_DEFS).filter((x) => x !== 'dig_library')) {
@@ -808,6 +817,14 @@ function met(s: State, c: Condition): boolean {
       return s.stats.insightMade >= c.atLeast;
     case 'researched':
       return keys(s.research).length >= c.atLeast;
+    case 'workers':
+      return (s.buildings[c.building]?.workers ?? 0) >= c.atLeast;
+    case 'porters':
+      return (s.porters[c.zone] ?? 0) >= c.atLeast;
+    case 'built':
+      return count(s, c.building) >= c.atLeast;
+    case 'experiments':
+      return s.stats.experiments >= c.atLeast;
     case 'bells':
       return bells(s) >= c.atLeast;
     case 'fired':
@@ -824,6 +841,31 @@ function met(s: State, c: Condition): boolean {
       return s.magi.length === 0 && s.apprentices.length === 0;
   }
 }
+/** The scenario's ending that matches how the run ended: its title and epitaph. */
+export function ending(s: State): Ending | undefined {
+  const sc = scenarioOf(s);
+  const list = s.outcome?.kind === 'win' ? sc.win : sc.loss;
+  return list.find((e) => e.cause === s.outcome?.cause);
+}
+
+/** The trial's guide: the first step not yet done, or null with no guide or once the run is over. */
+export function guideStep(s: State): GuideStep | null {
+  if (s.outcome) return null;
+  return scenarioOf(s).guide?.find((g) => !g.done || !met(s, g.done)) ?? null;
+}
+
+/** The Notice at which this scenario is lost. */
+export function noticeLimit(s: State) {
+  const l = scenarioOf(s).loss.find((e) => e.when.kind === 'notice')?.when;
+  return l?.kind === 'notice' ? l.atLeast : 100;
+}
+
+/** Progress toward a numeric goal, for the goal line: Insight gathered toward the trial's 500. */
+export function goalProgress(s: State): { have: number; need: number } | null {
+  const w = scenarioOf(s).win[0]?.when;
+  return w?.kind === 'insightMade' ? { have: s.stats.insightMade, need: w.atLeast } : null;
+}
+
 function checkOutcome(s: State) {
   if (s.outcome) return;
   const sc = scenarioOf(s);

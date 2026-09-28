@@ -7,6 +7,7 @@ import {
   createRun,
   type Legacy,
   NO_LEGACY,
+  nameOf,
   nextLegacy,
   noticeDecay,
   rates,
@@ -17,7 +18,7 @@ import {
   toSave,
   year,
 } from '../core/index.ts';
-import { GOODS, type GoodId, type ScenarioId } from '../data/index.ts';
+import { GOODS, type GoodId, RECIPES, type ScenarioId } from '../data/index.ts';
 
 export type Screen = 'title' | 'options' | 'game' | 'end';
 export const [screen, setScreen] = createSignal<Screen>('title');
@@ -112,6 +113,23 @@ function popChanges(prev: State, next: State) {
   if (next.hands !== prev.hands) pop('hands', next.hands - prev.hands);
 }
 
+/** A toast when an experiment ends, so an idle lab doesn't go unnoticed. */
+function announce(prev: State, next: State) {
+  for (const m of prev.magi) {
+    const e = m.exp;
+    const now = next.magi.find((x) => x.id === m.id);
+    if (!e || !now || now.exp?.start === e.start) continue;
+    const what = RECIPES[e.recipe];
+    const gained = next.stats.insightMade - prev.stats.insightMade;
+    const botched = next.stats.botches > prev.stats.botches;
+    say(
+      botched
+        ? `${nameOf(m)}'s ${what.name} went wrong. Start another in the Magi tab.`
+        : `${nameOf(m)}'s ${what.name} is done${what.result === 'insight' ? `: +${Math.round(gained)} Insight` : ''}. Start another in the Magi tab.`,
+    );
+  }
+}
+
 export const hasSave = () => readJson<Save>(SAVE_KEY) !== null;
 function save() {
   if (state && !state.outcome) writeJson(SAVE_KEY, toSave(state));
@@ -156,6 +174,7 @@ export function act(a: Action) {
   const r = apply(state, a);
   if ('error' in r) return say(r.error);
   popChanges(state, r);
+  announce(state, r);
   state = r;
   sync();
   if (state.outcome) finish();
@@ -179,6 +198,7 @@ function frame(now: number) {
   const next = step(state, real * speed());
   if (next === state) return;
   popChanges(state, next);
+  announce(state, next);
   state = next;
   sync();
   if (year(state) !== y) save();
