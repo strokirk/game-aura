@@ -2,27 +2,37 @@
 import { For, Show } from 'solid-js';
 import {
   almsCost,
+  aura,
+  auraBoosts,
   bellStatus,
   bribeCost,
   canAfford,
   canAffordResearch,
+  count,
   dark,
+  divine,
   endowCost,
+  friars,
   giftCost,
   has,
   idleHands,
   influence,
   lowTide,
   nextTribunal,
+  noticeDecay,
+  offerCost,
   type Rates,
   researchCost,
   type State,
+  stains,
   timeToAfford,
   visibleResearch,
   year,
 } from '../core/index.ts';
 import {
+  AURA,
   DECREES,
+  FAERIE,
   GATE,
   GOOD_INFO,
   GOODS,
@@ -120,7 +130,8 @@ export function NoticeCard(p: { s: State; r: Rates }) {
               <Ico icon={I.endow} /> Endow the Parish
             </span>
             <Dim class="text-sm">
-              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good
+              {cost(endowCost(p.s))} · settles {NOTICE.endow.gen * 10} lower, for good · every second one: Divine +1,
+              aura −1
             </Dim>
           </Button>
           <Button disabled={!canAfford(p.s, almsCost(p.s))} onClick={() => act({ type: 'alms' })} class="flex-col">
@@ -144,10 +155,72 @@ export function NoticeCard(p: { s: State; r: Rates }) {
               <Ico icon={I.bribe} /> Bribe the Lord
             </span>
             <Dim class="text-sm">
-              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min
+              {cost(bribeCost(p.s))} · −{NOTICE.bribe.notice} now, back in ~10 min · an Infernal stain: all output ×
+              {AURA.stain} for {AURA.stainSecs / 120} years
             </Dim>
           </Button>
         </div>
+      </Show>
+    </Card>
+  );
+}
+
+const pct = (x: number) => `${x >= 1 ? '+' : '−'}${Math.round(Math.abs(x - 1) * 100)}%`;
+
+/** The covenant's aura: its realms, the boosts it gives at each level, and the offerings at the Regio Spring. */
+export function AuraCard(p: { s: State; r: Rates }) {
+  const b = () => auraBoosts(p.s);
+  const a = () => aura(p.s);
+  const tiers = (): [number, string, string][] => [
+    [Number.NEGATIVE_INFINITY, 'Lab Insight', pct(b().insight)],
+    [AURA.speedFrom, 'Experiment speed', pct(b().speed)],
+    [AURA.agingFrom, 'Aging', pct(b().aging)],
+    [AURA.discoveryFrom, 'Discovery', `+${Math.round(b().discovery * 100)} points`],
+    [AURA.visFrom, 'Vis sites', pct(b().vis)],
+    [AURA.ltFrom, 'Lab Total', `+${b().lt}`],
+  ];
+  const spring = () => has(p.s, 'faerie') && count(p.s, 'regio_spring') > 0;
+  return (
+    <Card warn={a() < AURA.base}>
+      <Label>
+        <Ico icon={I.aura} /> Aura {a()}
+      </Label>
+      <div class="text-sm">
+        <Rich
+          text={`Magic ${p.s.aura.magic} − Divine ${divine(p.s)} (${p.s.endowments} Endowments, ${friars(p.s)} houses of friars${p.s.aura.aegisAt !== null ? ', held off by the Aegis' : ''}).`}
+        />
+        <Show when={stains(p.s)}>
+          <Rich text={` Infernal stains ${stains(p.s)}: all output ×${(AURA.stain ** stains(p.s)).toFixed(2)}.`} />
+        </Show>
+        <Show when={p.s.faerie.level}>
+          <Rich text={` Faerie ${p.s.faerie.level}: Notice fades ${(noticeDecay(p.s) * 100).toFixed(1)}% a minute.`} />
+        </Show>
+      </div>
+      <ul class="mt-1 grid grid-cols-2 gap-x-3 text-sm">
+        <For each={tiers()}>
+          {([from, name, v]) => (
+            <li class={a() >= from ? '' : 'text-dim'}>
+              {name}: <b>{a() >= from ? v : `at aura ${from}`}</b>
+            </li>
+          )}
+        </For>
+      </ul>
+      <Dim class="block text-sm">
+        <Rich text="Raise the Aura is research: Magic +1, Notice +1 a minute for good." />
+      </Dim>
+      <Show when={spring()}>
+        <Button
+          class="mt-1.5 w-full flex-col"
+          disabled={!canAfford(p.s, offerCost(p.s))}
+          onClick={() => act({ type: 'offer' })}
+        >
+          <span>
+            <Ico icon={I.faerie} /> Leave an offering at the Regio Spring · {cost(offerCost(p.s))}
+          </span>
+          <Dim class="text-sm">
+            Mostly lost. Sometimes Faerie +1 (max {FAERIE.max}): Notice fades faster. A gift, if you're in real need
+          </Dim>
+        </Button>
       </Show>
     </Card>
   );

@@ -20,6 +20,7 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 | [design/notice.md](design/notice.md) | Notice, thresholds, Endow and Bribe | The core tension, losing by Notice |
 | [design/gate.md](design/gate.md) | The Drowned Gate and the Seven Bells of Ys | The endgame, winning |
 | [design/tribunal.md](design/tribunal.md) | The Normandy Tribunal: influence, decrees and gifts (prototype) | Notice, Vis, the Tribunal |
+| [design/aura.md](design/aura.md) | The aura and its four realms, Raise the Aura, offerings to the fae | The labs' big multiplier, Notice levers |
 | [design/traits.md](design/traits.md) | The trait model and trait lists | Traits, Breakthroughs |
 | [design/stories.md](design/stories.md) | Story threads and the ink contract | Ink content, event cards, effect tags |
 | [design/scenarios.md](design/scenarios.md) | The trial and full scenarios, staged unlocks | Onboarding, the trial, unlock order |
@@ -39,6 +40,7 @@ Each file describes the game as it is now. Read the ones your task touches; `ove
 
 | Document | What it's for |
 | --- | --- |
+| [proposals/](proposals/) | Written-up mechanic proposals, judged independently. Not part of the game yet |
 | [backlog.md](backlog.md) | Planned and seriously considered features. Not part of the game yet |
 | [icebox.md](icebox.md) | Parked ideas and set-aside ideas, with reasons. Not part of the game |
 | [archive/](archive/) | Earlier specs, kept as history. Not the current design |

@@ -142,7 +142,7 @@ The covenant's lands are 3 **zones**, shown as sections of the Covenant tab.
 
 - Each building uses 1 slot in its zone. Cottages live in the loud Bocage, so housing more hands costs Notice.
 - Vis Sources use the 3 named Vis sites, not the Marsh's 10 slots.
-- Buildings are never pulled down: the covenant only grows. When a zone is full, its Build buttons say how to make room: terraces for the Hearth, dikes for new land.
+- Buildings are never pulled down: the covenant only grows. When a zone is full, it can **buy land**: +2 plots for 100 Silver + 40 Stone, ×1.3 per purchase in that zone (any zone but the Polder, which grows with dikes). The Hearth also grows with terraces.
 - **Why:** slots cap breadth, and new land is a purchase of its own. Once a zone is full, growth comes from research multipliers, Devices, putting more hands to work, and winning more land.
 
 ## Land from the sea
@@ -159,7 +159,7 @@ The Marais de Dol really was won from the sea with dikes, from the 11th century 
 
 - **Start:** 4 hands in the trial, 6 in the full run.
 - **Housing:** the Hall houses 8. Each Cottage houses 3 more.
-- **Growth:** while there is free housing, 1 new hand arrives every 20 s. Hands don't eat: the covenant feeds them from its lands without the player's help.
+- **Growth:** while there is free housing, 1 new hand arrives every 20 s and pays the **eel rent**: 10 Eels each in the full run. Without Eels nobody comes. Hands don't eat: the covenant feeds them from its lands without the player's help.
 - **Bread is fuel.** Hard work needs calories: every Quarry and Salt-works worker burns 0.05 Bread/s and works ×1.5 while there is Bread in store. Without Bread they work at the base rate. Runs start with no Bread; the Bocage and its Farms open when the Hall is full (8 hands).
 - **Jobs:** a hand is a **worker** (assigned to a building type) or a **porter** (assigned to a zone). Unassigned hands are idle and still eat.
 - **Input:** each building type has − / + buttons for its workers, plus "fill" (as many as the slots allow). Each zone has − / + for porters.
@@ -180,10 +180,10 @@ Buildings are counted per type. The next one costs base cost × 1.15^owned. Each
 | Sanctum | Hearth (max 3, 1 per magus) | 100 Silver + 50 Stone | 2 assistants | +25% to the magus's baseline Insight and experiment speed per assistant | A magus without a Sanctum does nothing |
 | Pilgrims' Hostel | Bocage (with Quarries) | 40 Silver + 20 Stone | 1 | Uses 0.5 Bread/s, makes 1 Silver/s | Bread becomes money: the *miquelots* cross the bay to Mont-Saint-Michel. Idle while Bread is out |
 | Salt Meadow | Polder | 30 Silver | 2 | 0.1 Bread/s + 0.05 Vellum/s | Sheep on the salt grass: mutton and skins, food and the labs' Vellum from one building |
-| Cottage | Bocage | 30 Silver | 0 | Housing +3 | More hands |
-| Storehouse | Hearth | 50 Silver + 20 Stone | 0 | Stone, Bread and Vellum caps +50% of base | Room to stockpile |
-| Library | Hearth | 40 Silver + 20 Vellum | 0 | Insight cap +500 | Room to save for big research |
-| Eel Weir | Marsh (after `unlock:eel_weir`) | 15 Silver | 1 | 0.3 Eels/s × (1 + 0.5 × eel level) while the eels thread is open; ×1 after it ends | Eels are the gift that calms the monks (`notice.md`), and the eels' standing temptation (`stories.md`) |
+| Cottage | Bocage | 30 Silver, ×1.06 per Cottage | 0 | Housing +3 | More hands |
+| Storehouse | Hearth | 50 Silver + 20 Stone | 0 | Caps of every mundane good (Silver, Salt, Stone, Bread, Eels, Vellum, Bog-oak) ×1.25 each | Room to stockpile; it outgrows its own ×1.15 price |
+| Library | Hearth | 40 Silver + 20 Vellum | 0 | Insight and Vis caps ×1.25 each | Room to save for big research |
+| Eel Weir | Marsh (from the start of the full run; after `unlock:eel_weir` in the trial) | 15 Silver | 1 | 0.3 Eels/s × (1 + 0.5 × eel level) while the eels thread is open; ×1 after it ends | Eels pay the rent for new hands, are the gift that calms the monks (`notice.md`), and are the eels' standing temptation (`stories.md`) |
 | Bog-oak Camp | Scissy (after the first bell) | 60 Silver + 30 Stone | 3 | 0.1 Bog-oak/s, only at low tide | Great Devices and the bells (`gate.md`) |
 | Wormwood | A Vis site (after the third bell) | 40 Silver | 2 | 0.24 Vis/s | Three times the Tide Pool |
 
@@ -220,21 +220,18 @@ Salt and pilgrims pay about the same Silver per hand, in different ways. Countin
 
 ## Storage caps
 
-Every good has a cap. At the cap, new production of that good is wasted and the resource shows red "full".
+Every good has a cap: a base, times multipliers. At the cap, new production of that good is wasted and the resource shows red "full".
 
-| Good | Base cap | Raised by |
+| Good | Base cap | Multiplied by |
 | --- | --- | --- |
-| Silver | 500 | *Hermetic Accounts* (×2); *Strongbox* (+500 each, repeatable) |
-| Stone | 200 | Storehouse (+100 each) |
-| Salt | 500 | — |
-| Bread | 200 | Storehouse (+100 each); +1 per 5 Salt in stock |
-| Eels | 200 | +1 per 5 Salt in stock |
-| Vellum | 50 | Storehouse (+25 each) |
-| Vis | 30 | *Lead-Lined Chests* (+30) |
-| Bog-oak | 200 | — |
-| Insight | 1,000 | Library (+500 each). Once founded, the Drowned Gate holds Insight with no cap (`gate.md`) |
+| Silver | 500 | Storehouse (×1.25 each); *Hermetic Accounts* (×2); *Strongbox* (×1.5 each) |
+| Salt, Stone, Eels, Bog-oak | 500, 200, 200, 200 | Storehouse (×1.25 each) |
+| Bread | 200 | Storehouse (×1.25 each); +1 per 5 Salt in stock |
+| Vellum | 50 | Storehouse (×1.25 each) |
+| Vis | 30 | Library (×1.25 each); *Lead-Lined Chests* (×2) |
+| Insight | 1,000 | Library (×1.25 each). Once founded, the Drowned Gate holds Insight with no cap (`gate.md`) |
 
-**Why:** caps turn "awash" into "spend it or lose it", and make storage a purchase with a real trade-off: a Storehouse or Library takes a Hearth slot a Quarry or Sanctum could use. This is Kittens Game's main constraint.
+**Why:** caps turn "awash" into "spend it or lose it", and storage is a purchase with a real trade-off: a Storehouse or Library takes a Hearth plot a Quarry or Sanctum could use. Each one multiplies its caps by more than its price grows (×1.25 against ×1.15), so storage always keeps up with prices and the covenant never locks itself out of a purchase. This is Kittens Game's main constraint, without its soft-locks.
 
 ## Stacking
 

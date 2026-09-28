@@ -2,7 +2,7 @@
 
 *The Covenant Must Grow.*
 
-Aura is an incremental game about a covenant of Ars Magica wizards at Mont-Dol, on the marsh between Brittany and Normandy, from 1220 to 1260. You start with one magus, one tide pool and a few servants. You end, if you're bold and lucky, by opening a drowned gate under the sea. In between, the covenant grows, and every bit of growth draws the eye of the lord, the bishop and the Order of Hermes.
+Aura is an incremental game about a covenant of Ars Magica wizards at Mont-Dol, on the marsh between Brittany and Normandy, from 1220 until the seventh bell rings or the covenant falls. You start with one magus, one tide pool and a few servants. You end, if you're bold and lucky, by opening a drowned gate under the sea. In between, the covenant grows, and every bit of growth draws the eye of the lord, the bishop and the Order of Hermes.
 
 ## The four mantras
 
@@ -15,8 +15,9 @@ Aura is an incremental game about a covenant of Ars Magica wizards at Mont-Dol, 
 
 - **The first minutes are small and cosy.** One magus, one pool, a handful of hands, one clear thing to do next.
 - **The middle is plate-spinning.** Experiments finish every minute or two, porters are always one short, Notice creeps up, and something new unlocks just as the last thing settles.
-- **The end is a sprint.** The covenant is enormous, the deadline is close, and the Gate asks for everything at once. The late game never waits: there are more decisions than the player can take, so the covenant either careens toward the edge or runs below its best pace for want of micromanagement. Both are the player's choice, and neither is idle.
+- **The end is a sprint.** The covenant is enormous, the magi are old, and the Gate asks for everything at once. The late game never waits: there are more decisions than the player can take, so the covenant either careens toward the edge or runs below its best pace for want of micromanagement. Both are the player's choice, and neither is idle.
 - **Every run tells a story.** The eels, the magi's traits and the choices you made at the Tribunal add up to a Chronicle worth reading.
+- **Trivial beats slow.** When the player has outgrown a run, it should end fast, not drag. There is no deadline; the challenge is to finish sooner, and the Chronicle records the year. Legacies stack from run to run, so the first covenant is the hardest and later ones race.
 - **It fits a phone and an evening.** A 5-minute trial on the bus, or an 80-minute run on the sofa.
 
 ## Who it's for

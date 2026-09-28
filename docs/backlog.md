@@ -96,7 +96,7 @@ At the endgame the covenant is a machine, and the player should be able to see i
 
 1. ~~Bread with uses~~, 2. ~~Dikes and terraces~~, 3. ~~the Form trees~~ and 4. ~~Bells 1–7~~: built (`design/economy.md`, `design/gate.md`, `design/research.md`). Bread is now work fuel rather than food, and Eels are the gift to the monks rather than fish-day food.
 5. **Routes**, and the covenant graph.
-6. **Balance:** the careful sim rings 2 of 7 bells. The trees, the bell curve and the Gate's pour rules need tuning until a good player rings all seven by 1260.
+6. **Balance:** the careful sim rings 2 of 7 bells. The trees, the bell curve and the Gate's pour rules need tuning until a good player rings all seven in about 80 minutes.
 
 ### Great works that bend the Hermetic limits
 
@@ -124,16 +124,6 @@ Built for botches (`design/magi.md`). Still open: pushed experiments and extra V
 ### A botch table
 
 A botch rolls on a small table instead of always giving +5 Notice: a lab fire (a Sanctum trait), a vis blowout (the aura spikes), a visible effect (Notice), or Warping.
-
-### Aging, longevity and apprentices
-
-The run lasts 40 years. Portraits grey; a longevity ritual is a vis sink, and without one a magus's Lab Total slowly falls after about 1240. An apprentice takes 15 years: one taken in 1225 passes the Gauntlet around 1240 as a 4th magus. Fuller write-up: Claude Docs, *Aura MVP — Game Design Spec* §11.
-
-## The covenant
-
-### The aura
-
-The game is called *Aura*: in Ars Magica an aura is a place's supernatural character (Magic, Divine, Faerie or Infernal) and its strength. Each zone has one. A Magic aura adds to Lab Totals for Sanctums and Vis sites there; a Divine aura subtracts. Endowing the Parish raises the Divine aura in the Bocage, so the cheapest permanent Notice fix costs lab power. The Aegis and the Gate raise the Magic aura as the regio seeps up. Mont-Dol, where St Michael fought the Devil, is a natural Divine hotspot above a Magic marsh.
 
 ### The yearly Aegis
 

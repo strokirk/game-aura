@@ -2,9 +2,10 @@
 
 Magi are the covenant's heart and its only named people. Each has a portrait, a Lab Total (LT, starting at 10) and traits (`traits.md`).
 
-## The founders
+## The founders and their chairs
 
-- **Aldric** starts with a Sanctum.
+- **Aldric** (48 in 1220) starts with a Sanctum. **Sabine** is 31, **Hervé** 39.
+- Each founder's place is a **chair**. When a magus dies, a journeyman takes the chair, its Sanctum and its name with the next numeral: *Aldric II*. The numerals carry on from covenant to covenant (`ui.md`, *The legacy*).
 - **Sabine and Hervé** arrive when the covenant reaches 10 hands (full run only). Each waits in the Hall, doing nothing, until the player builds their Sanctum.
 - **The Drowned Knight** rises at the fifth bell (`gate.md`): a fourth magus at Lab Total 15 who works from Ys and needs no Sanctum.
 
@@ -56,6 +57,22 @@ Experiments are the Insight engine. A magus in a Sanctum starts one; it runs for
   - **Success:** the full yield.
   - **Botch:** the costs are lost, Notice +5, and the magus is **Warped** (below). 15% of botches also destroy one building (never a Sanctum or a Vis site).
   - **Discovery:** the full yield, plus a Breakthrough.
+
+## Age and death
+
+- **System:** every magus but the Drowned Knight ages with game time. At each year boundary from age 45, each rolls a chance of (age − 45) × 3% to gain 1 **Decrepitude**; the aura's aging boost lowers it (`aura.md`). Each point takes 1 from the Lab Total. At 5 the magus dies, and their chair stands empty.
+- **The Longevity Ritual** (a lab recipe, from the first research): costs a fifth of the magus's age in Vis, plus 5 per point of Decrepitude; 240 s. It halves the aging chance for life, once per magus. A Discovery also removes 1 Decrepitude.
+- **Feedback:** each magus card shows age, Decrepitude and the chance a year. A death is an event card and a Chronicle line.
+
+Computed over 20,000 runs, the median death year without a ritual is 1235 for Aldric, 1243 for Hervé and 1251 for Sabine; with one, 1242, 1251 and 1259.
+
+## Apprentices
+
+- **Input:** **Take an apprentice** on a magus card: 150 Silver; one per chair.
+- **System:** the apprentice changes the master's Insight by −25% at first, sliding to +25% over 4 years (480 s), and stays at +25%. Over 6 years that averages +8.3%, breaking even at year 4. After 6 years (720 s) they pass the **Gauntlet** and wait at their master's side, still at +25%, until a chair falls vacant. They take their own master's chair first, else any empty one, at age 25 and Lab Total 8 + ⌊(master's Lab Total − 10) ÷ 2⌋ (at least 8).
+- Each botch by the master kills the apprentice 20% of the time. If the master dies first, the apprentice goes on studying alone.
+- **Loss:** with no magus and no apprentice left, the line is broken and the run is lost.
+- **Why:** the clock that replaces the deadline. An apprentice is the covenant's insurance and, after 4 years, its best multiplier; a reckless master risks their heir. Crusader Kings' heirs at an incremental game's pace, and kabuki's inherited names.
 
 ## Warping and Twilight
 

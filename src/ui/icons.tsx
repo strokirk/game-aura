@@ -87,6 +87,8 @@ export const I = {
   research: GiOpenBook,
   gate: GiMagicGate,
   rite: GiRingingBell,
+  aura: GiMagicSwirl,
+  faerie: GiSpiralBloom,
   endow: GiChurch,
   bribe: GiCoinsPile,
   alms: GiBread,

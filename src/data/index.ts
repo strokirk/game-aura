@@ -48,10 +48,16 @@ export interface BuildingDef {
   fuel?: number;
   /** Goods each worker consumes per second. The building stands idle while any of them is out of stock. */
   uses?: Cost;
-  /** Raises storage caps, per building. */
-  caps?: Cost;
+  /** Goods whose storage cap each one of these multiplies by STORE_MULT. */
+  stores?: readonly GoodId[];
+  /** Cost growth per building owned, if not COST_GROWTH. */
+  growth?: number;
   blurb: string;
 }
+/** Each Storehouse or Library multiplies the caps it covers by this: storage outgrows its ×1.15 price. */
+export const STORE_MULT = 1.25;
+/** Buying more land in a zone: +`slots` plots, the price ×`growth` per purchase in that zone. */
+export const EXPAND = { cost: { silver: 100, stone: 40 } as Cost, growth: 1.3, slots: 2 };
 const visSite = (name: string, blurb: string): BuildingDef => ({
   name,
   zone: 'marsh',
@@ -130,23 +136,25 @@ export const BUILDINGS = {
     cost: { silver: 15 },
     slots: 1,
     perWorker: { eels: 0.3 },
-    blurb: 'Stakes and wattle across the channel below the Tide Pool. The eels grow bigger every year.',
+    blurb:
+      'Stakes and wattle across a channel on the flats. Eels pay the rent here: every family that comes up the hill costs a few.',
   },
   storehouse: {
     name: 'Storehouse',
     zone: 'hearth',
     cost: { silver: 50, stone: 20 },
     slots: 0,
-    caps: { stone: 100, bread: 100, vellum: 25 },
-    blurb: 'A dry stone barn. More Stone, Bread and Vellum can wait here.',
+    stores: ['silver', 'salt', 'stone', 'bread', 'eels', 'vellum', 'bog_oak'],
+    blurb: 'A dry stone barn with a strongroom. Every mundane good: storage ×1.25 for each one.',
   },
   library: {
     name: 'Library',
     zone: 'hearth',
     cost: { silver: 40, vellum: 20 },
     slots: 0,
-    caps: { insight: 500 },
-    blurb: 'Shelves, a lectern and a chain for every book. Room for more Insight.',
+    stores: ['insight', 'vis'],
+    blurb:
+      'Shelves, a lectern, a chain for every book and a lead-lined chest. Insight and Vis storage ×1.25 for each one.',
   },
   salt_meadow: {
     name: 'Salt Meadow',
@@ -171,6 +179,7 @@ export const BUILDINGS = {
     cost: { silver: 30 },
     slots: 0,
     housing: 3,
+    growth: 1.06,
     blurb: 'Room for three more hands.',
   },
 } as const satisfies Record<string, BuildingDef>;
@@ -194,12 +203,13 @@ export const NOTICE_K = 0.35;
 export const SANCTUM_ASSIST = 0.25;
 export const BASELINE_INSIGHT = 0.02; // per LT per second
 
+/** The founders, with their ages in 1220. Each founder's place is a chair their successors inherit, name and all. */
 export const MAGI = [
-  { id: 'aldric', name: 'Aldric' },
-  { id: 'sabine', name: 'Sabine' },
-  { id: 'herve', name: 'Hervé' },
-  /** Risen at the fifth bell. Works from Ys: needs no Sanctum. */
-  { id: 'knight', name: 'The Drowned Knight' },
+  { id: 'aldric', name: 'Aldric', age: 48 },
+  { id: 'sabine', name: 'Sabine', age: 31 },
+  { id: 'herve', name: 'Hervé', age: 39 },
+  /** Risen at the fifth bell. Works from Ys: needs no Sanctum, and does not age. */
+  { id: 'knight', name: 'The Drowned Knight', age: 0 },
 ] as const;
 export type MagusId = (typeof MAGI)[number]['id'];
 
@@ -208,7 +218,7 @@ export interface RecipeDef {
   cost: Cost;
   time: number;
   /** What a success gives: Insight (per point of Lab Total), a Lab Text, or a Device for a chosen building. */
-  result: 'insight' | 'labText' | 'device';
+  result: 'insight' | 'labText' | 'device' | 'longevity';
   insightPerLT?: number;
   /** Devices a success adds (default 1). */
   power?: number;
@@ -246,6 +256,14 @@ export const RECIPES = {
     power: 4,
     blurb:
       'Bind a Rego Terram effect into a frame of bog-oak that will outlast the hill. +100% output for one kind of building, for good.',
+  },
+  longevity: {
+    name: 'Longevity Ritual',
+    cost: {},
+    time: 240,
+    result: 'longevity',
+    blurb:
+      'A Creo Corpus ritual against the years. Costs a fifth of the magus’s age in Vis, plus 5 per point of Decrepitude. Halves the chance of growing decrepit, for life. Once per magus.',
   },
 } as const satisfies Record<string, RecipeDef>;
 export type RecipeId = keyof typeof RECIPES;
@@ -328,7 +346,7 @@ export const EXPERIMENT = {
 export type Modifier =
   | { kind: 'output'; building: BuildingId; mult: number }
   | { kind: 'carry'; zone?: ZoneId; mult: number }
-  | { kind: 'cap'; good: GoodId; mult?: number; add?: number }
+  | { kind: 'cap'; good: GoodId; mult: number }
   | { kind: 'botch'; mult: number }
   | { kind: 'assistants'; add: number }
   | { kind: 'zoneNotice'; zone: ZoneId; factor: number }
@@ -345,6 +363,8 @@ export interface ResearchDef {
   /** Repeatable research grows its cost by `growth` (default 2) each time. */
   repeatable?: boolean;
   growth?: number;
+  /** Paid every time, without growing. */
+  flat?: Cost;
   /** Shown only once this feature is revealed (see UnlockDef), and always while it is. */
   needs?: string;
   blurb: string;
@@ -387,12 +407,23 @@ export const RESEARCH = {
     effects: [{ kind: 'cap', good: 'silver', mult: 2 }],
     blurb: 'Silver storage ×2. Double-entry, and a lock on the chest.',
   },
+  raise_aura: {
+    name: 'Raise the Aura',
+    cost: { insight: 300 },
+    flat: { vis: 10 },
+    effects: [],
+    repeatable: true,
+    growth: 1.8,
+    needs: 'research',
+    blurb:
+      'Magic +1. Pour vis into the granite until the hill hums; in Dol the milk curdles and the villagers dream of bells. Notice +1 a minute, for good. Each raise costs ×1.8 the Insight.',
+  },
   strongbox: {
     name: 'Strongbox',
     cost: { insight: 400 },
-    effects: [{ kind: 'cap', good: 'silver', add: 500 }],
+    effects: [{ kind: 'cap', good: 'silver', mult: 1.5 }],
     repeatable: true,
-    blurb: 'Silver storage +500. Can be bought again, at double the price.',
+    blurb: 'Silver storage ×1.5. Can be bought again, at double the price.',
   },
   reed_pen: {
     name: 'Reed Pen of Diligent Copying',
@@ -415,8 +446,8 @@ export const RESEARCH = {
   lead_chests: {
     name: 'Lead-Lined Chests',
     cost: { insight: 900 },
-    effects: [{ kind: 'cap', good: 'vis', add: 30 }],
-    blurb: 'Vis storage +30.',
+    effects: [{ kind: 'cap', good: 'vis', mult: 2 }],
+    blurb: 'Vis storage ×2.',
   },
   stones_carry: {
     name: 'Stones That Carry',
@@ -493,8 +524,16 @@ export const RESEARCH = {
     'Reading ×2, Notice ×0.85. The Form of minds: yours, and Dol’s.',
   ),
 } as const satisfies Record<string, ResearchDef>;
-export type ResearchId = keyof typeof RESEARCH;
-export const RESEARCH_DEFS: Record<ResearchId, ResearchDef> = RESEARCH;
+export type ResearchId = keyof typeof RESEARCH | 'dig_library';
+/** Shown only when fallen covenants buried Lab Texts. Its Insight is per buried text. */
+export const DIG_LIBRARY: ResearchDef = {
+  name: 'Dig Out the Old Library',
+  cost: { insight: 100 },
+  effects: [],
+  blurb:
+    'Under the hill lie the Lab Texts of every covenant that fell here. Dig them out, all of them, back onto the shelves.',
+};
+export const RESEARCH_DEFS: Record<ResearchId, ResearchDef> = { ...RESEARCH, dig_library: DIG_LIBRARY };
 /** How many unbought items the Research tab shows at once. */
 export const RESEARCH_SHOWN = 3;
 
@@ -510,6 +549,61 @@ export const NOTICE = {
   /** Alms to the poor of Dol: Endow's Bread twin. */
   alms: { base: 200, growth: 2, gen: 1 },
   bribe: { base: 100, growth: 2, notice: 20 },
+};
+
+/** The aura (`aura.md`). Effective aura = Magic − Divine. */
+export const AURA = {
+  base: 3,
+  /** Notice generation per minute, per Raise the Aura. */
+  raiseNotice: 1,
+  /** The friars bring the Dominion: Divine +1 every decade, until the Aegis holds them off. */
+  friars: 10 * 120,
+  /** Endowments per point of Divine. */
+  endowments: 2,
+  /** A bribe's Infernal stain lasts this long, and multiplies all output by `stain`. */
+  stainSecs: 600,
+  stain: 0.95,
+  /** Lab Insight per point above 3 (a penalty below, down to the floor); then each boost from its level. */
+  insight: 0.15,
+  insightFloor: 0.25,
+  speedFrom: 5,
+  speed: 0.1,
+  agingFrom: 6,
+  aging: 0.1,
+  discoveryFrom: 7,
+  discovery: 0.01,
+  visFrom: 8,
+  vis: 0.1,
+  ltFrom: 9,
+};
+
+/** Offerings at the Regio Spring (`aura.md`). */
+export const FAERIE = {
+  cost: 10,
+  max: 5,
+  /** Faerie falls by 1 after this long without an offering. */
+  fade: 240,
+  /** Each level adds this to Notice's decay per minute. */
+  decay: 0.006,
+  odds: { nothing: 0.5, more: 0.2, pleased: 0.2 },
+  gift: { notice: 30, silver: 200 },
+};
+
+/** The eel rent: a new hand costs this many eels, where the scenario has `eelRent`. */
+export const EEL_RENT = 10;
+
+export const AGING = { from: 45, perYear: 0.03, longevity: 0.5, death: 5 };
+
+export const APPRENTICE = {
+  cost: { silver: 150 } as Cost,
+  /** The boost to the master's Insight slides from `start` to `end` over `ramp` seconds. */
+  start: -0.25,
+  end: 0.25,
+  ramp: 480,
+  gauntlet: 720,
+  botchDeath: 0.2,
+  age: 25,
+  lt: 8,
 };
 
 /** The Normandy Tribunal (`tribunal.md`). */
@@ -693,7 +787,9 @@ export type Condition =
   | { kind: 'story'; v: StoryVar; atLeast?: number; atMost?: number }
   /** The year is at least `years` after the year held in an ink variable. */
   | { kind: 'yearsAfter'; v: StoryVar; years: number }
-  | { kind: 'all'; of: readonly Condition[] };
+  | { kind: 'all'; of: readonly Condition[] }
+  /** No magus and no apprentice left: the line is broken. */
+  | { kind: 'noMagi' };
 
 export type Thread = 'eels' | 'ys';
 /** The whitelist of ink variables the engine reads back. */
@@ -715,7 +811,7 @@ export interface ScenarioDef {
     hands: number;
     buildings: Partial<Record<BuildingId, { count: number; workers: number }>>;
     porters: Partial<Record<ZoneId, number>>;
-    magi: readonly { id: MagusId; sanctum: boolean; lt?: number }[];
+    magi: readonly { id: MagusId; sanctum: boolean; lt?: number; age?: number; gen?: number }[];
     /** Stage scenarios start partway through a run, with the covenant already built up. */
     t?: number;
     notice?: number;
@@ -737,6 +833,8 @@ export interface ScenarioDef {
   story?: readonly StoryBeat[];
   /** The Normandy Tribunal meets in this scenario (`tribunal.md`). */
   tribunal?: boolean;
+  /** The full run: its end adds to the legacy, and it starts from it. */
+  legacy?: boolean;
 }
 
 export const YEAR = 120;
@@ -797,7 +895,7 @@ const EELS: readonly StoryBeat[] = [
 export const SCENARIOS = {
   trial: {
     name: 'Trial of the Tide Pool',
-    goal: 'Gather 500 Insight before 1222',
+    goal: 'Gather 500 Insight before the Tribunal of 1222',
     start: {
       res: { silver: 60, vis: 5 },
       hands: 4,
@@ -823,27 +921,28 @@ export const SCENARIOS = {
     ],
     intro: {
       title: 'Spring 1220',
-      text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. Five hundred pages of Insight by 1222 and the Order will take the covenant seriously.',
+      text: 'Aldric has a tower on Mont-Dol, four hands, a salt-works on the flats and a pool the tide never empties. The pool holds vis. Burn it in the lab and write down what it does. The Tribunal meets in 1222 to decide whether to charter the covenant: bring it five hundred pages of Insight.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: EELS,
   },
   grow: {
     name: 'The Covenant Must Grow',
-    goal: 'Ring the Seven Bells of Ys before 1260',
+    goal: 'Ring the Seven Bells of Ys',
     start: {
-      res: { silver: 60, vis: 5 },
+      res: { silver: 60, vis: 5, eels: 20 },
       hands: 6,
       buildings: {
         sanctum: { count: 1, workers: 0 },
         salt_pan: { count: 1, workers: 1 },
         tide_pool: { count: 1, workers: 1 },
+        eel_weir: { count: 1, workers: 1 },
       },
-      porters: { marsh: 1 },
+      porters: { marsh: 2 },
       magi: [{ id: 'aldric', sanctum: true }],
     },
-    allowed: ['salt_pan', 'tide_pool', 'sanctum'],
-    unlocked: [],
+    allowed: ['salt_pan', 'tide_pool', 'sanctum', 'eel_weir'],
+    unlocked: ['eelRent'],
     unlocks: [
       { when: { kind: 'insightMade', atLeast: 1 }, reveal: ['research'] },
       {
@@ -856,7 +955,15 @@ export const SCENARIOS = {
       },
       {
         when: { kind: 'researched', atLeast: 1 },
-        reveal: ['quarry', 'storehouse', 'knights_barrow', 'recipe:device', 'hostel'],
+        reveal: [
+          'quarry',
+          'storehouse',
+          'knights_barrow',
+          'recipe:device',
+          'hostel',
+          'recipe:longevity',
+          'apprentices',
+        ],
         card: {
           title: 'Granite and barrows',
           text: 'Mont-Dol is granite to the root. Quarry it for Stone: Sanctums, Storehouses and one day greater things are built of it. Out on the flats the hands have found a second place where vis gathers: the Drowned Knight’s Barrow.',
@@ -864,10 +971,10 @@ export const SCENARIOS = {
       },
       {
         when: { kind: 'hands', atLeast: 10 },
-        reveal: ['parchmenter', 'library', 'regio_spring', 'recipe:lab_text', 'magus:sabine', 'magus:herve'],
+        reveal: ['parchmenter', 'library', 'regio_spring', 'faerie', 'recipe:lab_text', 'magus:sabine', 'magus:herve'],
         card: {
           title: 'Two more magi',
-          text: 'Word has reached the Order that Mont-Dol can feed a covenant. Sabine and Hervé arrive with their books in a cart. Each needs a Sanctum before they can work. They know of a third vis source, the Regio Spring, and they want Vellum for Lab Texts.',
+          text: 'Word has reached the Order that Mont-Dol can feed a covenant. Sabine and Hervé arrive with their books in a cart. Sabine, thirty-one, wants everything the drowned knew, with her name cut into the Order’s stone above it. Hervé, thirty-nine, says the bells under the bay were blessed before Rome ever came to this coast. Each needs a Sanctum before they can work. They know of a third vis source, the Regio Spring, where the fae take offerings, and they want Vellum for Lab Texts.',
         },
       },
       { when: { kind: 'notice', atLeast: 1 }, reveal: ['notice'] },
@@ -884,30 +991,31 @@ export const SCENARIOS = {
         reveal: ['endow'],
         card: {
           title: 'Friends in Dol',
-          text: 'The parish would take an Endowment, and the lord of Dol a gift. Endowing calms the covenant’s Notice for good; a bribe buys quiet for a few years.',
+          text: 'The parish would take an Endowment, and the lord of Dol a gift. Endowing calms the covenant’s Notice for good, but the Dominion comes with it and dulls the aura. A bribe buys quiet for a few years, and leaves an Infernal stain on the fields. And the monks building the Merveille across the bay would take a cart of eels, and speak well of whoever sent it.',
         },
       },
     ],
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
     ],
     intro: {
       title: 'Spring 1220',
-      text: 'Aldric has a tower on Mont-Dol, six hands, a salt-works and the Tide Pool. Under the marsh lies a drowned regio, and a Gate into it. Open it before 1260. Every building will be noticed in Dol, and the Order watches what Dol notices.',
+      text: 'Aldric climbs Mont-Dol alone: the black hill in the marsh where the archangel ground his heel into the Devil and left the print in the stone. The wind comes off the bay with brine and the smoke of the salt-pans. Across the water, Mont-Saint-Michel wears a cage of scaffolding: the monks are raising the Merveille, stone on stone, toward heaven.\n\nBelow him his few hands rake salt-sand on the flats and lift eels from the weir. Here, eels pay the rent, and eels bring families up the hill.\n\nHe was forty-eight this winter. On still nights he hears bells under the water. He has heard them since the year the sea took his brother. Under the reeds, under the eels, under a fathom of black water lies the Drowned Regio, sealed behind the Drowned Gate. It is said no one there grows old, and that the drowned are only waiting.\n\nOpen the Gate. Thicken the aura until the hill hums like a struck bell. But the bishop counts sins, the lord of Dol counts silver, and the Order of Hermes counts Notice, and at one hundred casts you out. And Time counts everything. Magi age. Magi die. Take apprentices, or the line ends in the mud.\n\nThere is no deadline. There is only the tide.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: [...EELS, ...YS],
     tribunal: true,
+    legacy: true,
   },
   middle: {
     name: 'Stage: the Middle Years',
-    goal: 'Ring the Seven Bells of Ys before 1260',
+    goal: 'Ring the Seven Bells of Ys',
     stage: true,
     start: {
       t: 16 * YEAR,
-      res: { silver: 600, stone: 150, bread: 150, vellum: 30, vis: 20, insight: 800 },
+      res: { silver: 600, stone: 150, bread: 150, vellum: 30, vis: 20, insight: 800, eels: 50 },
       hands: 26,
       buildings: {
         sanctum: { count: 3, workers: 2 },
@@ -924,9 +1032,9 @@ export const SCENARIOS = {
       },
       porters: { marsh: 4, bocage: 2 },
       magi: [
-        { id: 'aldric', sanctum: true, lt: 14 },
-        { id: 'sabine', sanctum: true, lt: 12 },
-        { id: 'herve', sanctum: true, lt: 12 },
+        { id: 'aldric', sanctum: true, lt: 14, age: 64 },
+        { id: 'sabine', sanctum: true, lt: 12, age: 47 },
+        { id: 'herve', sanctum: true, lt: 12, age: 55 },
       ],
       notice: 45,
       endowments: 2,
@@ -953,15 +1061,19 @@ export const SCENARIOS = {
       'salt_meadow',
       'magus:sabine',
       'magus:herve',
+      'eelRent',
+      'faerie',
+      'apprentices',
+      'recipe:longevity',
     ],
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
     ],
     intro: {
       title: 'Spring 1236',
-      text: 'Sixteen years on. Three magi, twenty-six hands, six salt-works and three sources of vis. Dol has noticed: Notice is climbing toward the lord’s tax and settling well above it. The Aegis of the Hearth is still to be learned, and the Drowned Gate still to be found.',
+      text: 'Sixteen years on. Three magi, twenty-six hands, six salt-works and three sources of vis. Aldric is sixty-four, and his hands shake. Dol has noticed: Notice is climbing toward the lord’s tax and settling well above it. The Aegis of the Hearth is still to be learned, and the Drowned Gate still to be found.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: YS,
@@ -969,11 +1081,11 @@ export const SCENARIOS = {
   },
   gate: {
     name: 'Stage: the Gate',
-    goal: 'Ring the Seven Bells of Ys before 1260',
+    goal: 'Ring the Seven Bells of Ys',
     stage: true,
     start: {
       t: 30 * YEAR,
-      res: { silver: 1200, stone: 150, bread: 150, vellum: 40, vis: 30, insight: 1500 },
+      res: { silver: 1200, stone: 150, bread: 150, vellum: 40, vis: 30, insight: 1500, eels: 50 },
       hands: 30,
       buildings: {
         sanctum: { count: 3, workers: 2 },
@@ -989,9 +1101,9 @@ export const SCENARIOS = {
       },
       porters: { marsh: 2, bocage: 2 },
       magi: [
-        { id: 'aldric', sanctum: true, lt: 18 },
-        { id: 'sabine', sanctum: true, lt: 17 },
-        { id: 'herve', sanctum: true, lt: 16 },
+        { id: 'aldric', sanctum: true, lt: 18, age: 36, gen: 2 },
+        { id: 'sabine', sanctum: true, lt: 17, age: 61 },
+        { id: 'herve', sanctum: true, lt: 16, age: 40, gen: 2 },
       ],
       notice: 60,
       endowments: 1,
@@ -1035,15 +1147,19 @@ export const SCENARIOS = {
       'magus:herve',
       'gate',
       'trees',
+      'eelRent',
+      'faerie',
+      'apprentices',
+      'recipe:longevity',
     ],
     win: [{ when: YS_WON, cause: 'The seventh bell rings, and there is no more sea.' }],
     loss: [
       { when: { kind: 'notice', atLeast: 100 }, cause: 'The Order renounces the covenant.' },
-      { when: { kind: 'time', atLeast: 40 * YEAR }, cause: 'The year 1260 begins, and the Gate stays shut.' },
+      { when: { kind: 'noMagi' }, cause: 'The last magus dies, and no apprentice answers to the name.' },
     ],
     intro: {
       title: 'Spring 1250',
-      text: 'Ten years left. The Gate stands in the marsh with four thousand pages of Insight poured into it, and under the mud something is listening. Seven bells hang in drowned Ys. Pour Insight and goods into the Gate, and ring them one by one.',
+      text: 'Thirty years on. Aldric and Hervé are dead; their apprentices answer to their names. The Gate stands in the marsh with four thousand pages of Insight poured into it, and under the mud something is listening. Seven bells hang in drowned Ys. Pour Insight and goods into the Gate, and ring them one by one.',
       options: [{ label: 'Begin', effects: [] }],
     },
     story: YS,

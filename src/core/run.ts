@@ -1,6 +1,9 @@
 // The headless game. Deterministic: same scenario + seed + action log => same state.
 // No DOM, no Date, no Math.random in here.
 import {
+  AGING,
+  APPRENTICE,
+  AURA,
   BASELINE_INSIGHT,
   type BuildingDef,
   type BuildingId,
@@ -10,9 +13,12 @@ import {
   DECREES,
   DEFS,
   DIKE,
+  EEL_RENT,
   type Effect,
   type EventDef,
+  EXPAND,
   EXPERIMENT,
+  FAERIE,
   FUEL_MULT,
   GATE,
   type GateStart,
@@ -27,7 +33,6 @@ import {
   NOTICE_K,
   PRESERVE,
   RECIPES,
-  RESEARCH,
   RESEARCH_DEFS,
   RESEARCH_SHOWN,
   type RecipeDef,
@@ -39,6 +44,7 @@ import {
   type ScenarioDef,
   type ScenarioId,
   START_YEAR,
+  STORE_MULT,
   TERRACE,
   type Thread,
   TRIBUNAL,
@@ -69,7 +75,14 @@ export interface Experiment {
   checked: boolean;
 }
 export interface MagusState {
+  /** The chair: the founder whose place this magus holds. */
   id: MagusId;
+  /** Which holder of the chair: Aldric II is gen 2. */
+  gen: number;
+  /** Years, rising with game time. The Drowned Knight doesn't age. */
+  age: number;
+  decrepitude: number;
+  longevity: boolean;
   lt: number;
   sanctum: boolean;
   exp: Experiment | null;
@@ -80,6 +93,26 @@ export interface MagusState {
   /** Twilight traits (index into TWILIGHT_TRAITS) and when each fades. */
   traits: { i: number; until: number }[];
 }
+/** An apprentice serves a chair and boosts whoever holds it. */
+export interface Apprentice {
+  chair: MagusId;
+  start: number;
+  /** Passed the Gauntlet: waits at full boost for a chair to fall vacant. */
+  ready: boolean;
+}
+/** What every fallen covenant leaves to the next. It stacks, run after run. */
+export interface Legacy {
+  covenants: number;
+  /** Starting Magic above the base. */
+  magic: number;
+  /** Lab Texts buried under the hill. */
+  labTexts: number;
+  /** One Device per fallen covenant, each on a building type. */
+  heirlooms: BuildingId[];
+  /** The last holder's numeral, per chair. */
+  gens: Partial<Record<MagusId, number>>;
+}
+export const NO_LEGACY: Legacy = { covenants: 0, magic: 0, labTexts: 0, heirlooms: [], gens: {} };
 export interface Outcome {
   kind: 'win' | 'loss';
   cause: string;
@@ -99,6 +132,11 @@ export interface GateState {
 export type Action =
   | { type: 'build'; building: BuildingId }
   | { type: 'dike' }
+  /** Buy more land in a zone. */
+  | { type: 'expand'; zone: ZoneId }
+  /** Leave an offering for the fae at the Regio Spring. */
+  | { type: 'offer' }
+  | { type: 'apprentice'; magus: MagusId }
   | { type: 'workers'; building: BuildingId; delta: number }
   | { type: 'porters'; zone: ZoneId; delta: number }
   | { type: 'experiment'; magus: MagusId; recipe: RecipeId; extra: number; target?: BuildingId }
@@ -138,6 +176,25 @@ export interface State {
   buildings: Partial<Record<BuildingId, { count: number; workers: number }>>;
   porters: Partial<Record<ZoneId, number>>;
   magi: MagusState[];
+  apprentices: Apprentice[];
+  /** Chairs whose holder died, waiting for a journeyman. */
+  vacant: { chair: MagusId; gen: number; sanctum: boolean }[];
+  aura: {
+    /** Magic before the Dominion; `start` is where this run began. */
+    magic: number;
+    start: number;
+    peak: number;
+    /** When each bribe's Infernal stain fades. */
+    stains: number[];
+    /** When the Aegis was cast: the friars stop counting from then. */
+    aegisAt: number | null;
+    /** Houses of friars already announced. */
+    friarsSeen: number;
+  };
+  faerie: { level: number; t: number; year: number; offers: number };
+  /** Land bought, per zone. */
+  expanded: Partial<Record<ZoneId, number>>;
+  legacy: Legacy;
   notice: number;
   /** Notice events that have fired and not yet re-armed. */
   noticeFired: string[];
@@ -175,7 +232,15 @@ export interface State {
   chronicle: { t: number; text: string }[];
   outcome: Outcome | null;
   log: LogEntry[];
-  stats: { insightMade: number; peakNotice: number; experiments: number; botches: number; discoveries: number };
+  stats: {
+    insightMade: number;
+    peakNotice: number;
+    experiments: number;
+    botches: number;
+    discoveries: number;
+    labTextsWritten: number;
+    deaths: number;
+  };
 }
 export type Result = State | { error: string };
 
@@ -183,14 +248,27 @@ const keys = <K extends string>(o: Partial<Record<K, unknown>>) => Object.keys(o
 const zeroGoods = () => Object.fromEntries(GOODS.map((g) => [g, 0])) as Record<GoodId, number>;
 export const scenarioOf = (s: State): ScenarioDef => SCENARIOS[s.scenario];
 export const magusName = (id: MagusId) => MAGI.find((m) => m.id === id)?.name ?? id;
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+/** A chair's name with its numeral: Aldric, Aldric II. */
+export const chairName = (id: MagusId, gen: number) =>
+  gen > 1 ? `${magusName(id)} ${ROMAN[gen] ?? gen}` : magusName(id);
+export const nameOf = (m: { id: MagusId; gen: number }) => chairName(m.id, m.gen);
+const ORD = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
 export const year = (s: State) => START_YEAR + Math.floor(s.t / YEAR);
 
 // ─── Setup ──────────────────────────────────────────────────────────
 
-export function createRun(scenario: ScenarioId, seed: number): State {
+export function createRun(scenario: ScenarioId, seed: number, legacy: Legacy = NO_LEGACY): State {
   const sc: ScenarioDef = SCENARIOS[scenario];
   const res = zeroGoods();
   for (const g of keys(sc.start.res)) res[g] = sc.start.res[g] ?? 0;
+  const lg = sc.legacy ? legacy : NO_LEGACY;
+  const devices: State['devices'] = { ...sc.start.devices };
+  for (const b of lg.heirlooms) devices[b] = (devices[b] ?? 0) + 1;
+  const magic = AURA.base + lg.magic;
+  const founded = lg.covenants
+    ? `The ${ORD[lg.covenants + 1] ?? `${lg.covenants + 1}th`} covenant of Mont-Dol is founded in spring ${START_YEAR}, on the ruins of the last.`
+    : `Founded in spring ${START_YEAR}.`;
   return {
     v: 1,
     scenario,
@@ -203,7 +281,20 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     growT: 0,
     buildings: structuredClone(sc.start.buildings) as State['buildings'],
     porters: { ...sc.start.porters },
-    magi: sc.start.magi.map((m) => newMagus(m.id, m.sanctum, m.lt)),
+    magi: sc.start.magi.map((m) => newMagus(m.id, m.sanctum, m.lt, m.gen ?? (lg.gens[m.id] ?? 0) + 1, m.age)),
+    apprentices: [],
+    vacant: [],
+    aura: {
+      magic,
+      start: magic,
+      peak: magic,
+      stains: [],
+      aegisAt: sc.start.research?.aegis ? 0 : null,
+      friarsSeen: Math.floor((sc.start.t ?? 0) / AURA.friars),
+    },
+    faerie: { level: 0, t: 0, year: 0, offers: 0 },
+    expanded: {},
+    legacy: lg,
     notice: sc.start.notice ?? 0,
     noticeFired: [],
     endowments: sc.start.endowments ?? 0,
@@ -215,7 +306,7 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     quarried: 0,
     research: { ...sc.start.research },
     labTexts: sc.start.labTexts ?? 0,
-    devices: { ...sc.start.devices },
+    devices,
     gate: sc.start.gate ? newGate(sc.start.gate) : null,
     couesnon: null,
     decrees: [],
@@ -228,10 +319,18 @@ export function createRun(scenario: ScenarioId, seed: number): State {
     blocks: {},
     unlocked: [...sc.unlocked],
     unlocksDone: [],
-    chronicle: [{ t: sc.start.t ?? 0, text: `Founded in spring ${START_YEAR}.` }],
+    chronicle: [{ t: sc.start.t ?? 0, text: founded }],
     outcome: null,
     log: [],
-    stats: { insightMade: 0, peakNotice: 0, experiments: 0, botches: 0, discoveries: 0 },
+    stats: {
+      insightMade: 0,
+      peakNotice: 0,
+      experiments: 0,
+      botches: 0,
+      discoveries: 0,
+      labTextsWritten: 0,
+      deaths: 0,
+    },
   };
 }
 
@@ -250,13 +349,56 @@ export const dark = (s: State) => bells(s) >= 4 && s.t % GATE.darkness.period < 
 
 function modifiers(s: State): Modifier[] {
   const out: Modifier[] = [];
-  for (const id of keys(s.research)) for (let i = 0; i < (s.research[id] ?? 0); i++) out.push(...RESEARCH[id].effects);
+  for (const id of keys(s.research))
+    for (let i = 0; i < (s.research[id] ?? 0); i++) out.push(...RESEARCH_DEFS[id].effects);
   return out;
 }
 const product = (xs: number[]) => xs.reduce((a, x) => a * x, 1);
+
+// ─── The aura (`aura.md`) ───────────────────────────────────────────
+
+/** Houses of friars in Dol: one a decade, until the Aegis holds them off. */
+export const friars = (s: State) => Math.floor(Math.min(s.t, s.aura.aegisAt ?? s.t) / AURA.friars);
+/** Divine: every second Endowment, and the friars. */
+export const divine = (s: State) => Math.floor(s.endowments / AURA.endowments) + friars(s);
+export const stains = (s: State) => s.aura.stains.filter((t) => t > s.t).length;
+/** Effective aura: Magic less the Dominion. */
+export const aura = (s: State) => s.aura.magic - divine(s);
+const above = (a: number, from: number) => Math.max(0, a - from + 1);
+/** Every boost the aura gives at its current strength. */
+export function auraBoosts(s: State) {
+  const a = aura(s);
+  return {
+    insight: Math.max(AURA.insightFloor, 1 + AURA.insight * (a - AURA.base)),
+    speed: 1 + AURA.speed * above(a, AURA.speedFrom),
+    aging: Math.max(0, 1 - AURA.aging * above(a, AURA.agingFrom)),
+    discovery: AURA.discovery * above(a, AURA.discoveryFrom),
+    vis: 1 + AURA.vis * above(a, AURA.visFrom),
+    lt: above(a, AURA.ltFrom),
+  };
+}
+export const noticeDecay = (s: State) => 0.1 + FAERIE.decay * s.faerie.level;
+
+// ─── Age and apprentices ────────────────────────────────────────────
+
+/** The apprentice's boost to their chair's holder: −25% sliding to +25% over 4 years. */
+export function apprenticeBoost(s: State, chair: MagusId) {
+  const a = s.apprentices.find((x) => x.chair === chair);
+  if (!a) return 0;
+  return APPRENTICE.start + (APPRENTICE.end - APPRENTICE.start) * Math.min(1, (s.t - a.start) / APPRENTICE.ramp);
+}
+/** The aura and an apprentice, on a magus's Insight. */
+const insightMult = (s: State, m: MagusState) => auraBoosts(s).insight * (1 + apprenticeBoost(s, m.id));
+export function agingChance(s: State, m: MagusState) {
+  if (m.id === 'knight' || m.age < AGING.from) return 0;
+  return Math.min(1, (m.age - AGING.from) * AGING.perYear * (m.longevity ? AGING.longevity : 1) * auraBoosts(s).aging);
+}
+
 function outputMult(s: State, mods: Modifier[], id: BuildingId, good: GoodId) {
   let m = product(mods.flatMap((x) => (x.kind === 'output' && x.building === id ? [x.mult] : [])));
   m *= 1 + EXPERIMENT.device * (s.devices[id] ?? 0);
+  m *= AURA.stain ** stains(s);
+  if (isSite(id)) m *= auraBoosts(s).vis;
   if (id === 'eel_weir' && s.story.eels_state === 0) m *= 1 + 0.5 * s.story.eel_level;
   if (id === 'eel_weir' && bells(s) >= 2) m *= GATE.bloodEels;
   if (id === 'farm' && bells(s) >= 4) m *= GATE.darkFarms;
@@ -279,11 +421,12 @@ const extraAssistants = (mods: Modifier[]) => mods.reduce((a, x) => a + (x.kind 
 
 // ─── Selectors ──────────────────────────────────────────────────────
 
+/** Every cap is a base times multipliers: storage buildings (×1.25 each) and research. */
 export function cap(s: State, g: GoodId, mods = modifiers(s)) {
   let c = GOOD_INFO[g].cap;
-  for (const id of keys(s.buildings)) c += count(s, id) * (B[id].caps?.[g] ?? 0);
-  for (const x of mods) if (x.kind === 'cap' && x.good === g && x.mult) c *= x.mult;
-  for (const x of mods) if (x.kind === 'cap' && x.good === g && x.add) c += x.add;
+  for (const id of keys(s.buildings)) if (B[id].stores?.includes(g)) c *= STORE_MULT ** count(s, id);
+  for (const x of mods) if (x.kind === 'cap' && x.good === g) c *= x.mult;
+  c = Math.floor(c);
   if (g === 'bread' || g === 'eels') c += Math.floor(s.res.salt / PRESERVE);
   return c;
 }
@@ -329,7 +472,15 @@ export const zoneSlots = (s: State, z: ZoneId) =>
   ZONES[z].slots +
   (z === 'polder' ? DIKE.slots * s.dikes : 0) +
   (z === 'hearth' ? terraces(s).n : 0) +
-  (z === 'scissy' && bells(s) >= 1 ? GATE.scissySlots : 0);
+  (z === 'scissy' && bells(s) >= 1 ? GATE.scissySlots : 0) +
+  EXPAND.slots * (s.expanded[z] ?? 0);
+/** Land can be bought in any zone that has plots: not the Polder, which is won with dikes. */
+export const canExpand = (s: State, z: ZoneId) => z !== 'polder' && zoneSlots(s, z) > 0;
+export const expandCost = (s: State, z: ZoneId): Cost => {
+  const c: Cost = {};
+  for (const g of keys(EXPAND.cost)) c[g] = Math.ceil((EXPAND.cost[g] ?? 0) * EXPAND.growth ** (s.expanded[z] ?? 0));
+  return c;
+};
 export const dikeCost = (s: State): Cost => {
   const c: Cost = {};
   for (const g of keys(DIKE.cost)) c[g] = Math.ceil((DIKE.cost[g] ?? 0) * DIKE.growth ** s.dikes);
@@ -339,7 +490,7 @@ export const dikeCost = (s: State): Cost => {
 export function buildCost(s: State, id: BuildingId): Cost {
   const c: Cost = {};
   const base = B[id].cost;
-  for (const g of keys(base)) c[g] = Math.ceil((base[g] ?? 0) * COST_GROWTH ** count(s, id));
+  for (const g of keys(base)) c[g] = Math.ceil((base[g] ?? 0) * (B[id].growth ?? COST_GROWTH) ** count(s, id));
   return c;
 }
 export const canAfford = (s: State, c: Cost) => keys(c).every((g) => s.res[g] >= (c[g] ?? 0) - 1e-9);
@@ -363,6 +514,8 @@ export function researchCost(s: State, id: ResearchId): Cost {
   const n = def.repeatable ? (s.research[id] ?? 0) : 0;
   const c: Cost = {};
   for (const g of keys(def.cost)) c[g] = Math.ceil((def.cost[g] ?? 0) * (def.growth ?? 2) ** n);
+  for (const g of keys(def.flat ?? {})) c[g] = (c[g] ?? 0) + (def.flat?.[g] ?? 0);
+  if (id === 'dig_library') c.insight = (c.insight ?? 0) * s.legacy.labTexts;
   return c;
 }
 /** What the Research tab lists: everything bought, plus the next few in order. */
@@ -371,9 +524,9 @@ export const canAffordResearch = (s: State, c: Cost) =>
   canAfford(s, { ...c, insight: Math.max(0, (c.insight ?? 0) - (s.gate?.store.insight ?? 0)) });
 
 export function visibleResearch(s: State): ResearchId[] {
-  const out: ResearchId[] = [];
+  const out: ResearchId[] = s.legacy.labTexts > 0 ? ['dig_library'] : [];
   let fresh = 0;
-  for (const id of keys(RESEARCH) as ResearchId[]) {
+  for (const id of keys(RESEARCH_DEFS).filter((x) => x !== 'dig_library')) {
     const needs = RESEARCH_DEFS[id].needs;
     // The Form trees stand apart from the list: always shown once revealed.
     if (needs) {
@@ -398,8 +551,12 @@ const assistMult = (s: State) => {
   return 1 + (n ? (SANCTUM_ASSIST * (s.buildings.sanctum?.workers ?? 0)) / n : 0);
 };
 /** Insight per second a magus makes reading in their Sanctum (none while experimenting). */
-const newMagus = (id: MagusId, sanctum: boolean, lt = 10): MagusState => ({
+const newMagus = (id: MagusId, sanctum: boolean, lt = 10, gen = 1, age?: number): MagusState => ({
   id,
+  gen,
+  age: age ?? MAGI.find((x) => x.id === id)?.age ?? 40,
+  decrepitude: 0,
+  longevity: false,
   lt,
   sanctum,
   exp: null,
@@ -407,8 +564,8 @@ const newMagus = (id: MagusId, sanctum: boolean, lt = 10): MagusState => ({
   twilight: null,
   traits: [],
 });
-/** Lab Total with Warping. Study raises `lt`; botches raise `warp`. */
-export const labTotal = (m: MagusState) => m.lt + WARP.lt * m.warp;
+/** Lab Total with Warping, less Decrepitude. Study raises `lt`; botches raise `warp`. The aura's top tier adds to it at work. */
+export const labTotal = (m: MagusState) => Math.max(1, m.lt + WARP.lt * m.warp - m.decrepitude);
 /** The magus's Twilight traits still in force. */
 export const activeTraits = (s: State, m: MagusState) =>
   m.traits.filter((x) => x.until > s.t).map((x) => TWILIGHT_TRAITS[x.i]!);
@@ -419,32 +576,37 @@ export const present = (m: MagusState) => m.sanctum && m.twilight === null;
 
 export function readingRate(s: State, m: MagusState, mods = modifiers(s)) {
   if (!m.sanctum) return 0;
-  return BASELINE_INSIGHT * labTotal(m) * assistMult(s) * baselineMult(mods);
+  const lt = labTotal(m) + auraBoosts(s).lt;
+  return BASELINE_INSIGHT * lt * assistMult(s) * baselineMult(mods) * insightMult(s, m);
 }
 export const studyCost = (m: MagusState): Cost => ({ insight: Math.ceil(20 * 1.35 ** (m.lt - 10)) });
 
 export function experimentPlan(s: State, magus: MagusId, recipe: RecipeId, extra: number) {
   const m = s.magi.find((x) => x.id === magus);
-  const def = RECIPES[recipe];
+  const def: RecipeDef = RECIPES[recipe];
   const cost: Cost = { ...def.cost };
+  if (def.result === 'longevity') cost.vis = Math.ceil((m?.age ?? 40) / 5) + 5 * (m?.decrepitude ?? 0);
   cost.vis = (cost.vis ?? 0) + extra;
-  const perLT = 'insightPerLT' in def ? def.insightPerLT : 0;
-  const lt = m ? labTotal(m) : 10;
+  const perLT = def.insightPerLT ?? 0;
+  const boosts = auraBoosts(s);
+  const lt = (m ? labTotal(m) : 10) + boosts.lt;
   // A device is craft: a stronger magus finishes it sooner.
   const craft = def.result === 'device' ? 10 / lt : 1;
   const traitBotch = m ? activeTraits(s, m).reduce((a, x) => a + (x.botch ?? 0), 0) : 0;
   return {
     cost,
-    time: (def.time * craft * (1 + EXPERIMENT.extraTime * extra) * traitMult(s, m, 'time')) / assistMult(s),
+    time:
+      (def.time * craft * (1 + EXPERIMENT.extraTime * extra) * traitMult(s, m, 'time')) / assistMult(s) / boosts.speed,
     insight:
       perLT *
       lt *
+      (m ? insightMult(s, m) : 1) *
       (1 + EXPERIMENT.extraYield * extra) *
       (1 + EXPERIMENT.labText * s.labTexts) *
       traitMult(s, m, 'yield') *
       product(modifiers(s).flatMap((x) => (x.kind === 'yield' ? [x.mult] : []))),
     botch: (EXPERIMENT.botch + EXPERIMENT.extraBotch * extra + traitBotch) * botchMult(modifiers(s)),
-    discovery: EXPERIMENT.discovery,
+    discovery: EXPERIMENT.discovery + boosts.discovery,
   };
 }
 
@@ -528,7 +690,8 @@ export function rates(s: State): Rates {
   const gateStone = s.gate ? s.gate.porters * ZONES.marsh.carry * carryMult(mods, 'marsh') : 0;
   if (rung >= 2) wakes += GATE.bloodNotice;
   const levers = NOTICE.endow.gen * s.endowments + NOTICE.alms.gen * s.alms;
-  const gen = dark(s) ? 0 : Math.max(0, (NOTICE_K * noticeSum + wakes - levers) * noticeMult(mods));
+  const raised = AURA.raiseNotice * (s.research.raise_aura ?? 0);
+  const gen = dark(s) ? 0 : Math.max(0, (NOTICE_K * noticeSum + wakes + raised - levers) * noticeMult(mods));
   return { net, byBuilding, zones, noticeGen: gen, gate, gateStone };
 }
 
@@ -547,7 +710,7 @@ function gainInsight(s: State, n: number) {
 }
 
 function resolveExperiment(s: State, m: MagusState, e: Experiment) {
-  const name = magusName(m.id);
+  const name = nameOf(m);
   const roll = nextRandom(s.rng);
   m.exp = null;
   if (roll < e.botch) {
@@ -565,6 +728,15 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
         applyEffects(s, [{ kind: 'destroy', building: id, n: 1 }]);
         log(s, `The blast takes a ${B[id].name} with it.`);
       }
+    }
+    const a = s.apprentices.find((x) => x.chair === m.id);
+    if (a && nextRandom(s.rng) < APPRENTICE.botchDeath) {
+      s.apprentices = s.apprentices.filter((x) => x !== a);
+      card(
+        s,
+        'The apprentice',
+        `${name}'s apprentice was standing too close. They bury what the fire left on the hill.`,
+      );
     }
     if (nextRandom(s.rng) < WARP.twilight * m.warp) {
       m.twilight = s.t + WARP.twilightSecs;
@@ -584,8 +756,16 @@ function resolveExperiment(s: State, m: MagusState, e: Experiment) {
     const gain = e.insight * (discovery ? 2 : 1);
     gainInsight(s, gain);
     if (discovery) log(s, `${name} finds something nobody wrote down before: ${Math.round(gain)} Insight.`);
+  } else if (kind === 'longevity') {
+    m.longevity = true;
+    if (discovery) m.decrepitude = Math.max(0, m.decrepitude - 1);
+    log(
+      s,
+      `${name} works the Longevity Ritual. The years will come more slowly${discovery ? ', and one of them goes back' : ''}.`,
+    );
   } else if (kind === 'labText') {
     s.labTexts += discovery ? 2 : 1;
+    s.stats.labTextsWritten += discovery ? 2 : 1;
     log(s, `${name} finishes a Lab Text${discovery ? ', and a second one from the margins' : ''}.`);
   } else if (e.target) {
     const power = (RECIPES[e.recipe] as RecipeDef).power ?? 1;
@@ -602,7 +782,7 @@ function returnFromTwilight(s: State, m: MagusState) {
   const t = TWILIGHT_TRAITS[i]!;
   m.traits.push({ i, until: s.t + secs });
   if (t.building && t.mult) s.mods.push({ id: t.building, good: goodOf(t.building), mult: t.mult, until: s.t + secs });
-  const name = magusName(m.id);
+  const name = nameOf(m);
   card(
     s,
     `${name} returns: ${t.name}`,
@@ -640,6 +820,8 @@ function met(s: State, c: Condition): boolean {
       return year(s) >= s.story[c.v] + c.years;
     case 'all':
       return c.of.every((x) => met(s, x));
+    case 'noMagi':
+      return s.magi.length === 0 && s.apprentices.length === 0;
   }
 }
 function checkOutcome(s: State) {
@@ -659,7 +841,7 @@ function reveal(s: State, id: string) {
   s.unlocked.push(id);
   if (id.startsWith('magus:')) {
     const m = id.slice(6) as MagusId;
-    if (!s.magi.some((x) => x.id === m)) s.magi.push(newMagus(m, false));
+    if (!s.magi.some((x) => x.id === m)) s.magi.push(newMagus(m, false, 10, (s.legacy.gens[m] ?? 0) + 1));
   }
 }
 
@@ -733,8 +915,8 @@ function checkIns(s: State) {
     e.checked = true;
     const push = `+${EXPERIMENT.pushYield * 100}% yield, +${EXPERIMENT.pushBotch * 100} points of botch chance`;
     s.events.push({
-      title: `${magusName(m.id)}, halfway`,
-      text: `${magusName(m.id)} looks up from ${RECIPES[e.recipe].name}. It is going well. It could go better, or worse.`,
+      title: `${nameOf(m)}, halfway`,
+      text: `${nameOf(m)} looks up from ${RECIPES[e.recipe].name}. It is going well. It could go better, or worse.`,
       options: [
         { label: `Push on. (${push})`, effects: [{ kind: 'checkIn', magus: m.id, choice: 'push' }] },
         { label: 'Hold steady.', effects: [{ kind: 'checkIn', magus: m.id, choice: 'steady' }] },
@@ -832,11 +1014,157 @@ function tribunal(s: State) {
   );
 }
 
+/** Each year, every magus from 45 may grow decrepit; at 5 Decrepitude they die and their chair stands empty. */
+function growOld(s: State) {
+  for (const m of [...s.magi]) {
+    const p = agingChance(s, m);
+    if (!p || nextRandom(s.rng) >= p) continue;
+    m.decrepitude++;
+    const name = nameOf(m);
+    if (m.decrepitude < AGING.death) {
+      log(s, `${name}'s hands shake over the crucible now. Decrepitude ${m.decrepitude}.`);
+      continue;
+    }
+    s.magi = s.magi.filter((x) => x !== m);
+    s.vacant.push({ chair: m.id, gen: m.gen, sanctum: m.sanctum });
+    s.stats.deaths++;
+    card(
+      s,
+      `${name} is dead`,
+      `${name} walks out onto the sands at low tide, aged ${Math.floor(m.age)}, and does not come back.`,
+    );
+  }
+}
+
+/** Apprentices pass the Gauntlet after 6 years, then wait for a chair to fall vacant and take it, with its name. */
+function tickApprentices(s: State) {
+  for (const a of s.apprentices) {
+    if (a.ready || s.t - a.start < APPRENTICE.gauntlet) continue;
+    a.ready = true;
+    const holder = s.magi.find((m) => m.id === a.chair);
+    card(
+      s,
+      'The Gauntlet',
+      `${holder ? `${nameOf(holder)}'s` : `The late ${magusName(a.chair)}'s`} apprentice breaks the Gauntlet and rises, robed and burning: a magus of Hermes. They will wait at their master's side until a chair falls empty.`,
+    );
+  }
+  for (const v of [...s.vacant]) {
+    const a = s.apprentices.find((x) => x.ready && x.chair === v.chair) ?? s.apprentices.find((x) => x.ready);
+    if (!a) continue;
+    const teacher = s.magi.find((m) => m.id === a.chair);
+    const lt = Math.max(APPRENTICE.lt, APPRENTICE.lt + Math.floor(((teacher?.lt ?? 10) - 10) / 2));
+    s.apprentices = s.apprentices.filter((x) => x !== a);
+    s.vacant = s.vacant.filter((x) => x !== v);
+    const m = newMagus(v.chair, v.sanctum, lt, v.gen + 1, APPRENTICE.age);
+    s.magi.push(m);
+    card(
+      s,
+      `Long live ${magusName(v.chair)}`,
+      `${chairName(v.chair, v.gen)} is dead; long live ${magusName(v.chair)}. The apprentice kneels, rises, and answers to a dead man's name: ${nameOf(m)}.`,
+    );
+  }
+}
+
+/** A gift from the fae comes only to a covenant in need. */
+export function faerieNeed(s: State): 'notice' | 'bread' | 'age' | 'silver' | null {
+  if (s.notice >= NOTICE.strike.at) return 'notice';
+  if (s.res.bread < 0.1 * cap(s, 'bread')) return 'bread';
+  if (s.magi.some((m) => m.decrepitude >= AGING.death - 1)) return 'age';
+  if (s.res.silver < 50) return 'silver';
+  return null;
+}
+export const offerCost = (s: State): Cost => ({
+  vis: FAERIE.cost * 2 ** (s.faerie.year === year(s) ? s.faerie.offers : 0),
+});
+const REELS = ['shell', 'eel', 'bell'];
+/** The fae's slot machine: mostly a loss, sometimes Faerie, and a gift only for a covenant in need. */
+function offering(s: State) {
+  const roll = nextRandom(s.rng);
+  const reels = [0, 1, 2].map(() => REELS[Math.floor(nextRandom(s.rng) * 3)]).join(' · ');
+  const o = FAERIE.odds;
+  let text: string;
+  const takeMore = () => {
+    if (s.res.vis >= FAERIE.cost) {
+      s.res.vis -= FAERIE.cost;
+      return `They take more: another ${FAERIE.cost} Vis is gone from the chests by morning.`;
+    }
+    s.hands = Math.max(0, s.hands - 1);
+    unassignOne(s);
+    return 'They take more. A hand walks into the marsh at dusk, smiling, and does not come back.';
+  };
+  if (roll < o.nothing) text = 'The fae take it and laugh.';
+  else if (roll < o.nothing + o.more) text = takeMore();
+  else if (roll < o.nothing + o.more + o.pleased) {
+    if (s.faerie.level >= FAERIE.max) text = `They are pleased, and greedy with it. ${takeMore()}`;
+    else {
+      s.faerie.level++;
+      text = `They are pleased. Faerie ${s.faerie.level}: the flats blur, and Dol forgets a little faster.`;
+    }
+  } else {
+    const need = faerieNeed(s);
+    if (need === 'notice') {
+      s.notice = Math.max(0, s.notice - FAERIE.gift.notice);
+      text = 'A gift. For a season the hill is simply not there when the bishop’s men look for it.';
+    } else if (need === 'bread') {
+      s.res.bread = cap(s, 'bread');
+      text = 'A gift. The granary is full in the morning, and the loaves are still warm.';
+    } else if (need === 'age') {
+      const m = s.magi.reduce((a, b) => (b.decrepitude > a.decrepitude ? b : a));
+      m.decrepitude--;
+      text = `A gift. ${nameOf(m)} wakes a year younger, and will not say what they dreamt.`;
+    } else if (need === 'silver') {
+      addRes(s, 'silver', FAERIE.gift.silver);
+      text = 'A gift. There is silver in the eel traps, old coins with no king on them.';
+    } else text = 'The fae look at the covenant, see it wants for nothing, and laugh.';
+  }
+  card(s, 'An offering at the Regio Spring', `${reels}\n\n${text}`);
+}
+/** After a hand is lost, take one from the biggest job if nobody is idle. */
+function unassignOne(s: State) {
+  if (idleHands(s) >= 0) return;
+  const id = keys(s.buildings).sort((a, b) => (s.buildings[b]?.workers ?? 0) - (s.buildings[a]?.workers ?? 0))[0];
+  const z = keys(s.porters).sort((a, b) => (s.porters[b] ?? 0) - (s.porters[a] ?? 0))[0];
+  const bw = id ? (s.buildings[id]?.workers ?? 0) : 0;
+  const pw = z ? (s.porters[z] ?? 0) : 0;
+  if (id && bw >= pw && bw > 0) s.buildings[id]!.workers--;
+  else if (z && pw > 0) s.porters[z] = pw - 1;
+  else if (s.gate && s.gate.porters > 0) s.gate.porters--;
+}
+
+/** The next covenant's legacy: what it inherited, plus what this run adds. */
+export function nextLegacy(s: State): Legacy {
+  const lg = s.legacy;
+  if (!scenarioOf(s).legacy) return lg;
+  const gens = { ...lg.gens };
+  for (const m of s.magi) if (m.id !== 'knight') gens[m.id] = m.gen;
+  for (const v of s.vacant) gens[v.chair] = Math.max(gens[v.chair] ?? 0, v.gen);
+  const heirloom = keys(s.devices)
+    .map((b) => [b, (s.devices[b] ?? 0) - lg.heirlooms.filter((h) => h === b).length] as const)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+  return {
+    covenants: lg.covenants + 1,
+    magic: lg.magic + Math.floor((s.aura.peak - s.aura.start) / 2),
+    labTexts: lg.labTexts + s.stats.labTextsWritten,
+    heirlooms: heirloom ? [...lg.heirlooms, heirloom] : lg.heirlooms,
+    gens,
+  };
+}
+
 /** Once a year: the Tribunal every 7 years; after the fifth and sixth bells, raids from the Pit and storms on the dikes. */
 function yearly(s: State) {
   const y = year(s);
   if (y <= s.yearDone) return;
   s.yearDone = y;
+  if (friars(s) > s.aura.friarsSeen) {
+    s.aura.friarsSeen = friars(s);
+    card(
+      s,
+      'The friars come to Dol',
+      `Grey friars walk barefoot into Dol, singing, and build a house by the market. The Dominion comes a hand's breadth closer to the hill: Divine ${divine(s)}, and the aura dulls to ${aura(s)}.`,
+    );
+  }
+  growOld(s);
   if (scenarioOf(s).tribunal && y >= TRIBUNAL.first && (y - TRIBUNAL.first) % TRIBUNAL.every === 0) tribunal(s);
   if (bells(s) >= 5) {
     const crowded = (keys(ZONES) as ZoneId[]).reduce((a, z) => (zoneUsed(s, z) > zoneUsed(s, a) ? z : a), 'hearth');
@@ -882,16 +1210,26 @@ function tick(s: State) {
   if (terraces(s).n > cut)
     log(s, 'The quarry has cut a new terrace into Mont-Dol: room for one more building on the Hearth.');
 
-  if (s.hands < housing(s)) {
+  // New hands pay the eel rent where the scenario asks it.
+  const rent = has(s, 'eelRent') ? EEL_RENT : 0;
+  if (s.hands < housing(s) && s.res.eels >= rent) {
     s.growT += DT;
     if (s.growT >= 20) {
       s.growT = 0;
       s.hands++;
+      s.res.eels -= rent;
     }
   } else s.growT = 0;
 
-  s.notice = Math.max(0, s.notice + ((r.noticeGen - 0.1 * s.notice) / 60) * DT);
+  s.notice = Math.max(0, s.notice + ((r.noticeGen - noticeDecay(s) * s.notice) / 60) * DT);
   s.t += DT;
+  for (const m of s.magi) if (m.id !== 'knight') m.age += DT / YEAR;
+  if (s.faerie.level > 0 && s.t - s.faerie.t >= FAERIE.fade) {
+    s.faerie.level--;
+    s.faerie.t = s.t;
+    log(s, 'Nobody has been down to the Regio Spring in a while. The fae stop listening.');
+  }
+  tickApprentices(s);
   for (const m of s.magi) if (m.exp && s.t >= m.exp.end - 1e-9) resolveExperiment(s, m, m.exp);
   for (const m of s.magi) if (m.twilight !== null && s.t >= m.twilight - 1e-9) returnFromTwilight(s, m);
   s.stats.peakNotice = Math.max(s.stats.peakNotice, s.notice);
@@ -928,12 +1266,18 @@ function startStory(s: State) {
 
 const blocked = (s: State) => !!s.outcome || s.events.length > 0;
 
+/** A deep copy, except the log and Chronicle: their entries never change once written, so they're shared. */
+function clone(s: State): State {
+  const { log: l, chronicle: c, ...rest } = s;
+  return { ...structuredClone(rest), log: [...l], chronicle: [...c] };
+}
+
 /** Advances by dt real game-seconds, in fixed ticks. Pending events pause the game. */
 export function step(s0: State, dt: number): State {
   if (blocked(s0)) return s0;
   const n = Math.floor((s0.acc + dt) / DT + 1e-9);
   if (n === 0) return { ...s0, acc: s0.acc + dt };
-  const s = structuredClone(s0);
+  const s = clone(s0);
   s.acc = s0.acc + dt - n * DT;
   for (let i = 0; i < n && !blocked(s); i++) tick(s);
   return s;
@@ -942,7 +1286,7 @@ export function step(s0: State, dt: number): State {
 /** Ticks until game time t (or until something blocks). */
 export function stepTo(s0: State, t: number): State {
   if (s0.t >= t || blocked(s0)) return s0;
-  const s = structuredClone(s0);
+  const s = clone(s0);
   while (s.t < t - 1e-9 && !blocked(s)) tick(s);
   return s;
 }
@@ -979,7 +1323,7 @@ function applyEffects(s: State, effects: readonly Effect[]) {
       } else if (e.choice === 'abort') {
         for (const g of keys(x.paid)) addRes(s, g, (x.paid[g] ?? 0) / 2);
         m.exp = null;
-        log(s, `${magusName(m.id)} puts ${RECIPES[x.recipe].name} aside.`);
+        log(s, `${nameOf(m)} puts ${RECIPES[x.recipe].name} aside.`);
       }
     }
   }
@@ -1004,7 +1348,7 @@ function act(s: State, a: Action): string | undefined {
         const m = s.magi.find((x) => !x.sanctum);
         if (m) {
           m.sanctum = true;
-          log(s, `${magusName(m.id)} moves into a Sanctum.`);
+          log(s, `${nameOf(m)} moves into a Sanctum.`);
         }
       }
       return;
@@ -1047,14 +1391,15 @@ function act(s: State, a: Action): string | undefined {
     case 'experiment': {
       const m = s.magi.find((x) => x.id === a.magus);
       if (!m?.sanctum) return 'That magus has no Sanctum';
-      if (m.twilight !== null) return `${magusName(m.id)} is in Twilight`;
+      if (m.twilight !== null) return `${nameOf(m)} is in Twilight`;
       if (m.exp) return 'Already experimenting';
       if (!recipeOpen(s, a.recipe)) return 'Nobody here knows how';
       if (isBlocked(s, `experiment:${m.id}`) || isBlocked(s, 'experiment:all'))
-        return `${magusName(m.id)} is away from the lab`;
+        return `${nameOf(m)} is away from the lab`;
       if (!Number.isInteger(a.extra) || a.extra < 0 || a.extra > EXPERIMENT.maxExtraVis) return 'Bad amount of Vis';
       const kind = RECIPES[a.recipe].result;
       if (kind === 'device' && !(a.target && s.buildings[a.target])) return 'Choose a building for the device';
+      if (kind === 'longevity' && (m.longevity || m.id === 'knight')) return `${nameOf(m)} needs no ritual`;
       const p = experimentPlan(s, a.magus, a.recipe, a.extra);
       if (!canAfford(s, p.cost)) return 'Not enough';
       pay(s, p.cost);
@@ -1094,7 +1439,18 @@ function act(s: State, a: Action): string | undefined {
       pay(s, { ...c, insight: fromHall });
       s.research[a.id] = (s.research[a.id] ?? 0) + 1;
       for (const x of def.effects) if (x.kind === 'reveal') reveal(s, x.id);
-      log(s, `The covenant learns ${def.name}.`);
+      if (a.id === 'aegis') s.aura.aegisAt = s.t;
+      if (a.id === 'raise_aura') {
+        s.aura.magic++;
+        s.aura.peak = Math.max(s.aura.peak, s.aura.magic);
+        log(
+          s,
+          `The covenant raises the aura to Magic ${s.aura.magic}. In Dol the milk curdles, and the dogs won't stop howling.`,
+        );
+      } else if (a.id === 'dig_library') {
+        s.labTexts += s.legacy.labTexts;
+        log(s, `The covenant digs out the old library: ${s.legacy.labTexts} Lab Texts, damp but legible.`);
+      } else log(s, `The covenant learns ${def.name}.`);
       return;
     }
     case 'endow': {
@@ -1143,7 +1499,43 @@ function act(s: State, a: Action): string | undefined {
       pay(s, c);
       s.bribes++;
       s.notice = Math.max(0, s.notice - NOTICE.bribe.notice);
-      log(s, 'A gift goes down the hill to the lord of Dol. He forgets a few things.');
+      s.aura.stains.push(s.t + AURA.stainSecs);
+      log(
+        s,
+        'A gift goes down the hill to the lord of Dol. He takes the silver and smiles too wide, and an Infernal stain spreads over the fields.',
+      );
+      return;
+    }
+    case 'expand': {
+      if (!canExpand(s, a.zone)) return 'There is no land to be had there';
+      const c = expandCost(s, a.zone);
+      if (!canAfford(s, c)) return 'Not enough';
+      pay(s, c);
+      s.expanded[a.zone] = (s.expanded[a.zone] ?? 0) + 1;
+      log(s, `The covenant buys ${EXPAND.slots} more plots in the ${ZONES[a.zone].name}.`);
+      return;
+    }
+    case 'offer': {
+      if (!has(s, 'faerie') || !count(s, 'regio_spring')) return 'Nobody has found the Regio Spring yet';
+      const c = offerCost(s);
+      if (!canAfford(s, c)) return 'Not enough Vis';
+      pay(s, c);
+      const y = year(s);
+      s.faerie.offers = s.faerie.year === y ? s.faerie.offers + 1 : 1;
+      s.faerie.year = y;
+      s.faerie.t = s.t;
+      offering(s);
+      return;
+    }
+    case 'apprentice': {
+      if (!has(s, 'apprentices')) return 'Not yet';
+      const m = s.magi.find((x) => x.id === a.magus);
+      if (!m || m.id === 'knight') return 'No such magus';
+      if (s.apprentices.some((x) => x.chair === m.id)) return `${nameOf(m)} already has an apprentice`;
+      if (!canAfford(s, APPRENTICE.cost)) return 'Not enough Silver';
+      pay(s, APPRENTICE.cost);
+      s.apprentices.push({ chair: m.id, start: s.t, ready: false });
+      log(s, `A Redcap brings ${nameOf(m)} a Gifted child from Dinan. The servants keep their distance.`);
       return;
     }
     case 'gate': {
@@ -1214,7 +1606,7 @@ function act(s: State, a: Action): string | undefined {
 export function apply(s0: State, a: Action): Result {
   if (s0.outcome) return { error: 'The run is over' };
   if (s0.events.length && a.type !== 'choose') return { error: 'An event is waiting' };
-  const s = structuredClone(s0);
+  const s = clone(s0);
   const error = act(s, a);
   if (error) return { error };
   s.log.push({ t: s.t, action: a });
@@ -1230,12 +1622,20 @@ export interface Save {
   seed: number;
   t: number;
   log: LogEntry[];
+  legacy?: Legacy;
 }
-export const toSave = (s: State): Save => ({ v: 1, scenario: s.scenario, seed: s.seed, t: s.t, log: s.log });
+export const toSave = (s: State): Save => ({
+  v: 1,
+  scenario: s.scenario,
+  seed: s.seed,
+  t: s.t,
+  log: s.log,
+  legacy: s.legacy,
+});
 
 /** Rebuilds a run from its seed and action log. Throws if the log no longer fits the rules. */
 export function replay(save: Save): State {
-  let s = createRun(save.scenario, save.seed);
+  let s = createRun(save.scenario, save.seed, save.legacy);
   for (const e of save.log) {
     s = stepTo(s, e.t);
     const r = apply(s, e.action);

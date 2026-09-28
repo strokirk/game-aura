@@ -38,5 +38,5 @@ A bell rings when the Gate holds its price. Ringing it takes the price from the 
 
 - **Each bell adds to the plate and never takes something off.** A bell opens a zone, a good, a site, a person or a lever, and wakes a pressure that keeps the older systems busy: Blood makes the Salt-works a Vis source and makes Notice a standing cost; Wormwood makes Bread matter again; Darkness turns Notice into a window to exploit; the Pit and the storms put buildings and dikes at risk every year.
 - **Number go up.** Prices grow from 10,000 to 20,000,000 Insight. That's only reachable because the Form trees compound.
-- **Losing is fun.** A covenant that runs out of time at the fifth bell has still raised a knight from his barrow and darkened the sun; every bell it rang stays in the Chronicle.
+- **Losing is fun.** A covenant that falls at the fifth bell has still raised a knight from his barrow and darkened the sun; every bell it rang stays in the Chronicle.
 - Taken from Revelation's seven trumpets for the set-pieces, and from Factorio's rocket for the final price in every good at once.
