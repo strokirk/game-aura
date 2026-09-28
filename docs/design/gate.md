@@ -1,26 +1,42 @@
-# The Drowned Gate
+# The Drowned Gate and the Seven Bells of Ys
 
-Beneath the marsh lies the Drowned Regio, a hidden magical realm. Opening its Gate is the covenant's great work and the only way to win the full run.
+*"And there was no more sea."* (Revelation 21:1)
 
-**Input:** 3 stages.
+The Breton legend puts Ys, the drowned city, under the bay of Douarnenez. The covenant finds out the Bretons had the wrong bay: Ys lies in the Drowned Regio under the marsh at Mont-Dol, and its seven bells hold back the sea. Opening its Gate and ringing all seven is the covenant's great work and the only way to win the full run.
 
-1. **Found the Gate:** after the *Aegis of the Hearth* research, tap the Gate site in the Marsh and pay 200 Silver + 100 Stone.
-2. **Raise the Gate:** deliver 1,500 Stone to it. **Gate porters** are their own job: each carries Stone from the Hall out to the Gate at the Marsh rate (0.5/s, with *Mule Trains* and *Stones That Carry*).
-3. **Perform the 3 Rites:** tap **Perform Rite** when its conditions hold.
+## The Gate
 
-**The Gate holds Insight.** From the moment it's founded, the Gate stores Insight with no cap, so nothing is wasted at the Insight cap while it's raised. A toggle on the Gate card, **Pour into the Gate**, sends all new Insight there instead of to the covenant's own stock. Rites are paid from the Gate's store.
+1. **Found the Gate:** after the *Aegis of the Hearth* research, pay 200 Silver + 100 Stone on the Gate tab.
+2. **Raise the Gate:** deliver 1,500 Stone. **Gate porters** carry Stone from the Hall out to the Gate at the Marsh rate (0.5/s each, with *Mule Trains* and *Stones That Carry*), and poured Stone (below) raises it too.
+3. **Ring the bells:** seven, in order, each paid from the Gate's store.
 
-| Rite | Insight from the Gate | Conditions at the moment of performing |
-| --- | --- | --- |
-| 1. The Bells Beneath the Tide | 20,000 | Over the last 60 s, 4+ Stone/s and 0.3+ Vis/s delivered to the Gate; all 3 magi in Sanctums and not experimenting |
-| 2. The Knight Unburied | 25,000 | Same |
-| 3. The Tide Stands Still | 30,000 | Same. Completing it wins the run |
+**Pouring.** The Gate stores goods with no caps. On the Gate card each good has a **pour** switch: while it's on, that good's net income goes to the Gate instead of the Hall. Poured Salt isn't sold. Once raised, Gate porters' Stone goes to the store as well. Experiments' Insight goes to the Gate while Insight is poured.
 
-- Once raised, the Gate consumes all Stone and Vis delivered to it.
-- **Vis to the Gate** is a toggle: while it's on, the 3 Vis sites send their Vis straight to the Gate (it's in the Marsh already, so no porters), and none reaches the Hall.
-- The Vis condition must be reachable with 2 of the 3 Vis sites plus research, so that losing the Tide Pool hurts without deciding the run.
-- `[PLAYTEST: 4 Stone/s needs 2–3 fully staffed Quarries with about 12 Enchant a Device bonuses, because the 3 Sanctums the Rites need crowd the Hearth. In the sim the careful strategy reaches the first Rite on some seeds but not the third: the Rites' Insight or timing needs tuning.]`
+**Why pouring:** the bells cost far more than any Hall can hold, so the Gate is the covenant's second treasury, and deciding what to pour is deciding what the Hall goes without. Pouring Vis starves the labs; pouring Stone stops the Devices; pouring Insight stops the research.
 
-**Feedback:** the Gate card shows a sunken arch that rises as Stone arrives, the Insight stored against the next Rite, and 2 live gauges (Stone/s, Vis/s) that turn green when the conditions hold. Each Rite plays a short sequence (bells under the water, the tide drawing back) and adds a line to the Chronicle. The third ends the run with the victory screen.
+## The bells
 
-**Why it's built this way:** the Rites demand all of the covenant's outputs at once (Stone from the Hearth, Vis from the Marsh, Insight from the labs), like Factorio's rocket silo, so a lopsided covenant can't win. The climax is a hands problem: can you spare enough porters, and stop every experiment at the same moment? Pouring Insight into the Gate is the late-game decision of how much to save and how much to spend, and 3 Rites turn the endgame into 3 sprints rather than one long wait.
+A bell rings when the Gate holds its price. Ringing it takes the price from the store, opens something new and wakes something the covenant must live with, and plays its story (`src/content/ys.ink`). Each bell echoes Revelation.
+
+| # | Bell | Price from the Gate | Opens | Wakes |
+| --- | --- | --- | --- | --- |
+| 1 | **The Bell of Scissy** (8:7, a third of the trees burnt up) | 10,000 Insight, 500 Stone | **Scissy**, the drowned forest: a zone of 6 plots for **Bog-oak Camps** (60 Silver + 30 Stone, 3 workers, 0.1 Bog-oak/s each), worked only at low tide (the first 30 s of every minute). **Enchant a Great Device**: 20 Vis + 20 Bog-oak, 300 s, +100% output for a building type | The drowned dead: Notice +1/min while any Bog-oak Camp is worked |
+| 2 | **The Bell of Blood** (8:8, a third of the sea became blood) | 35,000 Insight, 2,000 Salt | The bay runs red with vis: every Salt-works worker also makes 0.02 Vis/s, and Eel Weirs ×2 | The fish die and the fishers rage: Notice +2/min, for good |
+| 3 | **The Bell of Wormwood** (8:10, a star falls) | 120,000 Insight, 400 Vis | **Wormwood**, a fallen star: a fourth Vis site at 0.24 Vis/s per worker, three times the Tide Pool | The wells turn bitter and the hands drink ale: fuelled work burns ×1.5 Bread |
+| 4 | **The Bell of Darkness** (8:12, a third of the sun darkened) | 400,000 Insight, 3,000 Vellum | **The hidden hour**: the first 60 s of every 5 minutes are dark. Notice generation stops, and running experiments advance twice as fast | Crops fail: Farms ×0.5, for good |
+| 5 | **The Bell of the Pit** (9:2, the bottomless pit opens) | 1,500,000 Insight, 1,000 Bog-oak | **The Drowned Knight** rises and serves: a fourth magus at Lab Total 15 who works from Ys and needs no Sanctum | Every year, *Things from the Pit* come for the most crowded zone: ward them with 30 Vis, or lose 2 of its commonest building |
+| 6 | **The Bell of the Four Winds** (7:1, the four winds held) | 5,000,000 Insight, 20,000 Stone | **The Couesnon** turns: point the river at a zone to double its output. It can be moved once a year | Every year a storm breaches a dike: mend it with 200 Stone + 200 Bread, or lose it and its two plots |
+| 7 | **No More Sea** (21:1) | 20,000,000 Insight, and 10,000 each of Silver, Salt, Stone, Bread, Eels, Vellum, Vis and Bog-oak | The tide goes out and does not come back. When its story ends, the run is won | The whole bay watches: it rings only while Notice is under 50 |
+
+`[PLAYTEST: every price. The curve (about ×3.5 per bell) matters more than the values; the Form trees (research.md) must carry Insight/s from about 25 to about 50,000 for the bells to land 5–10 minutes apart. The careful sim rings 2 bells by 1260.]`
+
+**Feedback:** the Gate card shows each good's store and pour switch, the next bell with what it opens and wakes, a bar per good in its price with the time to fill it, and the Ring button. A card lists the bells rung, the tide at Scissy, the hidden hour, and the Couesnon's picker. Each bell adds a line to the Chronicle and plays its story.
+
+**Dev menu:** *Fill the Gate for this bell* sets the store to the next bell's price, so every bell can be tried in one sitting.
+
+## Why it's built this way
+
+- **Each bell adds to the plate and never takes something off.** A bell opens a zone, a good, a site, a person or a lever, and wakes a pressure that keeps the older systems busy: Blood makes the Salt-works a Vis source and makes Notice a standing cost; Wormwood makes Bread matter again; Darkness turns Notice into a window to exploit; the Pit and the storms put buildings and dikes at risk every year.
+- **Number go up.** Prices grow from 10,000 to 20,000,000 Insight. That's only reachable because the Form trees compound.
+- **Losing is fun.** A covenant that runs out of time at the fifth bell has still raised a knight from his barrow and darkened the sun; every bell it rang stays in the Chronicle.
+- Taken from Revelation's seven trumpets for the set-pieces, and from Factorio's rocket for the final price in every good at once.

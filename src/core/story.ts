@@ -3,6 +3,7 @@
 // The story's state lives in State as ink's own JSON, so saves and replays cover it.
 import { Story } from 'inkjs';
 import eels from '../content/eels.json' with { type: 'json' };
+import ys from '../content/ys.json' with { type: 'json' };
 import {
   type BuildingId,
   DEFS,
@@ -11,6 +12,7 @@ import {
   type GoodId,
   type StoryBeat,
   type StoryVar,
+  type Thread,
 } from '../data/index.ts';
 
 /** What the engine tells ink before each knot (`stories.md`, "What ink can read"). */
@@ -27,9 +29,11 @@ export interface InkInputs {
 }
 export type InkOutputs = Record<StoryVar, number>;
 
+const SOURCES: Record<Thread, object> = { eels, ys };
+
 /** A fresh story seeds itself from the clock; `seed` keeps ink's randomness on the run's seed. */
-function load(saved: string | null, seed = 0): Story {
-  const story = new Story(eels);
+function load(thread: Thread, saved: string | null, seed = 0): Story {
+  const story = new Story(SOURCES[thread] as ConstructorParameters<typeof Story>[0]);
   if (saved) story.state.LoadJson(saved);
   else story.state.storySeed = seed % 100;
   return story;
@@ -54,8 +58,11 @@ const outputs = (story: Story): InkOutputs => ({
 
 /** Plays a knot up to its choices. Returns the card and the saved story state. */
 export function playKnot(saved: string | null, seed: number, beat: StoryBeat, inputs: InkInputs) {
-  const story = load(saved, seed);
-  for (const [k, v] of Object.entries(inputs)) story.variablesState[k] = v;
+  const thread = beat.thread ?? 'eels';
+  const story = load(thread, saved, seed);
+  // Each thread declares only the inputs it reads.
+  for (const [k, v] of Object.entries(inputs))
+    if (story.variablesState.GlobalVariableExistsWithName(k)) story.variablesState[k] = v;
   story.ChoosePathString(beat.knot);
   const { lines } = runOn(story);
   return {
@@ -64,18 +71,24 @@ export function playKnot(saved: string | null, seed: number, beat: StoryBeat, in
       text: lines.join('\n'),
       options: story.currentChoices.map((c) => ({ label: c.text, effects: [] })),
       knot: beat.knot,
+      thread,
     },
     saved: story.state.toJson(),
   };
 }
 
 /** Takes choice `index` in the waiting knot and runs it to DONE, collecting tags from every line. */
-export function chooseInKnot(saved: string, index: number) {
-  const story = load(saved);
+export function chooseInKnot(thread: Thread, saved: string, index: number) {
+  const story = load(thread, saved);
   if (!story.currentChoices[index]) return null;
   story.ChooseChoiceIndex(index);
   const { lines, tags } = runOn(story);
-  return { lines, effects: tags.map(parseTag), saved: story.state.toJson(), vars: outputs(story) };
+  return {
+    lines,
+    effects: tags.map(parseTag),
+    saved: story.state.toJson(),
+    vars: thread === 'eels' ? outputs(story) : null,
+  };
 }
 
 const isGood = (g: string): g is GoodId => (GOODS as readonly string[]).includes(g);

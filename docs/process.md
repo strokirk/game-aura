@@ -10,6 +10,10 @@ Design starts at the endgame: the Drowned Gate, the Rites, the most impressive t
 
 A new system earns its place by creating decisions, not by filling time. When in doubt, prefer a system that can go wrong loudly to one that makes the player wait.
 
+## Stories are written apart from design
+
+A story that seeds new mechanics is written by an **independent writer**: a subagent that only writes the story and never designs. The same agent never both writes a story and extracts design from it. Its raw output is shown to the user **inline, in the conversation**, and new systems are proposed from it together, with the user. Story content for existing mechanics (such as the Seven Bells' ink) can be drafted by such a writer too; the author interprets it into ink and keeps the raw text in `docs/ink/` for reference.
+
 ## Writing design docs
 
 - **Describe the current game in the present tense.** Design docs say what the game is, not how it got there. History belongs in `archive/`; planned features belong in `backlog.md`; parked and rejected ideas belong in `icebox.md`. Leave out "we changed", "no longer" and "instead of X": they confuse people and agents alike.

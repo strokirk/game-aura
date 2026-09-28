@@ -1,8 +1,11 @@
 import {
   type Action,
+  apply,
+  bellStatus,
   buildable,
   buildCost,
   canAfford,
+  canAffordResearch,
   cap,
   count,
   endowCost,
@@ -11,23 +14,106 @@ import {
   housing,
   idleHands,
   isMaxed,
+  present,
   rates,
   researchCost,
-  riteStatus,
   type State,
   studyCost,
   visibleResearch,
   workerSlots,
   zoneUsed,
 } from '../src/core/index.ts';
-import { type BuildingId, DEFS, EXPERIMENT, NOTICE, type ZoneId } from '../src/data/index.ts';
+import { nextRandom, seedRng } from '../src/core/rng.ts';
+import {
+  type BuildingId,
+  DEFS,
+  EXPERIMENT,
+  GOODS,
+  NOTICE,
+  RECIPES,
+  RESEARCH,
+  RESEARCH_DEFS,
+  type RecipeId,
+  type ResearchId,
+  ZONES,
+  type ZoneId,
+} from '../src/data/index.ts';
 
 /** A scripted player: called once per simulated second, returns the actions to try. */
 export type Strategy = (s: State) => Action[];
 
+const keys = <K extends string>(o: Partial<Record<K, unknown>>) => Object.keys(o) as K[];
+const deltas = [1, -1];
+
+/**
+ * Every action the random player can take, by type: each entry lists the candidates in a state.
+ * Keyed by `Action['type']`, so tsc fails until a new action type gets its one line here.
+ */
+const CANDIDATES: { [K in Action['type']]: (s: State) => Extract<Action, { type: K }>[] } = {
+  build: () => keys(DEFS).map((building) => ({ type: 'build', building })),
+  dike: () => [{ type: 'dike' }],
+  workers: (s) =>
+    keys(s.buildings).flatMap((building) => deltas.map((delta) => ({ type: 'workers', building, delta }))),
+  porters: () => keys(ZONES).flatMap((zone) => deltas.map((delta) => ({ type: 'porters', zone, delta }))),
+  gatePorters: () => deltas.map((delta) => ({ type: 'gatePorters', delta })),
+  experiment: (s) =>
+    s.magi.flatMap((m) =>
+      keys<RecipeId>(RECIPES).flatMap((recipe) =>
+        [0, EXPERIMENT.maxExtraVis].flatMap((extra) =>
+          RECIPES[recipe].result === 'device'
+            ? keys(s.buildings).map((target) => ({ type: 'experiment' as const, magus: m.id, recipe, extra, target }))
+            : [{ type: 'experiment' as const, magus: m.id, recipe, extra }],
+        ),
+      ),
+    ),
+  study: (s) => s.magi.map((m) => ({ type: 'study', magus: m.id })),
+  research: () => keys<ResearchId>(RESEARCH).map((id) => ({ type: 'research', id })),
+  endow: () => [{ type: 'endow' }],
+  bribe: () => [{ type: 'bribe' }],
+  alms: () => [{ type: 'alms' }],
+  keepSalt: () => [{ type: 'keepSalt' }],
+  gift: () => [{ type: 'gift' }],
+  gate: () => (['found', 'bell'] as const).map((op) => ({ type: 'gate', op })),
+  pour: () => GOODS.map((good) => ({ type: 'pour', good })),
+  couesnon: () => keys(ZONES).map((zone) => ({ type: 'couesnon', zone })),
+  devFill: () => [], // a cheat, never played
+  choose: (s) => (s.events[0]?.options ?? []).map((_, option) => ({ type: 'choose', option })),
+};
+const KINDS = keys(CANDIDATES);
+
+/** A generator seeded from the run's seed and the moment, so the random player replays exactly without touching `s.rng`. */
+function momentRng(s: State): () => number {
+  const h =
+    Math.imul(s.seed ^ 0x5bd1e995, 0x9e3779b1) ^ Math.imul(Math.round(s.t * 4) + 1, 0x85ebca6b) ^ s.events.length;
+  const r = seedRng(h);
+  return () => nextRandom(r);
+}
+const pickOf = <T>(xs: readonly T[], rnd: () => number): T | undefined => xs[Math.floor(rnd() * xs.length)];
+/** Whether apply() accepts the action. The log is left out: legality never reads it, and cloning it is most of apply()'s cost. */
+const legal = (s: State, a: Action) => !('error' in apply({ ...s, log: [] }, a));
+
 export const STRATEGIES: Record<string, Strategy> = {
   /** Does nothing but dismiss cards. Must lose the trial. */
   idle: () => [],
+
+  /** A fuzzer and a baseline: up to 3 legal actions a second, picked at random; a random option on each card. */
+  random: (s) => {
+    const rnd = momentRng(s);
+    if (s.events.length) {
+      const opts = CANDIDATES.choose(s).filter((a) => legal(s, a));
+      const a = pickOf(opts, rnd);
+      return a ? [a] : [];
+    }
+    const out: Action[] = [];
+    const want = Math.floor(rnd() * 4);
+    // Sample a handful of candidates rather than testing them all.
+    for (let tries = 0; out.length < want && tries < 8; tries++) {
+      const kind = pickOf(KINDS, rnd)!;
+      const a = pickOf<Action>(CANDIDATES[kind](s), rnd);
+      if (a && a.type !== 'choose' && legal(s, a)) out.push(a);
+    }
+    return out;
+  },
 
   /** Staffs the Tide Pool, keeps the Marsh carried, runs experiments with all spare Vis. */
   sensible: (s) => {
@@ -107,24 +193,33 @@ export const STRATEGIES: Record<string, Strategy> = {
         buildable(s, id) &&
         !isMaxed(s, id) &&
         room(id) &&
-        (settles < 60 || DEFS[id].site || id === 'sanctum') &&
+        (settles < 60 || DEFS[id].site || id === 'sanctum' || id === 'library') &&
         canAfford(s, buildCost(s, id)),
     );
     if (pick) out.push({ type: 'build', building: pick });
     // Research in order; Notice levers; the Gate.
     for (const id of visibleResearch(s))
-      if (!(s.research[id] ?? 0) && canAfford(s, researchCost(s, id))) out.push({ type: 'research', id });
+      if (!(s.research[id] ?? 0) && canAffordResearch(s, researchCost(s, id))) out.push({ type: 'research', id });
+    // The Form trees, again and again, while a level costs under a quarter of the Insight on hand.
+    const insightOnHand = s.res.insight + (s.gate?.store.insight ?? 0);
+    for (const id of visibleResearch(s))
+      if (
+        RESEARCH_DEFS[id].needs &&
+        (researchCost(s, id).insight ?? 0) < insightOnHand / 4 &&
+        canAffordResearch(s, researchCost(s, id))
+      )
+        out.push({ type: 'research', id });
     if (has(s, 'endow') && settles > 55 && canAfford(s, endowCost(s))) out.push({ type: 'endow' });
     if (has(s, 'endow') && s.notice > NOTICE.strike.at - 5) out.push({ type: 'bribe' });
     if (has(s, 'gate') && !s.gate) out.push({ type: 'gate', op: 'found' });
-    const allLearned = visibleResearch(s).every((id) => (s.research[id] ?? 0) > 0);
-    if (s.gate && !s.gate.pour && allLearned) out.push({ type: 'gate', op: 'pour' });
-    if (s.gate?.raised && !s.gate.visToGate) out.push({ type: 'gate', op: 'vis' });
-    if (riteStatus(s).ready) out.push({ type: 'gate', op: 'rite' });
+    // Once the Gate is raised, pour into it exactly what the next bell asks for. Ring whenever a bell is paid.
+    const next = bellStatus(s).next;
+    if (s.gate?.raised && next)
+      for (const k of GOODS) if (s.gate.pour.includes(k) !== k in next.price) out.push({ type: 'pour', good: k });
+    if (bellStatus(s).ready) out.push({ type: 'gate', op: 'bell' });
     // The lab: Lab Texts while Vellum lasts, Devices on the quarries once the Gate needs Stone, else Study the Vis.
-    const readyForRite = s.gate?.raised && riteStatus(s).insight >= (riteStatus(s).next?.insight ?? Infinity);
     for (const m of s.magi) {
-      if (!m.sanctum || m.exp || readyForRite) continue;
+      if (!present(m) || m.exp) continue;
       if (s.labTexts < 6 && s.res.vellum >= 20 && has(s, 'recipe:lab_text'))
         out.push({ type: 'experiment', magus: m.id, recipe: 'lab_text', extra: 0 });
       else if (
